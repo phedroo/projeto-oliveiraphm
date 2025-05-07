@@ -359,29 +359,438 @@ display: none;
 
 <div id="r-markdown" class="section level2">
 <h2>R Markdown</h2>
-<p>This is an R Markdown document. Markdown is a simple formatting
-syntax for authoring HTML, PDF, and MS Word documents. For more details
-on using R Markdown see <a href="http://rmarkdown.rstudio.com" class="uri">http://rmarkdown.rstudio.com</a>.</p>
-<p>When you click the <strong>Knit</strong> button a document will be
-generated that includes both content as well as the output of any
-embedded R code chunks within the document. You can embed an R code
-chunk like this:</p>
-<pre class="r"><code>summary(cars)</code></pre>
-<pre><code>##      speed           dist       
-##  Min.   : 4.0   Min.   :  2.00  
-##  1st Qu.:12.0   1st Qu.: 26.00  
-##  Median :15.0   Median : 36.00  
-##  Mean   :15.4   Mean   : 42.98  
-##  3rd Qu.:19.0   3rd Qu.: 56.00  
-##  Max.   :25.0   Max.   :120.00</code></pre>
-</div>
-<div id="including-plots" class="section level2">
-<h2>Including Plots</h2>
-<p>You can also embed plots, for example:</p>
-<p><img role="img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABUAAAAPACAMAAADDuCPrAAAA1VBMVEUAAAAAAF8AAIsAX18AX4sAX64Ai64Ai8xfAABfAItfXwBfX19fX4tfX65fi4tfi65fi8xfrsxfruaLAACLXwCLX1+Li1+Li4uLi66LrsyLruaLzOaLzP+uXwCuiwCui1+ui4uurq6ursyuzMyuzOau5uau5v/MiwDMi1/Mrl/MrovMrq7MzIvMzK7MzMzMzObM5szM5ubM5v/M/+bM///mrl/mrovmzIvmzK7mzMzm5q7m5szm5ubm5v/m/+bm////zIv/5q7/5sz/5ub//8z//+b////J/LbaAAAACXBIWXMAAB2HAAAdhwGP5fFlAAAgAElEQVR4nO3de2PT1r6gYYXCiad0CjuEnVLC0HPKgQ5nSIcMbOhAx/RCvv9HGsm3yJck1i8rWlrO8/xDMEheKPGLZEnL1RkAIVXuAQCUSkABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBo2AGtAJJJn6jka0wo99YGdkvyRqVe4arx519PTk5++/w1sOwN/IcB3FqlBfTtg1b7n3/quriAAumUFdDTuyu7z4d/dFuBgALpFBXQ470mmvePpr5pfjP60mkNAgqkU1JA392pg/mx9cCLOqiP/u6yCgEF0ikpoAdruWyS+r7LKgQUSKeggI7vVdXqAftxVT3rcjZeQIF0Cgpovbu5dry+6bHLCCiQjoACBBUU0PoQfrR61ZJDeCCfggJ6tr9Wy+Zt0VddViGgQDolBfTlXl3QP1sPnNb9XNspvZSAAumUFNDmOqa6mEdvTho/T6+k73QVk4ACCRUV0LOneyu3co4+dFuBgALplBXQs/GTdkJHr7vOyCSgwOW6TFRXWEBr47cnT46Ojl6ffArMZyegwKU6TfVZXkCvRUCByyzCuVVBBRRgrpXNHQ2oGemBG9JOxBa5KC2gZqQHbs5OB9SM9MBN2uWAmpEeuFE7HFAz0gM3a4cDakZ64GbtbkDNSA/csN29jKn7hMrVBjc1OmAX7OyF9AIK3LhdvZXTjPTAzdvVyUTMSA8MSkkBNSM9MCglBdSM9MCgFBVQM9IDQ1JWQM1IDwxIYQE9MyM9MBjlBfRaBBRIR0ABgsoN6Pjtb391XkhAgXRKC+ivJyeTK0GnUyuP/tVxcQEF0ikroNPLmJ59nU2tXHW8kVNAgZSKCujBrJqvJlMrT+ek73Qnp4ACCZUU0OZWzsM3P9cH79/P7kBqitrpMz0EFEinpIDOJhNpZhCZ73jum0wEyKaggC5mpD8+n0Kk3ik1nR2QSUEBXUye3JpF+fIJldcJKJCOgAIEFRTQxYz09XG7Q3ggv4ICujhjtH8+DeiBk0hANiUF9LgO5y+fPz+sqvvn+6IuYwJyKSmgk13Pye1H/1mH8/nJyYPOtyIJKJBOUQEdP5zOo/zH4p6kbqeQBBRIqaiAnp29/eH+48k09D9Ob4Z/3nFSZQEF0iksoOfGv/5w9KbzfHYCCqRTbEBjBBRIR0ABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIKjAgI4//3pycvLb56+BZQUUSKe0gL59UJ17/qnr4gIKpFNWQE/vVssO/+i2AgEF0ikqoMd7TTTvH0190/xm9KXTGgQUSKekgL67UwfzY+uBF3VQH/3dZRUCCqRTUkAP1nLZJPV9l1UIKJBOQQEd36uq1QP246p61uVsvIAC6RQU0Hp3c+14fdNjlxFQIB0BBQgqKKD1Ifxo9aolh/BAPgUF9Gx/rZbN26KvuqxCQIF0Sgroy726oH+2Hjit+7m2U3opAQXSKSmgzXVMdTGP3pw0fp5eSd/pKiYBBRIqKqBnT/dWbuUcfei2AgEF0ikroGfjJ+2Ejl53nZFJQIF0Cgtobfz25MnR0dHrk0+B+ewEFEinvIBei4AC6QgoQFCBATUjPTAMpQXUjPTAYJQVUDPSAwNSVEDNSA8MSUkBNSM9MCglBdSM9MCgFBRQM9IDw1JQQLtPqFxtcFOjA24fAQUIKiigZqQHhqWggJqRHhiWkgJqRnpgUEoKqBnpgUEpKqBmpAeGpKyAmpEeGJDCAnpmRnpgMMoL6LUIKJCOgAIEFRvQ33+NHMMLKJBOYQF9+93kzs35uaTDj1cusUxAgXSKCuj4wXRCu+YGpJlfuu2FCiiQTkkBnXSzDujk19HR0VGzG9rpTk4BBRIqKaDHdS//59fpr5MbkMb/cCsnkE9JAd2fdXP/fL9z32QiQDYFBfTdnenu5vzXxss909kBuZQV0Mkp+PYkypdPqLxOQIF0Cgzo+J6AAkNQUEAXHyq3f34Ib0Z6IJ+CArr4WOOXe/MzR01TfawxkElJAW0+Bf6wmZH+YH4Z00OXMQH5lBTQs+PmyvnHbz5//kdd0tc/P9gzIz2wWS8fxFtUQCefirSsWz8FFG6Jfj7KvKyArsxIbzIRYKNFOG+2oIUFtPb7z0ff3a89/umN6eyATVrZFNB0BBRug/Yr/SZf9QIK7BwBvRECCreBgN4IAYXbQEBvhIDCbSCgN0JA4TYQ0BshoHAbuIzpRggo3AoupL8JAgq3g1s5b4CAwi1hMpH0BBRIR0ABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIKi/gP5+cvLb17PxX6mfrxMBBdLpK6BPv6mq6tHfZ+/uHP6Z+hk7EFAgnZ4C+rCq5gGtRn+kfsrtCSiQTj8BPajrefjve3VAx/eq6tnX1M+5NQEF0ukloC/3qupDvfNZB3RS0C+pn3NrAgqk00tA96vq1dksoGfHk99kIqBAOn0EtN7pbN73nAW03h3NdwwvoEA6fQT03Z3m9NE8oLPf5SGgQDoCChDkEB4gqK+TSO8XAT1wEgnYDb0E9Hh2DX0T0PprlzEBO6GXgDbXfo4+NgEd/6NyIT2wI/q5E+ndneqcWzmB3dDTvfDNPuiMyUSAHdHbdHanD5r5mEbPP6V+vk4EFEjHhMoAQb0E9OHhx9TPEiSgQDo9Xkg/BAIKpNPjrZxDIKBAOj3tgQoosHt6eQ80692bSwQUSKefs/BP96rDN59TP1OAgALp9HII/8PR91Wb6eyAXdDTSaRKQIGd00tAv7u/7LGAAjvAnUgAQQIKECSgAEECChDU02VMy37yoXLADnAZE0CQgAIE9fIe6O+f535+UI0+fP4r9XNuTUCBdHo/ifRyr/qQ+im3J6BAOv2fhT/IObuygALp9B/Qehc039x2Agqk039As85PL6BAOln2QK8X0PHnX09OTn77HLmYVECBdHK8B1o9i19I//ZB63Ko7h8yL6BAOj0HdPz5H9U1Pt/j9O7KFaWHHc9HCSiQTo4L6cNn4Y/3msXvz24I/Wayri/dBiegQDIZAjqKXgfarGf0sfXAi72udzUJKJBO7zPSP34dvg/pYC2XTVLfdxqcgALJFDSd3fheVa0esB93PCMloEA6BQV00wWkXS8qFVAgHQEFCOo3oE/3qur5n8EV14fwa+fvHcID+fQU0Bd3mx3Fg+tdxbS/VsvmbdFOF5UKKJBOPwGdnj9/uXe9+ZSb5Z+1919P73XNsYAC6fQS0JfT6zUnGW12GjtdedQy2YMdHb05afw8vZK+27oEFEinl4BOb3+fHW8fX+NWzqd7K7dydr0oX0CBdHr5VM7p2Z9mP/TLNaezGz9pJ3T0uuusJAIKpNPTrZyzU0hNR687H+j47cmTo6Oj1yefAnM6CSiQTo8B3Z+ePjKhMrAj+gvo/JKj+kj+GvOBXpOAAun09B5o9WX+FmizI3q9z0QyIz0wDH2dhT/89G+TI/hxM6Fytzk8l5iRHhiMXgI6nxD0/fSr+A6oGemBAennTqTpPUjPvk4C+kv4HVAz0gND0tO98OMXRz81x9vv/lv3w+4FM9IDg1LQdHZmpAeGpaCAmpEeGJaC5gPtPqFytUHwyQHWFDQfqIACw1LQfKBmpAeGpaT5QM1IDwxKSfOBmpEeGJSi5gM1Iz0wJGXNB2pGemBACpsP1Iz0wHCUNx+oGemBgShwPtDrEFAgndLmA70mAQXSKWs+0Lbxrye/dT6IF1Aoy7DvISxqPtAloZNRQ/02ABsN/C7skuYDXSagsPMW4RxoQQuazu7s989tb+uAfqp//avLKob5TQA2amVzmK/dggI6fyd1Rafd0GF+E4CN2i/YQb54+wvo7yfNSZ9xpx3GJQIKt4yAzjz9Ztq6d3cOoxMqT27kHB3Nfb9Xjf5Z//qT6exgRwno1MP5zmK9GxmdUHk6+9Kiv04iwa4T0IlmGqXDf9+b3dB5jTs5f6x3O/81/VJAYdcJaKO5DPRDXbwmeJs+Gq6D07vzOUEFFHadgDamt79PA3qNCZUnmntBJ5PYCSjsOpcxnS0mVJ4F9LqzMZ29rHdCn38VUNh9LqRf7CvOAnqt+UAnxg/rndCPAgq7z62cyQM6vaDpn3sCCjtv0P0s8RC+0VzQFPl85KF+G4AS9XUS6f0ioAdp5rP7cU9Agbx6Cejx7Br6JnjHqSZUPv2h201I08EJKJBMLwFtrv1szvo8+nsyIf31j+DDBBRIp587kZbmAYnfynl9Agqk09eEyvcW/YxPJpKAgALp9Dad3emDZj6mUbIJ6WMEFEinoAmVUxBQIJ1eAvrw8GPqZwkSUCCdHi+kHwIBBdLp8VbOIRBQIJ2e9kAFFNg9vbwHmujuzQQEFEinn7PwT/eqwzefUz9TgIAC6fRyCP/D0ffxTyJOSkCBdHo6iXSNj3JPSkCBdHoJ6Hf3lz0WUGAHuBMJIEhAAYIEFCCov4CO356cnOS+lElAgXT6CuiLu7Mz8I9zTgcqoEBC/QS0NZ/y5PPlshFQIJ1+ArrfzKX8z/86+Y/vMxdUQIF0+vpUzuqX6SfJjR9m/VAkAQXS6etz4V9t/k3fBBRIp6dbOVs7nS/3Mn6usYAC6fQ/oXLW6ZUFFEin/wmVBRTYEX1NqPxl8Ztj74ECu6GXgL67Wz2aXz+f9/M9BBRIp6cL6R9Uow+Tr07vZv2ETgEF0ulrPtDmAvpvp7+MMs4KKqBAOllmpM83L72AAukIKECQ+UABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBS4edVM7nEkJqDAjauq3SyogAI3bRHOXSuogAI3rJXNHXsJCihww9qvu916DQoocMMEtMMaU68wpd365kEZBLTDGlOvMKXd+uZBGQS0wxpTrzCl3frmQRkEtMMaU68wpd365kEZBLTDGlOvMKXd+uZBGVzG1GGNqVeY0o5996AMLqTffo2pV5jSjn33oBBu5dx6jalXmNKuffugELvZzxIDOv7868nJyW+fvwaW3bnvH5BRaQF9++D8WKB6/qnr4gIKpFNWQE/vVssO/+i2AgEF0ikqoMd7TTTvH0190/xm9KXTGgQUSKekgL67UwfzY+uBF3VQH/3dZRUCCqRTUkAP1nLZJPV9l1UIKJBOQQEd36uq1QP246p61uVsvIAC6RQU0Hp3c+14fdNjlxFQIB0BBQgqKKD1Ifxo9aolh/BAPgUF9Gx/rZbN26KvuqxCQIF0Sgroy726oH+2Hjit+7m2U3opAQXSKSmgzXVMdTGP3pw0fp5eSd/pKiYBBRIqKqBnT/dWbuUcfei2AgEF0ikroGfjJ+2Ejl53nZFJQIF0Cgtobfz25MnR0dHrk0+B+ewEFEinvIBei4AC6QgoQFCBATUjPTAMpQXUjPTAYJQVUDPSAwNSVEDNSA8MSUkBNSM9MCglBdSM9MCgFBRQM9IDw1JQQLtPqFxtcFOjA24fAQUIKiigZqQHhqWggJqRHhiWkgJqRnpgUEoKqBnpgUEpKqBmpAeGpKyAmpEeGJDCAnpmRnpgMMoL6LUIKJCOgAIECShAUGEBHT/57v4//+v8zc/Lb+VcJ6BAOmUF9Me9lbPvAgrkU1RADxYXMM1v6RRQIJ+SAtrcynn48fPn5lrQw2k2BRTIp6SAHsz3PJvPlpsWVECBfAoKaGtG+ubLSUsFFMinoIC2Yzmfx05AgXwKDej84+QEFMin1IA2Z5RGfwgokFFBAV35VM7jqnr0p4AC+RQU0OYs/Kvl3z763wIKZFNSQJvrQJ//df77h5Nr6gUUyKSkgE7uRGr38qGAQq98PPiyogLafKTHUi+bj/gQUOjL+cdB5B7JQJQV0LPxi5+W5qEfP9wTUOjJIpwKOlNYQK/Ltx3CWtn0SpoSUGA77ZePl9KEgALbEdA1AgpsR0DXCCiwHQFdI6DAdgR0jYAC2xHQNQIKbMdlTGsEFNiSC+lXCSiwLbdyrhBQYGv6uUxAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEDh9qlmco+jeAIKt05VKWgaAgq3zSKcCnpdAgq3TCubXhDXJKBwy7RfBV4R1yOgcMsIaDoCCreMgKYjoHDLCGg6Agq3jICmI6BwywhoOgIKt4zLmNIRULhtXEifjIDCreNWzlQEFG4f/UxEQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBTKZValzAQUimVez9wEFEplZvnsBBQK5bON8hNQKJRP18xPQKFQApqfgEKhBDQ/AYVCCWh+AgqFEtD8BBQKJaD5CSgUymVM+QkolMqF9NkJKBTLrZy5CSiUSz8zE1CAIAEFCBJQgCABBQgSUMjOuaBSCSjk5mqkYgkoZOZ6+HIJKOTljsyCCSjkZU6Qggko5CWgBRNQyEtACyagkJeAFkxAIS8BLZiAQl4CWjABhVRil8O7jKlgAgqJRG8ociF9uQQU0oh30K2cxRJQSOI6R+L6WSoBhSScC7qNBBSSENDbSEBhRfRU0Oav2WUCCsuCp3QE9DYSUFgSPZkuoLeRgLKrer6sXUBvIwFlR/V9JO6GotuowICOP/96cnLy2+evgWX9ZJcneI1k/0fibii6hUoL6NsH5zsW1fNPXRff7p8bvqy5nAXLG2nnHcn+j8TdUHT7lBXQ07vVssM/uq1gq39u+HVQzoJFjXTli22X2/z1zS145oaiW6iogB7vNT+d94+mvml+M/rSaQ3b/HOjL9mCFixwpL3tSDoXRAclBfTdnTqYH1sPvKiD+ujvLqvY4p97jZdsKQuWM9IMHRRQOigpoAdruWyS+r7LKrYKaKe/XuKC5Yw0y4JOprO1ggI6vldVqwfsx1X1rMvZeAHN8oQlLehkOh0UFNB6d3PteH3TY62hbHDl0xT0WhfQG1jwGifKuH0EdH2hzV/v0ILljDTPkbh+sq2CAlofwo9Wr1pyCB9ZsJyROhJn2AoK6Nn+Wi2bt0VfdVmFgGZ5wiw7ko7EuXklBfTlXl3QP1sPnNb9XNspvdRWAQ2+ZMtZsJyRXmtHUj+5cSUFtLmOqS7m0ZuTxs/TK+k7XcW01T+3nKvMwwuWM1I7kgxaUQE9e7q3ckpo9KHbCrb654ZfsuUsWM5I7UgyZGUF9Gz8pJ3Q0euuMzJt988Nv2TLWbCckcKAFRbQ2vjtyZOjo6PXJ58C89l5/QLplBfQaxFQIB0BBQgSUIAgAQUIElCAIAEFCBJQgCABBQgSUIAgAQUIElCAIAEFCBJQgCABBQi6dQEFSCd5o1KvMKXcGxvYLckblXqFWQzrWN9oLjGs4RjNxYxmGwMdVkfD2rpGc4lhDcdoLmY02xjosDoa1tY1mksMazhGczGj2cZAh9XRsLau0VxiWMMxmosZzTYGOqyOhrV1jeYSwxqO0VzMaLYx0GF1NKytazSXGNZwjOZiRrONgQ6ro2FtXaO5xLCGYzQXM5ptDHRYHQ1r6xrNJYY1HKO5mNFsY6DD6mhYW9doLjGs4RjNxYxmGwMdVkfD2rpGc4lhDcdoLmY02xjosDoa1tY1mksMazhGczGj2cZAh9XRsLau0VxiWMMxmosZzTYGOqyOhrV1jeYSwxqO0VzMaLYx0GF1NKytazSXGNZwjOZiRrONgQ6ro2FtXaO5xLCGYzQXM5ptDHRYHQ1r6xrNJYY1HKO5mNFsY6DD6mhYW9doLjGs4RjNxYxmGwMdVkfD2rpGc4lhDcdoLmY02xjosDoa1tY1mksMazhGczGj2cZAhwUwfAIKECSgAEECChAkoABBAgoQJKAAQQIKECSgAEECChAkoABBAgoQJKAAQQIKECSgAEECChAkoABBAgoQJKAAQQIKECSgAEECChAkoABBAgoQJKAAQQIKECSgAEE7ENDTB3tVNXr+Z8YhjO9VC1/yDuvdnUd/n/9ufRA9D6s9nKxbafzkfv20316+KfKNJu9P0IvvmtG8/nr+SM4fnNXRDOjVta78gD7dm27a0b/yjeHdnbVvcaZh1T9srYCuD6LnYS0NJ+dWmj9RVf2y+lCGjbM+mpzbZhGo0TxPObfN+miG8+raoPiAHq//75R1ELNRZBrWeL9qFWt9ED0P68Lh9L2V2k/9au2hvjfO5aPpe9ts2MHLuG0uH03eV9cmpQe0+d/psN6Rf3u3/VLt28HqNzLTsCY/fYvnWx9Ez8NaHk7GrTR5ok9n02ca/bH5uXOOJudPUP3Uo+Z4+T/rZ3r2dfNz5xzNYF5dG5Ue0IP5Zm5erO9zjWJ/9fuYZ1gvJgc2i6GsD6LfYa0MJ+NWOl7s6TXP9Grzc+ccTcZtU69/FvG6S9OvMm6bDaMZyqtrs8IDer69z17uzf/HyjGK5afOMqzT+v/j6vndxU/b+iB6HdbqcHJupf3zfZgLN0XO0eTcNvXqZzmf7+rl3DbroxnIq+sihQe0/m9qvgFbmzXDKF6tPtD/sJqDnw+tszbrg+h1WKvDGchWmj1p5o2zMpqBbJtZ2Qeybeb/zwxj21yk8ICeHw0t/cfe/yi+nDbXXjz+mHFYB6NfvrZPe68PotdhrQ5nIFtp9urLvHFWRjOMbVMPZvLNGsa2mY9mGNvmQuUHdPEeyNp7zb05qEbfz04KPv+abVi/z44FWwFdGUSvw1odzkC20uzVl3njrIxmCNtm/GRv9jxD2DbnoxnCtrlE4QFtb7/jbG8o77eus5jsUOQbVqtY64Pof1jtgA5iK81PTQxh47ROlGTfNpMBjD5Mvs6/bdqjyb9tLiWg19ecC5xcenH6oJqOQUDXhzOMrbR/fhI++8Y5H03+bTOp1LcfJnt4+bdNezT5t82lBPT6zi+4aMbTBENA14czhK10fmH/IDbOfusyy7zbZvzf73+3d/EeXs7RZN82lxPQpJr/Lr8I6KbhLD+aZStNdmbWL1zPtHFao1l5NNNPUHPhWbNDPIBt0xpNS/ZX1wYCmtZBth+4qSICmmkrnZ7f+DOAjdMeTVvGn6DZzl7+bdMeTVvuV9cGhQd0UCfkGtMB5RvWcM7Crw6nLctWelkfFR62rqnKu3GWRtOW8yfo4ILnzjmattyvrg3KD+hwLglrLL7FmYY1nOtAV4fTlmMr1S+16pfFXSu5N87yaNpy/gRd9Nw5R7PN+DIqPKCDuimhMf0fMd+whnMn0upw2jJspYNq6eWY/zatiw49c/4ETQM1hB+c89G05X51bVB4QAdxW2zrUGP2vk2+YS1fN5TzXvjV4eTdSgcrbzjm3Tiro8m5bdoHytP9uZzbZn00Q3p1bVB4QAcxMUv9XZxVYrx/4Vw/PVm+9SfvbEzLw8m6leqdmUfLs5fn3Dhro8m5bernXrlMKOe2WR/NkF5dG5Qe0PncijmnBpxcj9Jc9bsy22SOYa3M3rEyiN6HtXohfaattOGEbsaNsz6anNtm8dyLC9Vzbpv10Qzp1bVB6QEdxOTUL/fOB/E+77CW3nTMOLH4huFk3EoHVdv0VZhv42wYTc6foNPWJ2bkn61/fTQDenVtUHxAz34cwMejvLxbrejIiWQAAAV3SURBVA4i07CWz9qsD6LnYS0NJ9tWan9MRLV4+zHXxtk4mpw/Qafz5z6/LiDjD876aIbz6tqg/IAO4gP6xrNPEvzr/KE8w1o57Z37UzmXh5NrK7U/lew8oLk2zubRZP0Jmj73QD6xdH00g3l1bbADAQXIQ0ABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBBQgSEABggQUIEhAAYIEFCBIQAGCBJT+nX68DU/JLSCg9G38sHq/+0/JrSCg9O246r1mGZ6SW0FA6ZuAsjMElL4JKDtDQOmbgLIzBJR+1S2b+NL8Zvz0fv3l449fJ3/07k717Ov46TdVddicMx8/2auqbz9M/ujlXvXq7PS7qhr98td8TcsLn+3XC7+ol338Z/2b3580fzZ6/HH5Kcf3qtEfZ/M1Pvu6utjKKuEKAkq/2gGtIzZ12NRrEtD/d2/6yPuz07vTr16dTf/mq9nfbhWwvXBTwqfzPz+o5ppIXhXQxWKrq4QrCCj9agV00auqevT32TSg/zZ7YPR/71Xnf7P5q/9j/sA0gasL1yX8dm8W3PN+Tg7drwjoYrG1VcIVBJS+zd+QrHs5OVYfP92b7mc2D1SHn87OTu/MdwNfzP5o0rbmgfbfXVq4LmG9vznfk60mR/pv7053QRdPuTGg7cWWVwlXEFD6Nq/Z8axuk3Q1XWsKNn3kuGp91XzRBHT6QP1V83fXFm5KOHvkeNG/+i9P9iUvD+j5YiurhCsIKH2b12z/vFLTh5qATs4ttQpWf9UkcJbN6WLN311bePb4stnSVwT0/XzFq6uEKwgofZvVaXLOffbQ5CT7Incbvprn7my2f7m+cFPCL0vP8/uvP+xV2wR0Ee3VVcIVBJS+nQe0rY7X5QGdF23y5frC7R3Is/GL7+YnhK4O6Pm+7uoq4QoCSt9mNWud8+4a0Gdf1xduB7T9p1sHdMMq4QoCSt/OA7oSqQ57oOsLtwI63Zf89vFPb/7PNu+BngdUNOlIQOnb+SH8ytWW3d4DXb1U8zygB4sr4bc6ibR8ugo6EFD6NqtZHbOVsz6XB3Ret/3ZFfErC5+XsFXJ45VD+OXKLgd0wyrhCgJK3+Y1qxP2aHbL5MH8MqZLAjo7hp+ldG3hTQFtLshfDehsNad3VgO6YZVwBQGlb/ML1pu3Kkcf6q9+f1jNL6S/LKDV8z+X71paWrhVwv3pIfxkMpLpg4tr5JubPH/5Ol3NakDXVwlXEFD6Nj3d/eX8HvXZLetXBPTbpQuT1hZulbD9R9MHF095fq3S/7qzGtD1VcIVBJS+je/NC3W8t9SrK87Cz/p2OHsvdGXhdgkfzuP5eva+5vpTvn+3HtC1VcIVBJTejR80B9KTrybTdn77ejrH51WXMb28u5gfdH3hpRK++G7yJ18Xt8WfP+XvD/eaGT/PNgV0dZVwBQGlBO6tZJAElBIIKIMkoJRAQBkkAaUEAsogCSglEFAGSUApgYAySAIKECSgAEECChAkoABBAgoQJKAAQQIKECSgAEECChAkoABBAgoQJKAAQQIKECSgAEECChAkoABBAgoQJKAAQQIKECSgAEECChAkoABBAgoQJKAAQQIKECSgAEECChAkoABBAgoQJKAAQQIKECSgAEECChAkoABBAgoQJKAAQQIKECSgAEECChAkoABBAgoQJKAAQQIKEPT/Af3ZJOKbRB0CAAAAAElFTkSuQmCC" width="672" /></p>
-<p>Note that the <code>echo = FALSE</code> parameter was added to the
-code chunk to prevent printing of the R code that generated the
-plot.</p>
+<pre class="r"><code># Faxina - XCO2 -----------------------------------------------------------
+
+# ## Lista com caminho e nomes dos arquivo a serem lidos - xco2
+# list_of_files &lt;- list.files(&quot;data-raw/nc4/&quot;,
+#                             pattern = &quot;.nc4&quot;,
+#                             full.names = TRUE)
+#
+# ## buscando o contorno do Brasil
+# br &lt;- geobr::read_country(showProgress = FALSE)
+# pol_br &lt;- br$geom |&gt; purrr::pluck(1) |&gt; as.matrix()
+# def_pol &lt;- function(x, y, pol){
+#   as.logical(sp::point.in.polygon(point.x = x,
+#                                   point.y = y,
+#                                   pol.x = pol[,1],
+#                                   pol.y = pol[,2]))
+# }
+#
+# ## função para ler arquivos NCD4
+# ncdf_reader &lt;- function(file_path){
+#   nc_file &lt;- ncdf4::nc_open(file_path)
+#   df &lt;- data.frame(
+#     &quot;longitude&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;longitude&quot;),
+#     &quot;latitude&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;latitude&quot;),
+#     &quot;time&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;time&quot;),
+#     &quot;xco2&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;xco2&quot;),
+#     &quot;xco2_quality_flag&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;xco2_quality_flag&quot;),
+#     &quot;xco2_incerteza&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;xco2_uncertainty&quot;),
+#     &quot;path&quot; = file_path
+#   )
+#   ncdf4::nc_close(nc_file)
+#   return(df)
+# }
+# ncdf_reader(list_of_files[1])
+# dff_1 &lt;- purrr::map_df(list_of_files[1:1000],ncdf_reader)
+# readr::write_rds(dff_1,&quot;data-raw/dff_1.rds&quot;)
+# dff_2 &lt;- purrr::map_df(list_of_files[1001:2000],ncdf_reader)
+# readr::write_rds(dff_2,&quot;data-raw/dff_2.rds&quot;)
+# dff_3 &lt;- purrr::map_df(list_of_files[2001:length(list_of_files)],ncdf_reader)
+# readr::write_rds(dff_3,&quot;data-raw/dff_3.rds&quot;)
+#
+# df1 &lt;- readr::read_rds(&quot;data-raw/dff_1.rds&quot;)
+# df1 &lt;- df1 |&gt;
+#   dplyr::filter(longitude &gt;= -80 &amp;
+#                   longitude &lt;= -32,
+#                 latitude &gt;= -34 &amp;
+#                   latitude &lt;= 10)
+# dplyr::glimpse(df1)
+#
+# df2 &lt;- readr::read_rds(&quot;data-raw/dff_2.rds&quot;)
+# df2 &lt;- df2 |&gt;
+#   dplyr::filter(longitude &gt;= -80 &amp;
+#                   longitude &lt;= -32,
+#                 latitude &gt;= -34 &amp;
+#                   latitude &lt;= 10)
+# dplyr::glimpse(df2)
+#
+# df3 &lt;- readr::read_rds(&quot;data-raw/dff_3.rds&quot;)
+# df3 &lt;- df3 |&gt;
+#   dplyr::filter(longitude &gt;= -80 &amp;
+#                   longitude &lt;= -32,
+#                 latitude &gt;= -34 &amp;
+#                   latitude &lt;= 10)
+# dplyr::glimpse(df3)
+# dff &lt;- rbind(df1,df2,df3)
+#
+# dff &lt;- dff |&gt;
+#   dplyr::mutate(
+#     flag_br = def_pol(longitude, latitude, pol_br)
+#   )
+# dplyr::glimpse(dff)
+#
+# regiao &lt;- geobr::read_region(showProgress = FALSE)
+# pol_norte &lt;- regiao$geom |&gt; purrr::pluck(1) |&gt; as.matrix()
+# pol_nordeste &lt;- regiao$geom |&gt; purrr::pluck(2) |&gt; as.matrix()
+# pol_sudeste &lt;- regiao$geom |&gt; purrr::pluck(3) |&gt; as.matrix()
+# pol_sul &lt;- regiao$geom |&gt; purrr::pluck(4) |&gt; as.matrix()
+# pol_centroeste&lt;- regiao$geom |&gt; purrr::pluck(5) |&gt; as.matrix()
+#
+# # Retirando alguns pontos
+# pol_br &lt;- pol_br[pol_br[,1]&lt;=-34,]
+# pol_br &lt;- pol_br[!((pol_br[,1]&gt;=-38.8 &amp; pol_br[,1]&lt;=-38.6) &amp;
+#                      (pol_br[,2]&gt;= -19 &amp; pol_br[,2]&lt;= -16)),]
+#
+# pol_nordeste &lt;- pol_nordeste[pol_nordeste[,1]&lt;=-34,]
+# pol_nordeste &lt;- pol_nordeste[!((pol_nordeste[,1]&gt;=-38.7 &amp; pol_nordeste[,1]&lt;=-38.6) &amp; pol_nordeste[,2]&lt;= -15),]
+#
+# # Retirando alguns pontos
+# pol_br &lt;- pol_br[pol_br[,1]&lt;=-34,]
+# pol_br &lt;- pol_br[!((pol_br[,1]&gt;=-38.8 &amp; pol_br[,1]&lt;=-38.6) &amp;
+#                      (pol_br[,2]&gt;= -19 &amp; pol_br[,2]&lt;= -16)),]
+#
+# pol_nordeste &lt;- pol_nordeste[pol_nordeste[,1]&lt;=-34,]
+# pol_nordeste &lt;- pol_nordeste[!((pol_nordeste[,1]&gt;=-38.7 &amp; pol_nordeste[,1]&lt;=-38.6) &amp; pol_nordeste[,2]&lt;= -15),]
+#
+# # Recriando o flag_nordeste
+# dff &lt;- dff |&gt;
+#   dplyr::mutate(
+#     flag_br = def_pol(longitude, latitude, pol_br),
+#     flag_nordeste = def_pol(longitude, latitude, pol_nordeste)
+#   )
+#
+# br |&gt;
+#   ggplot2::ggplot() +
+#   ggplot2::geom_sf(fill=&quot;white&quot;, color=&quot;#FEBF57&quot;,
+#                    size=.15, show.legend = FALSE) +
+#   ggplot2::geom_point(data= dff |&gt;
+#                         dplyr::sample_n(10000) |&gt;
+#                         dplyr::filter(flag_br|flag_nordeste) ,
+#                       ggplot2::aes(x=longitude,y=latitude),
+#                       shape=3,
+#                       col=&quot;red&quot;,
+#                       alpha=0.2)
+
+# dff &lt;- dff |&gt;
+#   dplyr::filter(flag_br|flag_nordeste)
+# data_set &lt;- readr::read_rds(&quot;data/nasa-xco2.rds&quot;) |&gt;
+#   # tibble::tibble() |&gt;
+#   dplyr::filter(
+#     xco2 &gt; 0,
+#     xco2_quality_flag == 0) |&gt;
+#     dplyr::mutate(
+#       path = stringr::str_remove(path, &quot;data-raw/nc4/|\\.nc4&quot;),
+#       date = lubridate::as_date(stringr::str_sub(path,12,17)),
+#       year = lubridate::year(date),
+#       month = lubridate::month(date),
+#       day = lubridate::day(date),
+#       .after = &quot;time&quot;
+#     )
+# dplyr::glimpse(data_set)
+
+# # Criando a coluna para os estados.
+# # carregando os poligonos e funções
+# source(&quot;R/my-function.R&quot;)
+#
+# # Leitura do banco de dados
+# data_set &lt;- readr::read_rds(&quot;data/nasa-xco2.rds&quot;)
+#
+# # Classificando pontos
+# state &lt;- 0
+# x &lt;- data_set |&gt; dplyr::pull(longitude)
+# y &lt;- data_set |&gt; dplyr::pull(latitude)
+# for(i in 1:nrow(data_set)) state[i] &lt;- get_geobr_state(x[i],y[i])
+# data_set &lt;- data_set |&gt; cbind(state)
+# dplyr::glimpse(data_set)
+
+
+# readr::write_rds(data_set,&quot;data/nasa-xco2.rds&quot;)
+
+
+# Faxina xCH4 -------------------------------------------------------------
+# ## Lista com caminho e nomes dos arquivo a serem lidos - xco2
+# list_of_files &lt;- list.files(&quot;data-raw/CH4_GOS_OCPR/&quot;,
+#                             pattern = &quot;.nc&quot;,
+#                             full.names = TRUE,
+#                             all.files = TRUE,
+#                             recursive = TRUE)
+#
+# # buscando o contorno do Brasil
+# br &lt;- geobr::read_country(showProgress = FALSE)
+# pol_br &lt;- br$geom |&gt; purrr::pluck(1) |&gt; as.matrix()
+# def_pol &lt;- function(x, y, pol){
+#   as.logical(sp::point.in.polygon(point.x = x,
+#                                   point.y = y,
+#                                   pol.x = pol[,1],
+#                                   pol.y = pol[,2]))
+# }
+#
+#
+# ## função para ler arquivos NCD4
+# ncdf_reader &lt;- function(file_path){
+#   nc_file &lt;- ncdf4::nc_open(file_path)
+#   df &lt;- data.frame(
+#     &quot;longitude&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;longitude&quot;),
+#     &quot;latitude&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;latitude&quot;),
+#     &quot;time&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;time&quot;),
+#     &quot;xch4&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;xch4&quot;),
+#     &quot;xch4_quality_flag&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;xch4_quality_flag&quot;),
+#     &quot;xch4_incerteza&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;xch4_uncertainty&quot;),
+#     &quot;path&quot; = file_path
+#   )
+#   ncdf4::nc_close(nc_file)
+#   return(df)
+# }
+#
+#
+# dff_1 &lt;- purrr::map_df(list_of_files[1:1000],ncdf_reader)
+# readr::write_rds(dff_1,&quot;data-raw/dff_1.rds&quot;)
+# dff_2 &lt;- purrr::map_df(list_of_files[1001:2000],ncdf_reader)
+# readr::write_rds(dff_2,&quot;data-raw/dff_2.rds&quot;)
+# dff_3 &lt;- purrr::map_df(list_of_files[2001:3000],ncdf_reader)
+# readr::write_rds(dff_3,&quot;data-raw/dff_3.rds&quot;)
+# dff_4 &lt;- purrr::map_df(list_of_files[3001:length(list_of_files)],ncdf_reader)
+# readr::write_rds(dff_4,&quot;data-raw/dff_4.rds&quot;)
+#
+#
+#
+# df1 &lt;- readr::read_rds(&quot;data-raw/dff_1.rds&quot;)
+# df1 &lt;- df1 |&gt;
+#   dplyr::filter(longitude &gt;= -80 &amp;
+#                   longitude &lt;= -32,
+#                 latitude &gt;= -34 &amp;
+#                   latitude &lt;= 10)
+# dplyr::glimpse(df1)
+#
+# df2 &lt;- readr::read_rds(&quot;data-raw/dff_2.rds&quot;) |&gt;
+#   dplyr::filter(longitude &gt;= -80 &amp;
+#                   longitude &lt;= -32,
+#                 latitude &gt;= -34 &amp;
+#                   latitude &lt;= 10)
+# dplyr::glimpse(df2)
+#
+# df3 &lt;- readr::read_rds(&quot;data-raw/dff_3.rds&quot;) |&gt;
+#   dplyr::filter(longitude &gt;= -80 &amp;
+#                   longitude &lt;= -32,
+#                 latitude &gt;= -34 &amp;
+#                   latitude &lt;= 10)
+# dplyr::glimpse(df3)
+#
+# df4 &lt;- readr::read_rds(&quot;data-raw/dff_4.rds&quot;) |&gt;
+#   dplyr::filter(longitude &gt;= -80 &amp;
+#                   longitude &lt;= -32,
+#                 latitude &gt;= -34 &amp;
+#                   latitude &lt;= 10)
+# dplyr::glimpse(df3)
+# dff &lt;- rbind(df1,df2,df3,df4)
+#
+# dff &lt;- dff |&gt;
+#   dplyr::mutate(
+#     flag_br = def_pol(longitude, latitude, pol_br)
+#   )
+# dplyr::glimpse(dff)
+
+# regiao &lt;- geobr::read_region(showProgress = FALSE)
+# pol_norte &lt;- regiao$geom |&gt; purrr::pluck(1) |&gt; as.matrix()
+# pol_nordeste &lt;- regiao$geom |&gt; purrr::pluck(2) |&gt; as.matrix()
+# pol_sudeste &lt;- regiao$geom |&gt; purrr::pluck(3) |&gt; as.matrix()
+# pol_sul &lt;- regiao$geom |&gt; purrr::pluck(4) |&gt; as.matrix()
+# pol_centroeste&lt;- regiao$geom |&gt; purrr::pluck(5) |&gt; as.matrix()
+#
+# # Retirando alguns pontos
+# pol_br &lt;- pol_br[pol_br[,1]&lt;=-34,]
+# pol_br &lt;- pol_br[!((pol_br[,1]&gt;=-38.8 &amp; pol_br[,1]&lt;=-38.6) &amp;
+#                      (pol_br[,2]&gt;= -19 &amp; pol_br[,2]&lt;= -16)),]
+#
+# pol_nordeste &lt;- pol_nordeste[pol_nordeste[,1]&lt;=-34,]
+# pol_nordeste &lt;- pol_nordeste[!((pol_nordeste[,1]&gt;=-38.7 &amp; pol_nordeste[,1]&lt;=-38.6) &amp; pol_nordeste[,2]&lt;= -15),]
+#
+# # Retirando alguns pontos
+# pol_br &lt;- pol_br[pol_br[,1]&lt;=-34,]
+# pol_br &lt;- pol_br[!((pol_br[,1]&gt;=-38.8 &amp; pol_br[,1]&lt;=-38.6) &amp;
+#                      (pol_br[,2]&gt;= -19 &amp; pol_br[,2]&lt;= -16)),]
+#
+# pol_nordeste &lt;- pol_nordeste[pol_nordeste[,1]&lt;=-34,]
+# pol_nordeste &lt;- pol_nordeste[!((pol_nordeste[,1]&gt;=-38.7 &amp; pol_nordeste[,1]&lt;=-38.6) &amp; pol_nordeste[,2]&lt;= -15),]
+#
+# # Recriando o flag_nordeste
+# dff &lt;- dff |&gt;
+#   dplyr::mutate(
+#     flag_br = def_pol(longitude, latitude, pol_br),
+#     flag_nordeste = def_pol(longitude, latitude, pol_nordeste)
+#   )
+#
+# br |&gt;
+#   ggplot2::ggplot() +
+#   ggplot2::geom_sf(fill=&quot;white&quot;, color=&quot;#FEBF57&quot;,
+#                    size=.15, show.legend = FALSE) +
+#   ggplot2::geom_point(data= dff |&gt;
+#                         dplyr::sample_n(10000) |&gt;
+#                         dplyr::filter(flag_br|flag_nordeste) ,
+#                       ggplot2::aes(x=longitude,y=latitude),
+#                       shape=3,
+#                       col=&quot;red&quot;,
+#                       alpha=0.2)
+
+
+# data_set &lt;- dff |&gt;
+#   dplyr::filter(flag_br|flag_nordeste) |&gt;
+#   dplyr::filter(
+#     xch4 &gt; 0,
+#     xch4_quality_flag == 0) |&gt;
+#     dplyr::mutate(
+#       path = stringr::str_remove(path, &quot;data-raw/CH4_GOS_OCPR/20...|\\.nc&quot;),
+#       date = lubridate::as_date(stringr::str_sub(path,27,34)),
+#       year = lubridate::year(date),
+#       month = lubridate::month(date),
+#       day = lubridate::day(date),
+#       .after = &quot;time&quot;
+#     )
+# dplyr::glimpse(data_set)
+#
+# # Criando a coluna para os estados.
+# # carregando os poligonos e funções
+# source(&quot;R/my-function.R&quot;)
+#
+# # Classificando pontos
+# state &lt;- 0
+# x &lt;- data_set |&gt; dplyr::pull(longitude)
+# y &lt;- data_set |&gt; dplyr::pull(latitude)
+# for(i in 1:nrow(data_set)) state[i] &lt;- get_geobr_state(x[i],y[i])
+# data_set &lt;- data_set |&gt; cbind(state)
+# dplyr::glimpse(data_set)
+# readr::write_rds(data_set,&quot;data/gosat-xch4.rds&quot;)
+
+
+# Faxina para a SIF -------------------------------------------------------
+# buscando o contorno do Brasil
+# br &lt;- geobr::read_country(showProgress = FALSE)
+# pol_br &lt;- br$geom |&gt; purrr::pluck(1) |&gt; as.matrix()
+# def_pol &lt;- function(x, y, pol){
+#   as.logical(sp::point.in.polygon(point.x = x,
+#                                   point.y = y,
+#                                   pol.x = pol[,1],
+#                                   pol.y = pol[,2]))
+# }
+# dff &lt;- fco2r::oco2_br |&gt;
+#   dplyr::mutate(
+#     xco2 = xco2_moles_mole_1*1e06,
+#     date = lubridate::ymd_hms(time_yyyymmddhhmmss),
+#     year = lubridate::year(date),
+#     month = lubridate::month(date),
+#     day = lubridate::day(date),
+#     sif = (
+#       fluorescence_radiance_757nm_idp_ph_sec_1_m_2_sr_1_um_1*2.6250912*10^(-19)  + 1.5*fluorescence_radiance_771nm_idp_ph_sec_1_m_2_sr_1_um_1* 2.57743*10^(-19))/2)
+#
+# regiao &lt;- geobr::read_region(showProgress = FALSE)
+# pol_norte &lt;- regiao$geom |&gt; purrr::pluck(1) |&gt; as.matrix()
+# pol_nordeste &lt;- regiao$geom |&gt; purrr::pluck(2) |&gt; as.matrix()
+# pol_sudeste &lt;- regiao$geom |&gt; purrr::pluck(3) |&gt; as.matrix()
+# pol_sul &lt;- regiao$geom |&gt; purrr::pluck(4) |&gt; as.matrix()
+# pol_centroeste&lt;- regiao$geom |&gt; purrr::pluck(5) |&gt; as.matrix()
+#
+# # Retirando alguns pontos
+# pol_br &lt;- pol_br[pol_br[,1]&lt;=-34,]
+# pol_br &lt;- pol_br[!((pol_br[,1]&gt;=-38.8 &amp; pol_br[,1]&lt;=-38.6) &amp;
+#                      (pol_br[,2]&gt;= -19 &amp; pol_br[,2]&lt;= -16)),]
+#
+# pol_nordeste &lt;- pol_nordeste[pol_nordeste[,1]&lt;=-34,]
+# pol_nordeste &lt;- pol_nordeste[!((pol_nordeste[,1]&gt;=-38.7 &amp; pol_nordeste[,1]&lt;=-38.6) &amp; pol_nordeste[,2]&lt;= -15),]
+#
+# # Retirando alguns pontos
+# pol_br &lt;- pol_br[pol_br[,1]&lt;=-34,]
+# pol_br &lt;- pol_br[!((pol_br[,1]&gt;=-38.8 &amp; pol_br[,1]&lt;=-38.6) &amp;
+#                      (pol_br[,2]&gt;= -19 &amp; pol_br[,2]&lt;= -16)),]
+#
+# pol_nordeste &lt;- pol_nordeste[pol_nordeste[,1]&lt;=-34,]
+# pol_nordeste &lt;- pol_nordeste[!((pol_nordeste[,1]&gt;=-38.7 &amp; pol_nordeste[,1]&lt;=-38.6) &amp; pol_nordeste[,2]&lt;= -15),]
+#
+# # Recriando o flag_nordeste
+# dff &lt;- dff |&gt;
+#   dplyr::mutate(
+#     flag_br = def_pol(longitude, latitude, pol_br),
+#     flag_nordeste = def_pol(longitude, latitude, pol_nordeste)
+#   )
+#
+# br |&gt;
+#   ggplot2::ggplot() +
+#   ggplot2::geom_sf(fill=&quot;white&quot;, color=&quot;#FEBF57&quot;,
+#                    size=.15, show.legend = FALSE) +
+#   ggplot2::geom_point(data= dff |&gt;
+#                         dplyr::sample_n(1000) |&gt;
+#                         dplyr::filter(flag_br|flag_nordeste) ,
+#                       ggplot2::aes(x=longitude,y=latitude),
+#                       shape=3,
+#                       col=&quot;red&quot;,
+#                       alpha=0.2)
+#
+#
+# # Criando a coluna para os estados.
+# # carregando os poligonos e funções
+# source(&quot;R/my-function.R&quot;)
+#
+# # Classificando pontos
+#
+# data_set &lt;- dff
+# state &lt;- 0
+# x &lt;- data_set |&gt; dplyr::pull(longitude)
+# y &lt;- data_set |&gt; dplyr::pull(latitude)
+# for(i in 1:nrow(data_set)) state[i] &lt;- get_geobr_state(x[i],y[i])
+# data_set &lt;- data_set |&gt; cbind(state)
+# dplyr::glimpse(data_set)
+# readr::write_rds(data_set,&quot;data/oco2-sif.rds&quot;)
+#
+
+# Faxina appeears ---------------------------------------------------------
+## Lista com caminho e nomes dos arquivo a serem lidos - xco2
+list_of_files &lt;- list.files(&quot;data-raw/appeears/&quot;,
+                            pattern = &quot;.nc&quot;,
+                            full.names = TRUE)
+
+
+nc_obj_1&lt;-ncdf4::nc_open(list_of_files[1]); names(nc_obj_1[[&#39;var&#39;]])
+nc_obj_2&lt;-ncdf4::nc_open(list_of_files[2]); names(nc_obj_2[[&#39;var&#39;]])
+nc_obj_3&lt;-ncdf4::nc_open(list_of_files[3]); names(nc_obj_3[[&#39;var&#39;]])
+memory.limit()
+df &lt;- data.frame(
+  &quot;EVI&quot;=ncdf4::ncvar_get(nc_obj_1,varid=&quot;_250m_16_days_EVI&quot;),
+  # &quot;latitude&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;latitude&quot;),
+  # &quot;time&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;time&quot;),
+  # &quot;xco2&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;xco2&quot;),
+  # &quot;xco2_quality_flag&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;xco2_quality_flag&quot;),
+  # &quot;xco2_incerteza&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;xco2_uncertainty&quot;),
+  # &quot;path&quot; = file_path
+)
+
+
+
+## função para ler arquivos NCD4
+ncdf_reader &lt;- function(file_path){
+  nc_file &lt;- ncdf4::nc_open(file_path)
+  df &lt;- data.frame(
+    &quot;longitude&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;longitude&quot;),
+    &quot;latitude&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;latitude&quot;),
+    &quot;time&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;time&quot;),
+    &quot;xco2&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;xco2&quot;),
+    &quot;xco2_quality_flag&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;xco2_quality_flag&quot;),
+    &quot;xco2_incerteza&quot;=ncdf4::ncvar_get(nc_file,varid=&quot;xco2_uncertainty&quot;),
+    &quot;path&quot; = file_path
+  )
+  ncdf4::nc_close(nc_file)
+  return(df)
+}
+
+
+## buscando o contorno do Brasil
+br &lt;- geobr::read_country(showProgress = FALSE)
+pol_br &lt;- br$geom |&gt; purrr::pluck(1) |&gt; as.matrix()
+def_pol &lt;- function(x, y, pol){
+  as.logical(sp::point.in.polygon(point.x = x,
+                                  point.y = y,
+                                  pol.x = pol[,1],
+                                  pol.y = pol[,2]))
+}</code></pre>
 </div>
 
 
