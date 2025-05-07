@@ -37,6 +37,12 @@ de uso da terra no Brasil Central, auxiliando na formulação de políticas
 públicas voltadas para a mitigação das emissões de GEE e,
 principalmente, a adaptação às mudanças climáticas.
 
+**Objetivo**: Analisar a variabilidade espaçotemporal das concentrações
+atmosféricas de CO2 e CH4 em áreas do Brasil Central, identificando
+fontes e possíveis sumidouros desses gases ao longo dos anos de 2015 a
+2023, bem como suas relações com índices vegetativos e climáticos, por
+meio de dados de GOSAT, OCO-2 e Climate TRACE.
+
 ## 👨‍🔬 Autores
 
 - **Pedro Henrique Marucio de Oliveira**  
@@ -54,13 +60,18 @@ em formato HTML:
 
 - **Aquisição e download dos dados brutos** **\[ATUALIZAR_PEDRO\]**
 
-  - [GOSAT](https://www.gosat.nies.go.jp/): Dados de concentração de
-    CO<sub>2</sub> e CH<sub>4</sub>  
-  - [OCO-2](https://oco.jpl.nasa.gov/): Dados de concentração de
-    CO<sub>2</sub>  
+  - [GOSAT](https://data.ceda.ac.uk/neodc/gosat/data/ch4/nceov1.0/CH4_GOS_OCPR/):
+    Dados de concentração de CH<sub>4</sub> 2009-2021  
+  - [OCO-2](https://disc.gsfc.nasa.gov): Dados de concentração de
+    XCO<sub>2</sub>
+    (<https://disc.gsfc.nasa.gov/datasets/OCO2_L2_Lite_FP_11.2r/summary?keywords=OCO2>)
+    e SIF (<a
+    href="https://disc.gsfc.nasa.gov/datasets/OCO2_L2_Lite_SIF_11r/summary?keywords=OCO2\"
+    class="uri">https://disc.gsfc.nasa.gov/datasets/OCO2_L2_Lite_SIF_11r/summary?keywords=OCO2\</a>
   - [Climate TRACE](https://climatetrace.org/): Dados de emissões de
     GEE  
   - [NASA](https://climate.nasa.gov/): Dados climáticos  
+  - [NASA-FIRMS](___): Dados de focos de incêndio  
 
 - [`01_faxina_tratamento_dados`](https://arpanosso.github.io//projeto-oliveiraphm//01_faxina_tratamento_dados.html)
   – Faxina, filtragem e organização dos dados.  
