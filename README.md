@@ -59,7 +59,6 @@ Os scripts abaixo foram desenvolvidos em RMarkdown e estão disponíveis
 em formato HTML:
 
 - **Aquisição e download dos dados brutos** **\[ATUALIZAR_PEDRO\]**
-
   - [GOSAT](https://data.ceda.ac.uk/neodc/gosat/data/ch4/nceov1.0/CH4_GOS_OCPR/):
     Dados de concentração de CH<sub>4</sub> 2009-2021  
   - [OCO-2](https://disc.gsfc.nasa.gov): Dados de concentração de
@@ -73,10 +72,31 @@ em formato HTML:
   - [NASA](https://climate.nasa.gov/): Dados climáticos  
   - [NASA-FIRMS](___): Dados de focos de incêndio  
 
-- [`01_faxina_tratamento_dados`](https://arpanosso.github.io//projeto-oliveiraphm//01_faxina_tratamento_dados.html)
-  – Faxina, filtragem e organização dos dados.  
+## 🧹 Faxina e tratamento [script](https://arpanosso.github.io//projeto-oliveiraphm//01_faxina_tratamento_dados.html)
 
-- [`02_preprocessamento`](https://arpanosso.github.io//projeto-oliveiraphm//02_preprocessamento.html)
-  – Preparação dos dados para análise.
+Nessa etapa foi realizada a faxina, filtragem e organização inicial dos
+dados. Os dados de concentração atmosférica de dióxido de carbono (XCO2)
+e metano (XCH4) foram devidamente processados e filtrados para o
+território brasileiro, incluindo:
 
-## 👉 [DOWNLOAD A BASE](https://drive.google.com/file/d/1EbGu6pI62J9fTxx2roxeRx6_WL4pZsbG/view?usp=drive_link)
+Filtro geográfico (apenas medições dentro do Brasil);  
+Controle de qualidade (baseado nos flags de qualidade dos dados
+originais);  
+Organização por regiões (Norte, Nordeste, Sudeste, Sul e Centro-Oeste);
+
+### 🔗 Links para Download dos dados processados:
+
+- 👉
+  [nasa-xco2.rds](https://drive.google.com/file/d/1kid1IDS-geePlg5q3jcz8nQ2i16YpRbv/view?usp=drive_link)
+- 👉
+  [gosat-xch4.rds](https://drive.google.com/file/d/1Rj-jcHOblEEb1ARMyJ1Jyfo4wCJnGliB/view?usp=drive_link)
+
+Formato dos arquivos:
+
+> .rds (formato nativo do R para rápido carregamento)
+
+> salve os arquivos na pasta `data` do seu projeto
+
+### 🛠️ Pré-processameto [script](https://arpanosso.github.io//projeto-oliveiraphm//02_preprocessamento.html)
+
+Preparação dos dados para análise.

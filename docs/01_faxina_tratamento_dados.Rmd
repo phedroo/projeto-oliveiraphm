@@ -163,7 +163,7 @@ file_batches  |>
   })
 ```
 
-Preparando ospolígonos geográficos das regiões brasileiras para análises espaciais, com um tratamento especial para ajustar os contornos.
+Preparando os polígonos geográficos das regiões brasileiras para análises espaciais, com um tratamento especial para ajustar os contornos.
 
 ```{r, eval = FALSE}
 regiao <- geobr::read_region(showProgress = FALSE)
@@ -262,6 +262,7 @@ br |>
                       alpha=0.2)
 ```
 
+### Faxina e Processamento de Dados de CH~4~ Atmosférico (XCH4) Gosat
 
 ```{r, eval = FALSE}
 # Faxina xCH4 -------------------------------------------------------------
