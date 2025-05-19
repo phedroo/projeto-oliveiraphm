@@ -60,17 +60,35 @@ em formato HTML:
 
 - **Aquisição e download dos dados brutos** **\[ATUALIZAR_PEDRO\]**
   - [GOSAT](https://data.ceda.ac.uk/neodc/gosat/data/ch4/nceov1.0/CH4_GOS_OCPR/):
-    Dados de concentração de CH<sub>4</sub> 2009-2021  
+    Dados de concentração de CH<sub>4</sub> 2009 a 2021  
   - [OCO-2](https://disc.gsfc.nasa.gov): Dados de concentração de
     XCO<sub>2</sub>
     (<https://disc.gsfc.nasa.gov/datasets/OCO2_L2_Lite_FP_11.2r/summary?keywords=OCO2>)
     e SIF (<a
     href="https://disc.gsfc.nasa.gov/datasets/OCO2_L2_Lite_SIF_11r/summary?keywords=OCO2\"
     class="uri">https://disc.gsfc.nasa.gov/datasets/OCO2_L2_Lite_SIF_11r/summary?keywords=OCO2\</a>
-  - [Climate TRACE](https://climatetrace.org/): Dados de emissões de
-    GEE  
+  - [Climate TRACE](https://climatetrace.org/): Dados de emissões de GEE
+    de 2015 a 2022  
+  - [AppEEARS](https://appeears.earthdatacloud.nasa.gov/task/point):
+    Variáveis climáticas e vegetativas  
   - [NASA](https://climate.nasa.gov/): Dados climáticos  
-  - [NASA-FIRMS](___): Dados de focos de incêndio  
+  - [NASA-FIRMS](https://firms.modaps.eosdis.nasa.gov): Dados de focos
+    de incêndio de 2015 to 2025  
+  - [BDQUEIMADAS](https://terrabrasilis.dpi.inpe.br/queimadas/bdqueimadas/#exportar-dados):
+    Dados de focos de incêndio de 2015 a 2025  
+  - [DETER](https://terrabrasilis.dpi.inpe.br/downloads/): Dados de
+    focos de fogo (cicatriz de queimadas)  
+  - [Programa Queimadas - INPE - Plataforma
+    Terrabrasilis](https://terrabrasilis.dpi.inpe.br/queimadas/portal/):
+    Dados de focos de queimadas x Supressão da vegetação nativa de
+    08/2018 a 01/2025 & Dados de focos de fogo ativo de 1998 a
+    21/01/2025  
+  - [Desmatamento - INPE - PRODES - Plataforma
+    Terrabrasilis](https://terrabrasilis.dpi.inpe.br/geonetwork/srv/eng/catalog.search#/metadata/fe02f2bf-2cc0-49d5-ab72-a3954f997408):
+    Dados sobre desmatamento de 31/07/2000 a 30/07/2023  
+  - [nasapower](https://power.larc.nasa.gov/): Variáveis climáticas
+    (Temperatura; precipitação; radiação solar; umidade relativa;
+    velocidade do vento e pressão) de 2015 a 2024  
 
 ## 🧹 Faxina e tratamento [script](https://arpanosso.github.io//projeto-oliveiraphm//01_faxina_tratamento_dados.html)
 
