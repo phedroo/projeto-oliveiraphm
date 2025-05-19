@@ -58,7 +58,8 @@ meio de dados de GOSAT, OCO-2 e Climate TRACE.
 Os scripts abaixo foram desenvolvidos em RMarkdown e estão disponíveis
 em formato HTML:
 
-- **Aquisição e download dos dados brutos** **\[ATUALIZAR_PEDRO\]**
+- **Aquisição e download dos dados brutos** **\[ATUALIZAR_PEDRO -
+  (ATUALIZEI ALAN 17/05)\]**
   - [GOSAT](https://data.ceda.ac.uk/neodc/gosat/data/ch4/nceov1.0/CH4_GOS_OCPR/):
     Dados de concentração de CH<sub>4</sub> 2009 a 2021  
   - [OCO-2](https://disc.gsfc.nasa.gov): Dados de concentração de
@@ -112,6 +113,8 @@ Organização por regiões (Norte, Nordeste, Sudeste, Sul e Centro-Oeste);
   [oco2-sif.rds](https://drive.google.com/file/d/1Y64vA2y1q_3kG3SIAKNO2DqyaL6WJC2A/view?usp=sharing)
 - 👉
   [appeears-modis.rds](https://drive.google.com/file/d/15bpg2r2_XSWveyWrFu6oumt79UUlxzJr/view?usp=sharing)
+- 👉
+  [emissions-sources.rds](https://drive.google.com/file/d/17erldRlIlTiB5sVtLWjsv4E--zZ3gmH-/view?usp=sharing)
 
 Formato dos arquivos:
 
