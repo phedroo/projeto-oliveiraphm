@@ -92,6 +92,8 @@ Organização por regiões (Norte, Nordeste, Sudeste, Sul e Centro-Oeste);
   [gosat-xch4.rds](https://drive.google.com/file/d/1Rj-jcHOblEEb1ARMyJ1Jyfo4wCJnGliB/view?usp=drive_link)
 - 👉
   [oco2-sif.rds](https://drive.google.com/file/d/1Y64vA2y1q_3kG3SIAKNO2DqyaL6WJC2A/view?usp=sharing)
+- 👉
+  [appeears-modis.rds](https://drive.google.com/file/d/15bpg2r2_XSWveyWrFu6oumt79UUlxzJr/view?usp=sharing)
 
 Formato dos arquivos:
 
