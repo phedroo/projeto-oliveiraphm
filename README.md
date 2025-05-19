@@ -115,6 +115,8 @@ Organização por regiões (Norte, Nordeste, Sudeste, Sul e Centro-Oeste);
   [appeears-modis.rds](https://drive.google.com/file/d/15bpg2r2_XSWveyWrFu6oumt79UUlxzJr/view?usp=sharing)
 - 👉
   [emissions-sources.rds](https://drive.google.com/file/d/17erldRlIlTiB5sVtLWjsv4E--zZ3gmH-/view?usp=sharing)
+- 👉
+  [nasa-power.rds](https://drive.google.com/file/d/13_PR3bQ9-ga_Wiv7jEv-GhYpAJwhmyTN/view?usp=sharing)
 
 Formato dos arquivos:
 

@@ -885,27 +885,11 @@ csv_files_list &lt;- list.files(&quot;../data-raw/AppEEARS/&quot;,
 # Empilhar arquivos 
 appeears_stack &lt;- purrr::map_dfr(csv_files_list, 
                            readr::read_csv)</code></pre>
-</div>
-<div id="selecinando-camadas-de-interesse" class="section level1">
-<h1>Selecinando camadas de interesse</h1>
-</div>
-<div id="renomeando-colunas" class="section level1">
-<h1>Renomeando colunas</h1>
-</div>
-<div id="extraindo-ano-das-datas-no-formato-yyyy-mm-dd" class="section level1">
-<h1>Extraindo ano das datas no formato YYYY-MM-DD</h1>
-</div>
-<div id="filtrando-para-nos-anos-que-serão-analisados" class="section level1">
-<h1>Filtrando para nos anos que serão analisados</h1>
-</div>
-<div id="agrupando" class="section level1">
-<h1>Agrupando</h1>
-</div>
-<div id="fazendo-a-média-das-variáveis-por-ano" class="section level1">
-<h1>Fazendo a média das variáveis por ano</h1>
-</div>
-<div id="ordenando-sequência-dos-anos" class="section level1">
-<h1>Ordenando sequência dos anos</h1>
+<p>Abaixo o vamos selecinar camadas de interesses, renomar colunas,
+extraindo o ano e o mês das datas no formato YYYY-MM-DD, filtrar para
+nos anos que serão analisados e agrupar por lat e lon. Após o
+agrupamento é calculado a média das variáveis numéricas por mês e
+ano.</p>
 <pre class="r"><code>appeears &lt;- appeears_stack |&gt; 
    dplyr::select(Latitude, Longitude, Date, MOD15A2H_061_Lai_500m, MOD15A2H_061_Fpar_500m, 
          MOD13Q1_061__250m_16_days_EVI, MOD13Q1_061__250m_16_days_NDVI, 
@@ -974,6 +958,156 @@ appeears |&gt;
 # 4° Baixar dados incorporados
 # write_rds(dados_incorporados, &#39;../data/ct+appeears.rds&#39;)
 # write.csv(dados_incorporados, &#39;data/ct+appeears.csv&#39;) # mais leve</code></pre>
+<div id="nasa-power" class="section level3">
+<h3>NASA-POWER</h3>
+<pre class="r"><code># Script adaptado de: &lt;https://github.com/lm-costa/curso-gp-01-aquisicao&gt;
+
+library(tidyverse)
+library(geobr)
+library(nasapower)
+library(sf)
+source(&#39;R/my-function.R&#39;)</code></pre>
+<pre class="r"><code># Lendo os estados brasileiros pelo pacote geobr
+estados_br &lt;- geobr::read_state(year = 2020, 
+                                showProgress = FALSE)
+
+# Filtrando estados de interesse (Centro-Oeste)
+estados &lt;- estados_br |&gt; filter(name_region == &#39;Centro Oeste&#39;)
+
+# Unindo polígono dos estados
+pol_estados &lt;- estados |&gt; st_union()
+
+# Criar grid de pontos
+grid_pontos &lt;- st_make_grid(pol_estados, 
+                            cellsize = 0.5, 
+                            what = &quot;centers&quot;) |&gt; 
+  st_as_sf()</code></pre>
+<pre class="r"><code># class(grid_pontos)
+# pontos_sf &lt;- st_as_sf(grid_pontos, wkt = &quot;x&quot;, crs = 4326)
+
+# Filtrar pontos dentro do Centro-Oeste
+pontos_filtro &lt;- grid_pontos[st_within(grid_pontos, 
+                                       pol_estados, 
+                                       sparse = FALSE), ]
+
+# Extrair coordenadas de cada ponto no grid
+coord &lt;- st_coordinates(pontos_filtro)
+
+# Gerando df com latitude e longitude
+df_coords &lt;- data.frame(lon = coord[,1], lat = coord[,2])
+
+# Conferindo pontos
+ggplot() +
+    geom_sf(data = pol_estados, fill = &quot;black&quot;, color = &quot;black&quot;) +
+    geom_point(data = df_coords, aes(x = lon, y = lat), color = &quot;red&quot;, size = 1.5) + 
+    theme_bw()</code></pre>
+<pre class="r"><code># Baixar dados nasa power
+for (i in 1:nrow(df_coords)) {
+  repeat {
+    dw &lt;- try(
+      power_data_download(df_coords$lon[i], df_coords$lat[i],
+                          startdate = &#39;2015-01-01&#39;,
+                          enddate = &#39;2024-01-01&#39;)
+    )
+    if (!(inherits(dw, &quot;try-error&quot;)))
+      break
+  }
+}</code></pre>
+<pre class="r"><code># Criar banco de dados com os arquivos baixados
+files_names &lt;- list.files(&quot;../data-raw/nasa-power/&quot;, 
+                          full.names = TRUE,
+                          pattern = &quot;.csv&quot;)
+
+df_final &lt;- purrr::map_dfr(files_names, read.csv)
+
+# Salvar o banco de dados final
+readr::write_rds(df_final |&gt; 
+                   janitor::clean_names(), 
+                 &#39;../data/nasa-power.rds&#39;)</code></pre>
+<pre class="r"><code># ------------------- RODAR ATÉ AQUI ----------------------------------
+
+
+#######################
+
+# Visualizar
+
+print(estados)
+
+# Extraindo latitude e longitude dos estados
+df_coords &lt;- estados %&gt;%
+  st_cast(&quot;MULTIPOLYGON&quot;) %&gt;% 
+  st_cast(&quot;POLYGON&quot;) %&gt;%       
+  st_cast(&quot;POINT&quot;) %&gt;%         
+  mutate(lon = st_coordinates(.)[,1],  # Extrai longitude
+         lat = st_coordinates(.)[,2])  # Extrai latitude
+
+# Gerando banco de dados com os dados extraídos
+
+readr::write_csv(df_coords, &#39;tpruvp/estados_coords.csv&#39;)
+
+# Carregar o banco de dados de coordenadas
+
+df &lt;- read.csv(&#39;tpruvp/estados_coords.csv&#39;) |&gt; select(lon,lat)
+
+
+# download dados precipitação
+
+for (i in 1:nrow(df)){
+  repeat{
+    dw &lt;- try(
+      power_data_download(df[i,1],df[i,2],
+                          startdate=&#39;2015-01-01&#39;,
+                          enddate = &#39;2025-01-01&#39;)
+    )
+    if (!(inherits(dw,&quot;try-error&quot;)))
+      break
+  }
+}
+
+
+### criação base de dados
+
+files_names &lt;- list.files(&#39;tpruvp/data-raw/&#39;,full.names = T)
+for (i in 1:length(files_names)){
+  if(i ==1){
+    df &lt;- read.csv(files_names[i])
+  }else{
+    df_a &lt;- read.csv(files_names[i])
+    df &lt;- rbind(df,df_a)
+  }
+}
+
+
+# readr::write_rds(df,&#39;precipitation/data/nasa_power_data.rds&#39;)
+
+# ----------------- RODAR ATÉ AQUI -------------
+
+
+
+
+###
+# Carregar pacotes necessários
+library(tidyverse)
+library(sf)
+library(geobr)
+library(nasapower)
+
+# Ler os estados do Brasil e filtrar apenas os do Centro-Oeste
+estados_br &lt;- geobr::read_state(year = 2020, showProgress = FALSE)
+centro_oeste &lt;- estados_br |&gt; filter(name_region == &#39;Centro Oeste&#39;)
+
+# Criar um único polígono que representa a região
+poligono_centro_oeste &lt;- centro_oeste |&gt; st_union()
+
+# Criar grid de pontos **somente dentro do Centro-Oeste**
+grid_pontos &lt;- st_make_grid(poligono_centro_oeste, cellsize = 0.5, what = &quot;centers&quot;) |&gt; 
+  st_as_sf()
+
+# Filtrar apenas os pontos dentro do polígono
+pontos_filtro &lt;- grid_pontos[st_within(grid_pontos, poligono_centro_oeste, sparse = FALSE), ]
+
+# Extrair coordenadas corretamente</code></pre>
+</div>
 </div>
 
 
