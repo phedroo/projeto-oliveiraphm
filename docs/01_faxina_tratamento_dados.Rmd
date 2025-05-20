@@ -1,5 +1,5 @@
 ---
-title: "Faxina e tratamento inicial dos dados"
+title: "Faxina e tratamento inicial"
 author: "Oliveria, PHM; Panosso, AR"
 date: "2025-05-07"
 output: html_document
@@ -44,18 +44,18 @@ def_pol <- function(x, y, pol){
 }
 ```
 
-Criação da **Função principal** para ler cada arquivo `.nc4` e extrair as variáveis essenciais:  
+Criação da **Função principal** para ler cada arquivo `.nc4` e extrair as variáveis essenciais:
 
-  +longitude, latitude: Coordenadas geográficas.
++longitude, latitude: Coordenadas geográficas.
 
-  +time: Carimbo de tempo da medição.
-  
-  +xco2: Concentração de CO₂ (partes por milhão - ppm).
++time: Carimbo de tempo da medição.
 
-  +xco2_quality_flag e xco2_incerteza: Indicadores de qualidade e incerteza das medições.
++xco2: Concentração de CO₂ (partes por milhão - ppm).
 
-  +Fechar a conexão com o arquivo após a leitura (`nc_close()`).
-  
++xco2_quality_flag e xco2_incerteza: Indicadores de qualidade e incerteza das medições.
+
++Fechar a conexão com o arquivo após a leitura (`nc_close()`).
+
 ```{r, eval = FALSE}
 ## função para ler arquivos NCD4
 ncdf_reader <- function(file_path){
@@ -76,7 +76,7 @@ ncdf_reader <- function(file_path){
 
 O código está processando um grande volume de arquivos NetCDF `(.nc4)` contendo dados de XCO2 e filtrando apenas as medições dentro da área geográfica de interesse do Brasil.
 
-Como os arquivos podem ser muitos (e grandes!), o processo deve ser dividido em etapas para: 
+Como os arquivos podem ser muitos (e grandes!), o processo deve ser dividido em etapas para:
 
 1-Evitar sobrecarregar a memória do R (lendo e processando em lotes).
 
@@ -126,8 +126,7 @@ dff <- dff |>
 dplyr::glimpse(dff)
 ```
 
-O processamento acima poderá ser realizado com:
-**1. Abordagem com purrr::map_df + Divisão Automática**
+O processamento acima poderá ser realizado com: **1. Abordagem com purrr::map_df + Divisão Automática**
 
 ```{r, eval = FALSE}
 library(purrr)
@@ -198,7 +197,6 @@ dff <- dff |>
   )
 ```
 
-
 ```{r, eval = FALSE}
 dff <- dff |>
   dplyr::filter(flag_br|flag_nordeste)
@@ -248,16 +246,15 @@ br |>
 
 ### Faxina e Processamento de Dados de CH~4~ Atmosférico (XCH4) Gosat
 
-Buscamos todos arquivos NetCDF (.nc) no diretório e subdiretórios da pasta `data-raw` e retorna caminhos completos para processamento. Posteriormente a função de leitura, semelhante à anterior  abre cada arquivo NetCD, extrai $7$ variáveis-chave para análise e fecha a conexão após leitura retornando um dataframe padronizado
+Buscamos todos arquivos NetCDF (.nc) no diretório e subdiretórios da pasta `data-raw` e retorna caminhos completos para processamento. Posteriormente a função de leitura, semelhante à anterior abre cada arquivo NetCD, extrai $7$ variáveis-chave para análise e fecha a conexão após leitura retornando um dataframe padronizado
 
 Variáveis extraídas:
 
-  + xch4: Concentração de metano (ppb)
+-   xch4: Concentração de metano (ppb)
 
-  + xch4_quality_flag: Indicador de qualidade
+-   xch4_quality_flag: Indicador de qualidade
 
-  + xch4_incerteza: Margem de erro das medições
-
+-   xch4_incerteza: Margem de erro das medições
 
 ```{r, eval = FALSE}
 ## Lista com caminho e nomes dos arquivo a serem lidos - xco2
@@ -283,7 +280,6 @@ ncdf_reader <- function(file_path){
   return(df)
 }
 ```
-
 
 **Processamento em Lote dos Dados**
 
@@ -335,7 +331,7 @@ dff <- dff |>
   )
 ```
 
-Extraímos os contornos das $5$ regiões do Brasil usando `{geobr}` e posteriormente ajustamos os polígonos para remover pontos a leste da longitude -34° (ilhas oceânicas) e corrigir distorções em áreas costeiras específicas. A saída é objeto `pol_br`, o polígono do Brasil ajustado e o `pol_nordeste`, o polígono do Nordeste ajustado.  
+Extraímos os contornos das $5$ regiões do Brasil usando `{geobr}` e posteriormente ajustamos os polígonos para remover pontos a leste da longitude -34° (ilhas oceânicas) e corrigir distorções em áreas costeiras específicas. A saída é objeto `pol_br`, o polígono do Brasil ajustado e o `pol_nordeste`, o polígono do Nordeste ajustado.
 
 ```{r, eval = FALSE}
 regiao <- geobr::read_region(showProgress = FALSE)
@@ -369,19 +365,20 @@ dff <- dff |>
   )
 ```
 
+Correções, - mantém apenas pontos dentro do Brasil (`flag_br`) ou Nordeste (`flag_nordeste`) removendo valores inválidos. Tratamento de Datas extrai informações temporais do caminho do arquivo:
 
-Correções, - mantém apenas pontos dentro do Brasil (`flag_br`) ou Nordeste (`flag_nordeste`) removendo valores inválidos. Tratamento de Datas extrai informações temporais do caminho do arquivo: 
-
-     - `date`: Data no formato `YYYY-MM-DD`  
-     - `year`/`month`/`day`: Componentes separados  
+```         
+ - `date`: Data no formato `YYYY-MM-DD`  
+ - `year`/`month`/`day`: Componentes separados  
+```
 
 Classificação por Estado pela função `get_geobr_state` para identificar o estado de cada coordenada resultado armazenado na coluna `state`.
 
-   - Salva o dataset processado como `gosat-xch4.rds`  
-   - Estrutura final inclui:  
-     - Dados de concentração de CH4 validados  
-     - Informações geográficas (coordenadas + estado)  
-     - Metadados temporais completos 
+-   Salva o dataset processado como `gosat-xch4.rds`\
+-   Estrutura final inclui:
+    -   Dados de concentração de CH4 validados\
+    -   Informações geográficas (coordenadas + estado)\
+    -   Metadados temporais completos
 
 ```{r, eval = FALSE}
 data_set <- dff |>
@@ -428,23 +425,27 @@ br |>
 
 ### Faxina e Processamento de Dados de SIF (*solar induced fluorescence*) OCO-2/NASA.
 
-1. **Conversão de Unidades e Datas**
-   - Converte XCO₂ para ppm (`xco2_moles_mole_1*1e06`)
-   - Extrai ano/mês/dia do timestamp
+1.  **Conversão de Unidades e Datas**
 
-2. **Cálculo de SIF**  
-   Combina medidas de fluorescência em 757nm e 771nm numa métrica única
+    -   Converte XCO₂ para ppm (`xco2_moles_mole_1*1e06`)
+    -   Extrai ano/mês/dia do timestamp
 
-3. **Filtro Geográfico**  
-   - Prepara polígonos das regiões brasileiras  
-   - Remove pontos oceânicos/distantes  
-   - Cria flags para Brasil (`flag_br`) e Nordeste (`flag_nordeste`)
+2.  **Cálculo de SIF**\
+    Combina medidas de fluorescência em 757nm e 771nm numa métrica única
 
-4. **Visualização Rápida**  
-   - Mapa com amostra de 1.000 pontos sobre o território brasileiro
+3.  **Filtro Geográfico**
 
-5. **Classificação por Estado**  
-   - Atribui cada ponto a um estado usando coordenadas
+    -   Prepara polígonos das regiões brasileiras\
+    -   Remove pontos oceânicos/distantes\
+    -   Cria flags para Brasil (`flag_br`) e Nordeste (`flag_nordeste`)
+
+4.  **Visualização Rápida**
+
+    -   Mapa com amostra de 1.000 pontos sobre o território brasileiro
+
+5.  **Classificação por Estado**
+
+    -   Atribui cada ponto a um estado usando coordenadas
 
 ```{r, eval=FALSE}
 dff <- fco2r::oco2_br |>
@@ -514,15 +515,13 @@ readr::write_rds(data_set,"../data/oco2-sif.rds")
 
 O **APPEEARS** (*Application for Extracting and Exploring Analysis Ready Samples*) é uma plataforma da **NASA** desenvolvida pela **Land Processes Distributed Active Archive Center (LP DAAC)** que facilita o acesso e o pré-processamento de dados de sensoriamento remoto, especialmente da coleção **MODIS** e outros produtos de observação da Terra.
 
-**Objetivo**  
-Este pipeline processa dados ecológicos do **MODIS** extraídos via **APPEEARS**, contendo métricas essenciais para monitoramento vegetativo:  
+**Objetivo**\
+Este pipeline processa dados ecológicos do **MODIS** extraídos via **APPEEARS**, contendo métricas essenciais para monitoramento vegetativo:
 
-**Variáveis Processadas**:  
-- **ET** (Evapotranspiração)
-- **EVI** (Enhanced Vegetation Index)  
-- **NDVI** (Normalized Difference Vegetation Index)  
-- **FPAR** (Fraction of Absorbed Photosynthetically Active Radiation)
-- **LAI** (Leaf Area Index)  
+**Variáveis Processadas**:\
+- **ET** (Evapotranspiração) - **EVI** (Enhanced Vegetation Index)\
+- **NDVI** (Normalized Difference Vegetation Index)\
+- **FPAR** (Fraction of Absorbed Photosynthetically Active Radiation) - **LAI** (Leaf Area Index)
 
 ```{r, eval=FALSE}
 # Carregar bibliotecas
@@ -539,7 +538,7 @@ appeears_stack <- purrr::map_dfr(csv_files_list,
                            readr::read_csv)
 ```
 
-Abaixo o vamos  selecinar camadas de interesses, renomar colunas, extraindo o ano e o mês das datas no formato YYYY-MM-DD, filtrar para nos anos que serão analisados e agrupar por lat e lon. Após o agrupamento é calculado a média das variáveis numéricas por mês e ano.
+Abaixo vamos selecionar camadas de interesses, renomear colunas, extraindo o ano e o mês das datas no formato YYYY-MM-DD, filtrar para nos anos que serão analisados e agrupar por lat e lon. Após o agrupamento é calculado a média das variáveis numéricas por mês e ano.
 
 ```{r, eval=FALSE}
 appeears <- appeears_stack |> 
@@ -575,7 +574,6 @@ dplyr::glimpse(appeears)
 # View(appeears)
 ```
 
-
 ```{r, eval=FALSE}
 # Verificacao de pontos Brasil Central
 
@@ -598,40 +596,22 @@ appeears |>
 # readr::write_rds(appeears, '../data/appeears-modis.rds')
 ```
 
-
-```{r}
-# Incorporar variáveis appeears na base de dados do Climate TRACE
-
-# 1° Ler dados CT
-# ct <- read_rds('../data/emissions_sources.rds')
-
-# 2° Ler arquivo "appeears" para incorporação aos dados CT
-# appeears <- read.csv('data/appeears.csv') # ja lido anteriormente
-
-# 3° Incorporando bases
-# dados_incorporados <- full_join(ct, appeears, by = c("lat", "lon")) 
-# full_join retorna todas as linahs de ambos os df
-# left_join retorna linhas do df esquerda, (NA para não correspondência direita)
-# right_join retorna linhas do df direita, (NA para não correspondência esquerda)
-# inner_join retorna apenas linhas correspondentes
-
-# 4° Baixar dados incorporados
-# write_rds(dados_incorporados, '../data/ct+appeears.rds')
-# write.csv(dados_incorporados, 'data/ct+appeears.csv') # mais leve
-```
-
 ### NASA-POWER
 
-```{r, eval=FALSE}
-# Script adaptado de: <https://github.com/lm-costa/curso-gp-01-aquisicao>
+Criação de um grid de pontos sobre a região Centro-Oeste do Brasil. É utilizado pacotes geográficos como `{geobr}` e `{sf}`. Usamdo o pacote `{geobr}`, que fornece shapefiles (polígonos) oficiais do IBGE.
 
-library(tidyverse)
-library(geobr)
-library(nasapower)
-library(sf)
-source('R/my-function.R')
-```
+`st_union()` une os polígonos dos estados em um único polígono (uma geometria só). Isso evita sobreposição ou múltiplas fronteiras internas.
 
+`st_make_grid()` cria uma grade (grid) de células retangulares ou quadradas. `cellsize = 0.5` define o tamanho das células (aqui: 0.5 graus de latitude/longitude). `what = "centers"` indica os centros dos quadrados, e não os quadrados em si.
+
+`st_as_sf()` converte os pontos em um sf (formato espacial).
+
+Esse tipo de grid é útil para:
+
+-   Amostragem espacial;\
+-   Modelagem de distribuição (e.g., interpolação);\
+-   Análises ambientais ou climáticas em pontos regulares;\
+-   Servir como base para extrair dados raster (NDVI, precipitação, etc.).
 
 ```{r, eval=FALSE}
 # Lendo os estados brasileiros pelo pacote geobr
@@ -639,48 +619,77 @@ estados_br <- geobr::read_state(year = 2020,
                                 showProgress = FALSE)
 
 # Filtrando estados de interesse (Centro-Oeste)
-estados <- estados_br |> filter(name_region == 'Centro Oeste')
+estados <- estados_br |> 
+  dplyr::filter(name_region == 'Centro Oeste')
 
 # Unindo polígono dos estados
-pol_estados <- estados |> st_union()
+pol_estados <- estados |> 
+  sf::st_union()
 
 # Criar grid de pontos
-grid_pontos <- st_make_grid(pol_estados, 
+grid_pontos <- sf::st_make_grid(pol_estados, 
                             cellsize = 0.5, 
                             what = "centers") |> 
-  st_as_sf()
+  sf::st_as_sf()
 ```
 
+filtro espacial dos pontos do grid, mantendo apenas os que estão dentro da região Centro-Oeste, e depois extrai as coordenadas (latitude e longitude) para visualização com `ggplot2`.
+
+`st_within(grid_pontos, pol_estados, sparse = FALSE)` cria uma matriz booleana dizendo quais pontos do grid estão dentro do polígono da região Centro-Oeste.
+
+`sparse = FALSE`: retorna uma matriz lógica completa (TRUE/FALSE), em vez de uma lista esparsa.
+
+`grid_pontos[...]`: usa essa matriz lógica para filtrar apenas os pontos `"TRUE"`, ou seja, os que estão dentro do polígono.
+
+`st_coordinates()` extrai as coordenadas X (longitude) e Y (latitude) dos objetos sf com geometria do tipo ponto.
+
+Pega a matriz coord e transforma em um data.frame com nomes amigáveis: lon (longitude), lat (latitude).
 
 ```{r, eval=FALSE}
-# class(grid_pontos)
-# pontos_sf <- st_as_sf(grid_pontos, wkt = "x", crs = 4326)
-
 # Filtrar pontos dentro do Centro-Oeste
-pontos_filtro <- grid_pontos[st_within(grid_pontos, 
+pontos_filtro <- grid_pontos[sf::st_within(grid_pontos, 
                                        pol_estados, 
-                                       sparse = FALSE), ]
+                                       sparse = FALSE),]
 
 # Extrair coordenadas de cada ponto no grid
-coord <- st_coordinates(pontos_filtro)
+coord <- sf::st_coordinates(pontos_filtro)
 
 # Gerando df com latitude e longitude
 df_coords <- data.frame(lon = coord[,1], lat = coord[,2])
 
 # Conferindo pontos
-ggplot() +
-    geom_sf(data = pol_estados, fill = "black", color = "black") +
-    geom_point(data = df_coords, aes(x = lon, y = lat), color = "red", size = 1.5) + 
-    theme_bw()
+ggplot2::ggplot() +
+    ggplot2::geom_sf(data = pol_estados, fill = "black", color = "black") +
+    ggplot2::geom_point(data = df_coords, ggplot2::aes(x = lon, y = lat), color = "red", size = 1.5) + 
+    ggplot2::theme_bw()
 ```
 
+agora vamos baixar dados climáticos para cada ponto do grid
+
+`try()` serve para tentar rodar um código que pode gerar erro, mas sem parar o script.
+
+`power_data_download()` é uma função do pacote `{nasapower}`, que baixa dados meteorológicos da NASA POWER API.
+
+`inherits(dw, "try-error")`: verifica se a tentativa anterior gerou erro.
+
+O `! (negação)` faz com que, se não houver erro, o laço repeat seja interrompido com break.
+
+Portanto para cada ponto `(i)` da grade de coordenadas:
+
+```         
+1-Tenta baixar os dados meteorológicos;
+
+2-Se der erro, tenta de novo (infinitamente, até funcionar);
+
+3-Se funcionar, sai do repeat e passa para o próximo ponto.
+```
 
 ```{r, eval=FALSE}
 # Baixar dados nasa power
 for (i in 1:nrow(df_coords)) {
   repeat {
     dw <- try(
-      power_data_download(df_coords$lon[i], df_coords$lat[i],
+      nasapower::power_data_download(df_coords$lon[i], df_coords$lat[i],
                           startdate = '2015-01-01',
                           enddate = '2024-01-01')
     )
@@ -690,6 +699,7 @@ for (i in 1:nrow(df_coords)) {
 }
 ```
 
+Agora vamos ler todos os `.csv` gerados pelo loop anterior (um por ponto), juntar tudo num único data frame, limpar os nomes das colunas e salvar como `.rds`.
 
 ```{r, eval=FALSE}
 # Criar banco de dados com os arquivos baixados
@@ -704,93 +714,3 @@ readr::write_rds(df_final |>
                    janitor::clean_names(), 
                  '../data/nasa-power.rds')
 ```
-
-
-```{r, eval=FALSE}
-# ------------------- RODAR ATÉ AQUI ----------------------------------
-
-
-#######################
-
-# Visualizar
-
-print(estados)
-
-# Extraindo latitude e longitude dos estados
-df_coords <- estados %>%
-  st_cast("MULTIPOLYGON") %>% 
-  st_cast("POLYGON") %>%       
-  st_cast("POINT") %>%         
-  mutate(lon = st_coordinates(.)[,1],  # Extrai longitude
-         lat = st_coordinates(.)[,2])  # Extrai latitude
-
-# Gerando banco de dados com os dados extraídos
-
-readr::write_csv(df_coords, 'tpruvp/estados_coords.csv')
-
-# Carregar o banco de dados de coordenadas
-
-df <- read.csv('tpruvp/estados_coords.csv') |> select(lon,lat)
-
-
-# download dados precipitação
-
-for (i in 1:nrow(df)){
-  repeat{
-    dw <- try(
-      power_data_download(df[i,1],df[i,2],
-                          startdate='2015-01-01',
-                          enddate = '2025-01-01')
-    )
-    if (!(inherits(dw,"try-error")))
-      break
-  }
-}
-
-
-### criação base de dados
-
-files_names <- list.files('tpruvp/data-raw/',full.names = T)
-for (i in 1:length(files_names)){
-  if(i ==1){
-    df <- read.csv(files_names[i])
-  }else{
-    df_a <- read.csv(files_names[i])
-    df <- rbind(df,df_a)
-  }
-}
-
-
-# readr::write_rds(df,'precipitation/data/nasa_power_data.rds')
-
-# ----------------- RODAR ATÉ AQUI -------------
-
-
-
-
-###
-# Carregar pacotes necessários
-library(tidyverse)
-library(sf)
-library(geobr)
-library(nasapower)
-
-# Ler os estados do Brasil e filtrar apenas os do Centro-Oeste
-estados_br <- geobr::read_state(year = 2020, showProgress = FALSE)
-centro_oeste <- estados_br |> filter(name_region == 'Centro Oeste')
-
-# Criar um único polígono que representa a região
-poligono_centro_oeste <- centro_oeste |> st_union()
-
-# Criar grid de pontos **somente dentro do Centro-Oeste**
-grid_pontos <- st_make_grid(poligono_centro_oeste, cellsize = 0.5, what = "centers") |> 
-  st_as_sf()
-
-# Filtrar apenas os pontos dentro do polígono
-pontos_filtro <- grid_pontos[st_within(grid_pontos, poligono_centro_oeste, sparse = FALSE), ]
-
-# Extrair coordenadas corretamente
-
-
-```
-
