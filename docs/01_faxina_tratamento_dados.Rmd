@@ -714,3 +714,127 @@ readr::write_rds(df_final |>
                    janitor::clean_names(), 
                  '../data/nasa-power.rds')
 ```
+
+## desmat_prodes
+
+```{r, eval=FALSE}
+library(terra)
+library(raster)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(geobr)
+library(sf)
+
+# Carregar raster
+r <- rast("../data-raw/desmat_prodes/prodes_br_2023.tif")   #colocar o caminho do arquivo raster
+```
+
+Criar subconjunto (subset) do raster para Brasil Central
+
+```{r, eval=FALSE}
+# Limites dos estados de interesse
+estados <- read_state(year = 2020, 
+                      code_state = "all", showProgress = FALSE)|> 
+  filter(abbrev_state %in% c("MT", "MS", "GO"))
+
+# Converter para o mesmo sistema de coordenadas do raster
+estados <- st_transform(estados, crs(r))
+
+
+# Criar o subset
+r_brcentral <- crop(r, estados, mask=T)
+
+plot(r_brcentral)
+
+# Salvar
+# writeRaster(subset, "data-raw/subsetbrcentral")
+```
+
+
+```{r, eval=FALSE}
+legenda <- data.frame(
+  valor = c(0, 2, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 
+            18, 19, 20,21, 22, 23,50, 51, 52, 53, 54, 55, 56, 57, 
+            58, 59, 60, 61, 62, 63,91, 99, 100, 101),
+  classe = c("d2000", "d2002", "d2004", "d2006", "d2007", "d2008", "d2009",
+             "d2010", "d2011", "d2012", "d2013", "d2014", "d2015", "d2016",
+             "d2017", "d2018", "d2019", "d2020", "d2021", "d2022", "d2023",
+             "r2010", "r2011", "r2012", "r2013", "r2014", "r2015", "r2016",
+             "r2017", "r2018", "r2019", "r2020", "r2021", "r2022", "r2023",
+             "H", "C", "V", "N")
+)
+
+## h = hidrologia; c = nuvem; v = vegetação nativa e n = não vegetada
+
+r_central_Class <- r_brcentral
+
+levels(r_central_Class) <- legenda
+
+r_central_Class |> is.factor()
+
+```
+
+```{r, eval=FALSE}
+plot(r_central_Class)
+```
+
+
+```{r, eval=FALSE}
+df <- r_central_Class |> 
+  freq() |> 
+  as_tibble() |> 
+  mutate(
+    area_Mha = ((count*30^2)*1e-4)/1e6,
+    ano = stringr::str_sub(value,start=2,end=5),
+    classe = stringr::str_sub(value,start=1,end=1),
+    classe= case_when(
+      classe == "d"~"Desmatamento",
+      classe == "r"~"Reflorestamento",
+      classe=="H"~"Hidrografia",
+      classe=="C"~"Nuvem",
+      classe=="V"~"Vegetação Nativa",
+      classe=="N"~"Não Vegetada",
+      .default = "Não Observada"
+    )
+  )
+
+```
+
+
+```{r, eval=FALSE}
+df |> 
+  filter(classe=="Desmatamento") |> 
+  ggplot(aes(x=as.numeric(ano),y=area_Mha))+
+  geom_col()+
+  labs(y="Area Desmatada (M ha)",
+       x='')
+
+
+df |> 
+  filter(classe=="Desmatamento") |> 
+  mutate(
+    area_acumulada = cumsum(area_Mha)
+  ) |> 
+  ggplot(aes(x=as.numeric(ano),y=area_acumulada))+
+  geom_col()+
+  labs(y="Area Desmatada Acumulada (M ha)",
+       x="")
+
+write_rds(df, "../data/prodes_brc.rds")
+```
+
+```{r, eval=FALSE}
+categorias <- levels(r_central_Class)[[1]]$classe
+lvls <- levels(r_central_Class)[[1]]
+
+dcat <- grep("^d",categorias,value=T)
+dcod <- lvls[lvls$classe %in% dcat, "classe"]
+
+desma_raster <- ifel(r_central_Class %in% dcod, r_central_Class,NA)
+```
+
+
+```{r, eval=FALSE}
+plot(desma_raster |> sum())
+```
