@@ -1,0 +1,134 @@
+---
+output: html_document
+---
+
+```{r setup, include=FALSE, eval = FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      message = FALSE,
+                      warning = FALSE,
+                      error = FALSE,
+                      collapse = TRUE,
+                      comment = "#>")
+source("../R/my-function.R")
+```
+
+### Faxina dos dados adiquiridos a partir do NASA-POWER
+
+Criação de um grid de pontos sobre a região Centro-Oeste do Brasil. É utilizado pacotes geográficos como `{geobr}` e `{sf}`. Usamdo o pacote `{geobr}`, que fornece shapefiles (polígonos) oficiais do IBGE.
+
+`st_union()` une os polígonos dos estados em um único polígono (uma geometria só). Isso evita sobreposição ou múltiplas fronteiras internas.
+
+`st_make_grid()` cria uma grade (grid) de células retangulares ou quadradas. `cellsize = 0.5` define o tamanho das células (aqui: 0.5 graus de latitude/longitude). `what = "centers"` indica os centros dos quadrados, e não os quadrados em si.
+
+`st_as_sf()` converte os pontos em um sf (formato espacial).
+
+Esse tipo de grid é útil para:
+
+-   Amostragem espacial;\
+-   Modelagem de distribuição (e.g., interpolação);\
+-   Análises ambientais ou climáticas em pontos regulares;\
+-   Servir como base para extrair dados raster (NDVI, precipitação, etc.).
+
+```{r, eval=FALSE}
+# Lendo os estados brasileiros pelo pacote geobr
+estados_br <- geobr::read_state(year = 2020, 
+                                showProgress = FALSE)
+
+# Filtrando estados de interesse (Centro-Oeste)
+estados <- estados_br |> 
+  dplyr::filter(name_region == 'Centro Oeste')
+
+# Unindo polígono dos estados
+pol_estados <- estados |> 
+  sf::st_union()
+
+# Criar grid de pontos
+grid_pontos <- sf::st_make_grid(pol_estados, 
+                            cellsize = 0.5, 
+                            what = "centers") |> 
+  sf::st_as_sf()
+```
+
+filtro espacial dos pontos do grid, mantendo apenas os que estão dentro da região Centro-Oeste, e depois extrai as coordenadas (latitude e longitude) para visualização com `ggplot2`.
+
+`st_within(grid_pontos, pol_estados, sparse = FALSE)` cria uma matriz booleana dizendo quais pontos do grid estão dentro do polígono da região Centro-Oeste.
+
+`sparse = FALSE`: retorna uma matriz lógica completa (TRUE/FALSE), em vez de uma lista esparsa.
+
+`grid_pontos[...]`: usa essa matriz lógica para filtrar apenas os pontos `"TRUE"`, ou seja, os que estão dentro do polígono.
+
+`st_coordinates()` extrai as coordenadas X (longitude) e Y (latitude) dos objetos sf com geometria do tipo ponto.
+
+Pega a matriz coord e transforma em um data.frame com nomes amigáveis: lon (longitude), lat (latitude).
+
+```{r, eval=FALSE}
+# Filtrar pontos dentro do Centro-Oeste
+pontos_filtro <- grid_pontos[sf::st_within(grid_pontos, 
+                                       pol_estados, 
+                                       sparse = FALSE),]
+
+# Extrair coordenadas de cada ponto no grid
+coord <- sf::st_coordinates(pontos_filtro)
+
+# Gerando df com latitude e longitude
+df_coords <- data.frame(lon = coord[,1], lat = coord[,2])
+
+# Conferindo pontos
+ggplot2::ggplot() +
+    ggplot2::geom_sf(data = pol_estados, fill = "black", color = "black") +
+    ggplot2::geom_point(data = df_coords, ggplot2::aes(x = lon, y = lat), color = "red", size = 1.5) + 
+    ggplot2::theme_bw()
+```
+
+agora vamos baixar dados climáticos para cada ponto do grid
+
+`try()` serve para tentar rodar um código que pode gerar erro, mas sem parar o script.
+
+`power_data_download()` é uma função do pacote `{nasapower}`, que baixa dados meteorológicos da NASA POWER API.
+
+`inherits(dw, "try-error")`: verifica se a tentativa anterior gerou erro.
+
+O `! (negação)` faz com que, se não houver erro, o laço repeat seja interrompido com break.
+
+Portanto para cada ponto `(i)` da grade de coordenadas:
+
+```         
+1-Tenta baixar os dados meteorológicos;
+
+2-Se der erro, tenta de novo (infinitamente, até funcionar);
+
+3-Se funcionar, sai do repeat e passa para o próximo ponto.
+```
+
+```{r, eval=FALSE}
+# Baixar dados nasa power
+for (i in 1:nrow(df_coords)) {
+  repeat {
+    dw <- try(
+      nasapower::power_data_download(df_coords$lon[i], df_coords$lat[i],
+                          startdate = '2015-01-01',
+                          enddate = '2024-01-01')
+    )
+    if (!(inherits(dw, "try-error")))
+      break
+  }
+}
+```
+
+Agora vamos ler todos os `.csv` gerados pelo loop anterior (um por ponto), juntar tudo num único data frame, limpar os nomes das colunas e salvar como `.rds`.
+
+```{r, eval=FALSE}
+# Criar banco de dados com os arquivos baixados
+files_names <- list.files("../data-raw/nasa-power/", 
+                          full.names = TRUE,
+                          pattern = ".csv")
+
+df_final <- purrr::map_dfr(files_names, read.csv)
+
+# Salvar o banco de dados final
+readr::write_rds(df_final |> 
+                   janitor::clean_names(), 
+                 '../data/nasa-power.rds')
+```
+
+

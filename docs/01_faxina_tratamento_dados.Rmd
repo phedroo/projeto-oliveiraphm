@@ -715,7 +715,7 @@ readr::write_rds(df_final |>
                  '../data/nasa-power.rds')
 ```
 
-## desmat_prodes
+## Faxina dos dados de desmatamento do prodes
 
 ```{r, eval=FALSE}
 library(terra)
@@ -725,9 +725,9 @@ library(ggplot2)
 library(tidyr)
 library(geobr)
 library(sf)
-
+library(readr)
 # Carregar raster
-r <- rast("../data-raw/desmat_prodes/prodes_br_2023.tif")   #colocar o caminho do arquivo raster
+r <- rast("../data-raw/desmat-prodes/prodes_brasil_2023.tif")   #colocar o caminho do arquivo raster
 ```
 
 Criar subconjunto (subset) do raster para Brasil Central
@@ -821,7 +821,7 @@ df |>
   labs(y="Area Desmatada Acumulada (M ha)",
        x="")
 
-write_rds(df, "../data/prodes_brc.rds")
+write_rds(df, "../data/prodes-brc.rds")
 ```
 
 ```{r, eval=FALSE}
