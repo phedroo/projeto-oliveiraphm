@@ -13,19 +13,20 @@ variáveis associadas ao sistema solo-planta-atmosfera. Nesse contexto,
 diversos esforços têm sido realizados para aprimorar as técnicas de
 monitoramento de GEE em escala global e regional. Esta proposta tem como
 objetivo descrever a variabilidade espaçotemporal das concentrações
-atmosféricas de CO2 e CH4 em áreas do Brasil Central, identificando
-fontes e possíveis sumidouros desses gases ao longo dos anos de 2015 a
-2023. Serão adquiridos dados das concentrações atmosféricas de
-CO<sub>2</sub> (XCO2) e CH<sub>4</sub> (XCH4) a partir dos sensores
-orbitais GOSAT e OCO-2. Em adição, dados das variáveis climáticas serão
-obtidos na plataforma da Agência Espacial Americana (NASA). Para todos
-os setores emissores de GEE, os dados serão obtidos a partir dos
-relatórios da plataforma Climate TRACE, coalizão sem fins lucrativos
-capaz de rastrear e fornecer informações sobre as emissões de GEE
-globalmente. A aquisição dos dados será sistematizada para redução das
-diferenças entre as resoluções espaciais dos dados de sensoriamento
-remoto, com posterior remoção da tendência mundial de XCO2 e XCH4. Para
-exploração dos dados adquiridos, serão utilizadas técnicas exploratórias
+atmosféricas de CO<sub>2</sub> e CH<sub>4</sub> em áreas do Brasil
+Central, identificando fontes e possíveis sumidouros desses gases ao
+longo dos anos de 2015 a 2023. Serão adquiridos dados das concentrações
+atmosféricas de CO<sub>2</sub> (X<sub>CO2</sub>) e CH<sub>4</sub>
+(X<sub>CH4</sub>) a partir dos sensores orbitais GOSAT e OCO-2. Em
+adição, dados das variáveis climáticas serão obtidos na plataforma da
+Agência Espacial Americana (NASA). Para todos os setores emissores de
+GEE, os dados serão obtidos a partir dos relatórios da plataforma
+Climate TRACE, coalizão sem fins lucrativos capaz de rastrear e fornecer
+informações sobre as emissões de GEE globalmente. A aquisição dos dados
+será sistematizada para redução das diferenças entre as resoluções
+espaciais dos dados de sensoriamento remoto, com posterior remoção da
+tendência mundial de X<sub>CO2</sub> e X<sub>CH4</sub>. Para exploração
+dos dados adquiridos, serão utilizadas técnicas exploratórias
 multivariadas e análise geoestatística, implementadas em linguagem R. A
 interrelação entre as variáveis analisadas será descrita por de
 reconhecimento de padrão, que incluíram análises de agrupamento
@@ -38,10 +39,11 @@ públicas voltadas para a mitigação das emissões de GEE e,
 principalmente, a adaptação às mudanças climáticas.
 
 **Objetivo**: Analisar a variabilidade espaçotemporal das concentrações
-atmosféricas de CO2 e CH4 em áreas do Brasil Central, identificando
-fontes e possíveis sumidouros desses gases ao longo dos anos de 2015 a
-2023, bem como suas relações com índices vegetativos e climáticos, por
-meio de dados de GOSAT, OCO-2 e Climate TRACE.
+atmosféricas de CO<sub>2</sub> e CH<sub>4</sub> em áreas do Brasil
+Central, identificando fontes e possíveis sumidouros desses gases ao
+longo dos anos de 2015 a 2023, bem como suas relações com índices
+vegetativos e climáticos, por meio de dados de GOSAT, OCO-2 e Climate
+TRACE.
 
 ## 👨‍🔬 Autores
 
@@ -58,8 +60,7 @@ meio de dados de GOSAT, OCO-2 e Climate TRACE.
 Os scripts abaixo foram desenvolvidos em RMarkdown e estão disponíveis
 em formato HTML:
 
-- **Aquisição e download dos dados brutos** **\[ATUALIZAR_PEDRO -
-  (ATUALIZEI ALAN 17/05)\]**
+- **Aquisição e download dos dados brutos**
   - [GOSAT](https://data.ceda.ac.uk/neodc/gosat/data/ch4/nceov1.0/CH4_GOS_OCPR/):
     Dados de concentração de CH<sub>4</sub> 2009 a 2021  
   - [OCO-2](https://disc.gsfc.nasa.gov): Dados de concentração de
@@ -91,7 +92,7 @@ em formato HTML:
     (Temperatura; precipitação; radiação solar; umidade relativa;
     velocidade do vento e pressão) de 2015 a 2024  
 
-## 🧹 Faxina e tratamento [script](https://arpanosso.github.io//projeto-oliveiraphm//01_faxina_tratamento_dados.html)
+## 🧹 Faxina e Tratamento [script_geral](https://arpanosso.github.io//projeto-oliveiraphm//01_faxina_tratamento_dados.html)
 
 Nessa etapa foi realizada a faxina, filtragem e organização inicial dos
 dados. Os dados de concentração atmosférica de dióxido de carbono (XCO2)
@@ -103,20 +104,16 @@ Controle de qualidade (baseado nos flags de qualidade dos dados
 originais);  
 Organização por regiões (Norte, Nordeste, Sudeste, Sul e Centro-Oeste);
 
-### 🔗 Links para Download dos dados processados:
+### 🔗 Scripts de tratamentos e Links para Download dos dados processados:
 
-- 👉
-  [nasa-xco2.rds](https://drive.google.com/file/d/1kid1IDS-geePlg5q3jcz8nQ2i16YpRbv/view?usp=drive_link)
-- 👉
-  [gosat-xch4.rds](https://drive.google.com/file/d/1Rj-jcHOblEEb1ARMyJ1Jyfo4wCJnGliB/view?usp=drive_link)
-- 👉
-  [oco2-sif.rds](https://drive.google.com/file/d/1Y64vA2y1q_3kG3SIAKNO2DqyaL6WJC2A/view?usp=sharing)
-- 👉
-  [appeears-modis.rds](https://drive.google.com/file/d/15bpg2r2_XSWveyWrFu6oumt79UUlxzJr/view?usp=sharing)
-- 👉
-  [emissions-sources.rds](https://drive.google.com/file/d/17erldRlIlTiB5sVtLWjsv4E--zZ3gmH-/view?usp=sharing)
-- 👉
-  [nasa-power.rds](https://drive.google.com/file/d/13_PR3bQ9-ga_Wiv7jEv-GhYpAJwhmyTN/view?usp=sharing)
+| Script de Tratamento | Dados Processados |
+|:--:|:--:|
+| [nasa-xco2.R](https://arpanosso.github.io//projeto-oliveiraphm//nasa-xco2.html) | ⬇️ [nasa-xco2.rds](https://drive.google.com/file/d/1kid1IDS-geePlg5q3jcz8nQ2i16YpRbv/view?usp=drive_link) |
+| [gosat-xch4.R]() | ⬇️ [gosat-xch4.rds](https://drive.google.com/file/d/1Rj-jcHOblEEb1ARMyJ1Jyfo4wCJnGliB/view?usp=drive_link) |
+| [oco2-sif.R]() | ⬇️ [oco2-sif.rds](https://drive.google.com/file/d/1Y64vA2y1q_3kG3SIAKNO2DqyaL6WJC2A/view?usp=sharing) |
+| [appeears-modis.R]() | ⬇️ [appeears-modis.rds](https://drive.google.com/file/d/15bpg2r2_XSWveyWrFu6oumt79UUlxzJr/view?usp=sharing) |
+| [emissions-sources.R]() | ⬇️ [emissions-sources.rds](https://drive.google.com/file/d/17erldRlIlTiB5sVtLWjsv4E--zZ3gmH-/view?usp=sharing) |
+| [asa-power.R]() | ⬇️ [nasa-power.rds](https://drive.google.com/file/d/13_PR3bQ9-ga_Wiv7jEv-GhYpAJwhmyTN/view?usp=sharing) |
 
 Formato dos arquivos:
 
