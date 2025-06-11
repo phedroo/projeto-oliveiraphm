@@ -1062,97 +1062,43 @@ readr::write_rds(df_final |&gt;
 </div>
 <div id="faxina-dos-dados-de-desmatamento-do-prodes" class="section level2">
 <h2>Faxina dos dados de desmatamento do prodes</h2>
-<pre class="r"><code>library(terra)
-library(raster)
-library(dplyr)
-library(ggplot2)
-library(tidyr)
+<div id="carregando-bibliotecas" class="section level3">
+<h3>Carregando bibliotecas</h3>
+<pre class="r"><code>library(tidyverse)
+library(terra)
 library(geobr)
+library(dplyr)
 library(sf)
-library(readr)
-# Carregar raster
-r &lt;- rast(&quot;../data-raw/desmat-prodes/prodes_brasil_2023.tif&quot;)   #colocar o caminho do arquivo raster</code></pre>
-<p>Criar subconjunto (subset) do raster para Brasil Central</p>
-<pre class="r"><code># Limites dos estados de interesse
-estados &lt;- read_state(year = 2020, 
-                      code_state = &quot;all&quot;, showProgress = FALSE)|&gt; 
-  filter(abbrev_state %in% c(&quot;MT&quot;, &quot;MS&quot;, &quot;GO&quot;))
+library(tmap)  # ou ggplot2</code></pre>
+<div id="carregando-raster-.tiff" class="section level4">
+<h4>Carregando raster (.tiff)</h4>
+<pre class="r"><code>raster &lt;- rast(&quot;../data-raw/desmat-prodes/prodes_brasil_2023.tif&quot;)
 
-# Converter para o mesmo sistema de coordenadas do raster
-estados &lt;- st_transform(estados, crs(r))
+estados_estudados &lt;- c(&quot;MT&quot;,&quot;MS&quot;,&quot;GO&quot;,&quot;DF&quot;)
+municipality &lt;- read_municipality(showProgress = FALSE)
 
-
-# Criar o subset
-r_brcentral &lt;- crop(r, estados, mask=T)
-
-plot(r_brcentral)
-
-# Salvar
-# writeRaster(subset, &quot;data-raw/subsetbrcentral&quot;)</code></pre>
-<pre class="r"><code>legenda &lt;- data.frame(
-  valor = c(0, 2, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 
-            18, 19, 20,21, 22, 23,50, 51, 52, 53, 54, 55, 56, 57, 
-            58, 59, 60, 61, 62, 63,91, 99, 100, 101),
-  classe = c(&quot;d2000&quot;, &quot;d2002&quot;, &quot;d2004&quot;, &quot;d2006&quot;, &quot;d2007&quot;, &quot;d2008&quot;, &quot;d2009&quot;,
-             &quot;d2010&quot;, &quot;d2011&quot;, &quot;d2012&quot;, &quot;d2013&quot;, &quot;d2014&quot;, &quot;d2015&quot;, &quot;d2016&quot;,
-             &quot;d2017&quot;, &quot;d2018&quot;, &quot;d2019&quot;, &quot;d2020&quot;, &quot;d2021&quot;, &quot;d2022&quot;, &quot;d2023&quot;,
-             &quot;r2010&quot;, &quot;r2011&quot;, &quot;r2012&quot;, &quot;r2013&quot;, &quot;r2014&quot;, &quot;r2015&quot;, &quot;r2016&quot;,
-             &quot;r2017&quot;, &quot;r2018&quot;, &quot;r2019&quot;, &quot;r2020&quot;, &quot;r2021&quot;, &quot;r2022&quot;, &quot;r2023&quot;,
-             &quot;H&quot;, &quot;C&quot;, &quot;V&quot;, &quot;N&quot;)
-)
-
-## h = hidrologia; c = nuvem; v = vegetação nativa e n = não vegetada
-
-r_central_Class &lt;- r_brcentral
-
-levels(r_central_Class) &lt;- legenda
-
-r_central_Class |&gt; is.factor()</code></pre>
-<pre class="r"><code>plot(r_central_Class)</code></pre>
-<pre class="r"><code>df &lt;- r_central_Class |&gt; 
-  freq() |&gt; 
-  as_tibble() |&gt; 
-  mutate(
-    area_Mha = ((count*30^2)*1e-4)/1e6,
-    ano = stringr::str_sub(value,start=2,end=5),
-    classe = stringr::str_sub(value,start=1,end=1),
-    classe= case_when(
-      classe == &quot;d&quot;~&quot;Desmatamento&quot;,
-      classe == &quot;r&quot;~&quot;Reflorestamento&quot;,
-      classe==&quot;H&quot;~&quot;Hidrografia&quot;,
-      classe==&quot;C&quot;~&quot;Nuvem&quot;,
-      classe==&quot;V&quot;~&quot;Vegetação Nativa&quot;,
-      classe==&quot;N&quot;~&quot;Não Vegetada&quot;,
-      .default = &quot;Não Observada&quot;
-    )
-  )</code></pre>
-<pre class="r"><code>df |&gt; 
-  filter(classe==&quot;Desmatamento&quot;) |&gt; 
-  ggplot(aes(x=as.numeric(ano),y=area_Mha))+
-  geom_col()+
-  labs(y=&quot;Area Desmatada (M ha)&quot;,
-       x=&#39;&#39;)
-
-
-df |&gt; 
-  filter(classe==&quot;Desmatamento&quot;) |&gt; 
-  mutate(
-    area_acumulada = cumsum(area_Mha)
-  ) |&gt; 
-  ggplot(aes(x=as.numeric(ano),y=area_acumulada))+
-  geom_col()+
-  labs(y=&quot;Area Desmatada Acumulada (M ha)&quot;,
-       x=&quot;&quot;)
-
-write_rds(df, &quot;../data/prodes-brc.rds&quot;)</code></pre>
-<pre class="r"><code>categorias &lt;- levels(r_central_Class)[[1]]$classe
-lvls &lt;- levels(r_central_Class)[[1]]
-
-dcat &lt;- grep(&quot;^d&quot;,categorias,value=T)
-dcod &lt;- lvls[lvls$classe %in% dcat, &quot;classe&quot;]
-
-desma_raster &lt;- ifel(r_central_Class %in% dcod, r_central_Class,NA)</code></pre>
-<pre class="r"><code>plot(desma_raster |&gt; sum())</code></pre>
+estado_x_mun_y &lt;- municipality |&gt; 
+  filter(abbrev_state %in% estados_estudados) </code></pre>
+<pre class="r"><code>codigo &lt;- 15:22
+get_my_coord &lt;- function(x){
+  muni_y &lt;- st_transform(estado_x_mun_y, crs(raster))
+  raster_muni_y &lt;- crop(raster, muni_y, mask = TRUE)
+  raster_2020 &lt;- raster_muni_y == x
+  raster_2020[raster_2020 == 1] &lt;- x # ENTENDER O QUE OCORRE
+  # names(raster_2020) &lt;- &quot;Desmatamento_2020&quot;
+  idx &lt;- which(raster_muni_y[] == x)  # índice dos pixels com valor 22
+  coords &lt;- xyFromCell(raster_muni_y, idx)  # coordenadas dos pixels
+  as.data.frame(coords) |&gt;   # data.frame com x (lon) e y (lat)
+    add_column(categorie = x,
+               muni = muni_y$name_muni,
+               state = muni_y$abbrev_state)
+    }
+df_final &lt;- map_df(codigo[1],get_my_coord)</code></pre>
+<pre class="r"><code>df_final |&gt; 
+  ggplot(aes(x,y,color = as_factor(categorie))) +
+  geom_point()</code></pre>
+</div>
+</div>
 </div>
 
 
