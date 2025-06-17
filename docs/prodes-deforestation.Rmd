@@ -1,0 +1,75 @@
+
+## Faxina dos dados de desmatamento do prodes
+
+### Carregando bibliotecas
+
+```{r, eval=FALSE}
+library(tidyverse)
+library(terra)
+library(geobr)
+library(dplyr)
+library(sf)
+library(tmap)  # ou ggplot2
+```
+
+#### Carregando raster (.tiff)
+
+```{r, eval=FALSE}
+raster <- rast("../data-raw/desmat-prodes/prodes_brasil_2023.tif")
+str(raster)
+estados_estudados <- c("MT","MS","GO","DF")
+municipality <- read_municipality(showProgress = FALSE)
+raster::plot(raster)
+```
+
+```{r, eval=FALSE}
+categotia <- 15:22
+cod_muni <- 1:nrow(estado_x_mun_y)
+comb <- expand.grid(categotia,cod_muni, sep = " ")
+codigo <- paste(comb$Var1, comb$Var2)
+get_my_coord <- function(x){
+  x_cat <- str_split(x," ",simplify = TRUE)[1,1] |> as.numeric()
+  y_muni <- str_split(x," ",simplify = TRUE)[1,2] |> as.numeric()
+  estado_x_mun_y <- municipality |> 
+    filter(abbrev_state %in% estados_estudados) |> 
+    slice(y_muni)
+  muni_y <- st_transform(estado_x_mun_y, crs(raster))
+  raster_muni_y <- crop(raster, muni_y, mask = TRUE)
+  raster_2020 <- raster_muni_y == x_cat
+  raster_2020[raster_2020 == 1] <- x_cat # ENTENDER O QUE OCORRE
+  idx <- which(raster_muni_y[] == x_cat)
+  coords <- xyFromCell(raster_muni_y, idx)  
+  df <- as.data.frame(coords) |>
+    add_column(categorie = x_cat,
+               muni = muni_y$name_muni,
+               state = muni_y$abbrev_state) 
+    write_rds(df, paste0("../data-raw/prodes-bad-alloc/",
+                   muni_y$name_muni,"-",
+                   muni_y$abbrev_state,"-",
+                   x,".rds"
+                   ))
+    }
+# invisible(map(codigo,get_my_coord))
+```
+
+```{r, eval=FALSE}
+lista <- list.files("../data-raw/prodes-bad-alloc/",
+           full.names=TRUE)
+prodes <- purrr::map_df(lista,readr::read_rds)
+glimpse(prodes)
+write_rds(prodes,"../data/prodes-deforestation.rds")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+

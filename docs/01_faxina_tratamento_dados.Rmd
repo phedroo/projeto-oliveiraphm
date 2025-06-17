@@ -733,37 +733,60 @@ library(tmap)  # ou ggplot2
 
 ```{r, eval=FALSE}
 raster <- rast("../data-raw/desmat-prodes/prodes_brasil_2023.tif")
-
+str(raster)
 estados_estudados <- c("MT","MS","GO","DF")
 municipality <- read_municipality(showProgress = FALSE)
-
-estado_x_mun_y <- municipality |> 
-  filter(abbrev_state %in% estados_estudados) 
+raster::plot(raster)
 ```
 
-
 ```{r, eval=FALSE}
-codigo <- 15:22
+categotia <- 15:22
+cod_muni <- 1:nrow(estado_x_mun_y)
+comb <- expand.grid(categotia,cod_muni, sep = " ")
+codigo <- paste(comb$Var1, comb$Var2)
 get_my_coord <- function(x){
+  x_cat <- str_split(x," ",simplify = TRUE)[1,1] |> as.numeric()
+  y_muni <- str_split(x," ",simplify = TRUE)[1,2] |> as.numeric()
+  estado_x_mun_y <- municipality |> 
+    filter(abbrev_state %in% estados_estudados) |> 
+    slice(y_muni)
   muni_y <- st_transform(estado_x_mun_y, crs(raster))
   raster_muni_y <- crop(raster, muni_y, mask = TRUE)
-  raster_2020 <- raster_muni_y == x
-  raster_2020[raster_2020 == 1] <- x # ENTENDER O QUE OCORRE
-  # names(raster_2020) <- "Desmatamento_2020"
-  idx <- which(raster_muni_y[] == x)  # índice dos pixels com valor 22
-  coords <- xyFromCell(raster_muni_y, idx)  # coordenadas dos pixels
-  as.data.frame(coords) |>   # data.frame com x (lon) e y (lat)
-    add_column(categorie = x,
+  raster_2020 <- raster_muni_y == x_cat
+  raster_2020[raster_2020 == 1] <- x_cat # ENTENDER O QUE OCORRE
+  idx <- which(raster_muni_y[] == x_cat)
+  coords <- xyFromCell(raster_muni_y, idx)  
+  df <- as.data.frame(coords) |>
+    add_column(categorie = x_cat,
                muni = muni_y$name_muni,
-               state = muni_y$abbrev_state)
+               state = muni_y$abbrev_state) 
+    write_rds(df, paste0("../data-raw/prodes-bad-alloc/",
+                   muni_y$name_muni,"-",
+                   muni_y$abbrev_state,"-",
+                   x,".rds"
+                   ))
     }
-df_final <- map_df(codigo[1],get_my_coord)
+# invisible(map(codigo,get_my_coord))
 ```
-
 
 ```{r, eval=FALSE}
-df_final |> 
-  ggplot(aes(x,y,color = as_factor(categorie))) +
-  geom_point()
+lista <- list.files("../data-raw/prodes-bad-alloc/",
+           full.names=TRUE)
+prodes <- purrr::map_df(lista,readr::read_rds)
+glimpse(prodes)
+write_rds(prodes,"../data/prodes-deforestation.rds")
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
 
