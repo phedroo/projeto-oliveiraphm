@@ -777,7 +777,36 @@ glimpse(prodes)
 write_rds(prodes,"../data/prodes-deforestation.rds")
 ```
 
+## Deter
 
+```{r, eval=FALSE}
+library(tidyverse)
+library(sf)
+```
+
+```{r, eval=FALSE}
+# Exemplo com os três shapefiles que você mostrou
+amz <- st_read("../data-raw/deter/deter-amz-deter-public.shp")
+
+# Ver estrutura
+str(amz)
+
+# Visualizar os primeiros registros
+head(amz)
+
+# Plot simples
+# plot(st_geometry(amz))
+
+
+ggplot(amz |> filter(CLASSNAME == "DEGRADACAO")) +
+  geom_sf() +  # Preenchimento por bioma, sem contorno
+  # scale_fill_manual(values = c("Amazônia" = "#1b9e77", 
+  #                              "Cerrado" = "#d95f02", 
+  #                              "Pantanal" = "#7570b3")) +
+  theme_minimal() +
+  labs(title = "Desmatamento por Bioma (DETER)") +
+  theme(legend.position = "bottom")
+```
 
 
 
