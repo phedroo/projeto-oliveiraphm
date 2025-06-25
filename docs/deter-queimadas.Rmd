@@ -1,0 +1,182 @@
+
+## Deter - Queimadas e desmatamento
+
+```{r, eval=FALSE}
+library(tidyverse)
+library(sf) # ler shapefile
+```
+
+```{r, eval=FALSE}
+# Exemplo com os três shapefiles que você mostrou
+amz <- st_read("../data-raw/deter/deter-amz-deter-public.shp") # ALB (completo, desde 2016)
+
+cerrado <- st_read("../data-raw/deter/deter-cerrado-nb-deter-public.shp") # Somente desmatamento
+
+pantanal <- st_read("../data-raw/deter/deter-pantanal-deter-public.shp") # Dados de cicatriz de queimada Somente a partir de 2023
+```
+
+
+```{r, eval=FALSE}
+# EXEMPLIFICANDO COM AMAZONIA
+# Ver estrutura
+# str(amz)
+# 
+# # Visualizar os primeiros registros
+# head(amz) 
+#   # ou
+#   glimpse(amz)
+# 
+# # Visualizar nomes das colunas
+# names(amz) #Coluna de interesse ("CLASSNAME")
+# 
+# # Visualizar nomes das linhas da coluna "CLASSNAME"
+# amz$CLASSNAME
+# 
+# # Quantificar observações
+# table(amz$CLASSNAME)
+# 
+#   # Verificar valores únicos de classe e estado
+#   unique(amz$CLASSNAME) # Linha de interesse ("CICATRIZ_DE_QUEIMADA")
+#   unique(amz$UF) # Somente MT
+#   
+
+
+# Filtrar para linha de interesse
+amz <- amz |>
+    # select(CLASSNAME, VIEW_DATE, UF, geometry, MUNICIPALI)
+    mutate(
+      bioma = "Amazônia"
+    ) |> 
+    filter(CLASSNAME == "CICATRIZ_DE_QUEIMADA",
+           UF == "MT")
+
+
+# Plot simples
+# plot(st_geometry(amz))
+
+
+ggplot(amz) +
+  geom_sf() +  # Preenchimento por bioma, sem contorno
+  # scale_fill_manual(values = c("Amazônia" = "#1b9e77", 
+  #                              "Cerrado" = "#d95f02", 
+  #                              "Pantanal" = "#7570b3")) +
+  theme_minimal() +
+  labs(title = "Queimada Amazônia Legal brasileira (DETER)") +
+  theme(legend.position = "bottom")
+```
+
+```{r, eval=FALSE}
+# str(cerrado)
+glimpse(cerrado)
+unique(cerrado$UF)
+
+cerrado <- cerrado |> 
+  mutate(
+    bioma = "Cerrado"
+  ) |> 
+  filter(CLASSNAME == "DESMATAMENTO_CR", # Só desmat
+                     UF == c("MT", "MS", "GO", "DF"))
+
+ggplot(cerrado) +
+  geom_sf() +  # Preenchimento por bioma, sem contorno
+  # scale_fill_manual(values = c("Amazônia" = "#1b9e77", 
+  #                              "Cerrado" = "#d95f02", 
+  #                              "Pantanal" = "#7570b3")) +
+  theme_minimal() +
+  labs(title = "Desmatamento Cerrado (DETER)") +
+  theme(legend.position = "bottom")
+```
+
+```{r, eval = FALSE}
+# str(pantanal)
+glimpse(pantanal)
+unique(pantanal$CLASS_NAME)
+
+pantanal <- pantanal |> 
+  mutate(CLASSNAME = CLASS_NAME,
+         bioma = "Pantanal") |> # padronizar nome da coluna
+  filter(CLASSNAME == "cicatriz de queimada")
+
+ggplot(pantanal) +
+  geom_sf() +  # Preenchimento por bioma, sem contorno
+  # scale_fill_manual(values = c("Amazônia" = "#1b9e77", 
+  #                              "Cerrado" = "#d95f02", 
+  #                              "Pantanal" = "#7570b3")) +
+  theme_minimal() +
+  labs(title = "Queimada Pantanal (DETER)") +
+  theme(legend.position = "bottom")
+```
+
+```{r, eval=FALSE}
+# Unindo shapefiles em um único
+deter_all <- bind_rows(amz, cerrado, pantanal)
+
+# Gerando plot dos biomas 
+ggplot(deter_all) +
+  geom_sf(aes(fill = bioma), color = NA) +
+  scale_fill_manual(values = c(
+    "Amazônia" = "#1b9e77",
+    "Cerrado" = "#d95f02",
+    "Pantanal" = "#7570b3"
+  )) +
+  theme_minimal() +
+  labs(title = "Áreas com Cicatriz de Queimada e Desmatamento (DETER)",
+       fill = "Bioma") +
+  theme(legend.position = "bottom")
+
+# Baixando arquivo shapefile unido
+# write_rds(deter_all, "areas-queimada-biomas")
+deter_all$geometry[[1]] |> plot()
+deter_all |> 
+  mutate(ANO = year(VIEW_DATE)) |> 
+  filter(ANO == 2021) |> 
+  ggplot() +
+  geom_sf(aes(fill = bioma), color = NA) +
+  scale_fill_manual(values = c(
+    "Amazônia" = "#1b9e77",
+    "Cerrado" = "#d95f02",
+    "Pantanal" = "#7570b3"
+  )) +
+  theme_minimal() +
+  labs(title = "Áreas com Cicatriz de Queimada e Desmatamento (DETER)",
+       fill = "Bioma") +
+  theme(legend.position = "bottom") 
+```
+
+```{r, eval=FALSE}
+# Averiguação do Cálculo da Área
+# pantanal |> slice(1) |> pull(geometry) |> plot()# 0.1000308
+# coords <- pantanal$geometry[[1]] |> as.matrix()
+# geosphere::areaPolygon(coords) / 1000000
+
+func_ret_x <-function(geometria){
+  ob <- geometria[[1]] |> as.matrix()
+  mean(ob[,1])
+}
+
+func_ret_y <-function(geometria){
+  ob <- geometria[[1]] |> as.matrix()
+  mean(ob[,2])
+}
+
+df <- deter_all |>  
+  group_by(geometry) |> 
+  mutate(
+  ANO = year(VIEW_DATE),
+  x = func_ret_x(geometry),
+  y = func_ret_y(geometry)
+) 
+df |> 
+  as_tibble() |> 
+  write_rds("../data/deter-queimadas.rds")
+```
+
+
+
+
+
+
+
+
+
+
