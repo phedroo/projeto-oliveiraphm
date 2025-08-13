@@ -125,4 +125,129 @@ Formato dos arquivos:
 
 ### 🛠️ Pré-processameto [script](https://arpanosso.github.io//projeto-oliveiraphm//02_preprocessamento.html)
 
-Preparação dos dados para análise.
+### 🛠 Preparação dos dados para análise.
+
+``` r
+library(tidyverse)
+states <- geobr::read_state(showProgress = FALSE)
+biomes <- geobr::read_biomes(showProgress = FALSE)
+conservation <- geobr::read_conservation_units(showProgress = FALSE)
+indigenous <- geobr::read_indigenous_land(showProgress = FALSE)
+municipality <- geobr::read_municipality(showProgress = FALSE)
+
+source("R/my-function.R")
+#> List of polygons loaded [list_pol]
+```
+
+#### Entrada com a Base: `emissions-sources.rds`
+
+``` r
+my_states <- c("MS","MT","GO","DF")
+emissions_sources <- read_rds("data/emissions-sources.rds")|> 
+  filter(sigla_uf %in% my_states)
+glimpse(emissions_sources)
+#> Rows: 265,375
+#> Columns: 32
+#> $ source_id                 <int> 10812934, 10812934, 10812934, 10812934, 1081…
+#> $ source_name               <chr> "Abadia de Goiás", "Abadia de Goiás", "Abadi…
+#> $ source_type               <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …
+#> $ iso3_country              <chr> "BRA", "BRA", "BRA", "BRA", "BRA", "BRA", "B…
+#> $ original_inventory_sector <chr> "cropland-fires", "cropland-fires", "croplan…
+#> $ start_time                <date> 2015-01-01, 2015-01-01, 2015-01-01, 2015-01…
+#> $ end_time                  <date> 2015-12-31, 2015-12-31, 2015-12-31, 2015-12…
+#> $ lat                       <dbl> -16.78557, -16.78557, -16.78557, -16.78557, …
+#> $ lon                       <dbl> -49.4521, -49.4521, -49.4521, -49.4521, -49.…
+#> $ geometry_ref              <chr> "gadm_BRA.9.1_2", "gadm_BRA.9.1_2", "gadm_BR…
+#> $ gas                       <chr> "ch4", "co2", "co2e_100yr", "co2e_20yr", "n2…
+#> $ emissions_quantity        <dbl> 1.469264e+00, 8.244216e+02, 8.747847e+02, 9.…
+#> $ temporal_granularity      <chr> "annual", "annual", "annual", "annual", "ann…
+#> $ created_date              <date> 2023-10-06, 2023-10-06, 2023-10-06, 2023-10…
+#> $ modified_date             <date> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA,…
+#> $ directory                 <chr> "data-raw/BRA/agriculture/cropland-fires_emi…
+#> $ activity                  <dbl> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …
+#> $ activity_units            <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …
+#> $ emissions_factor          <dbl> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …
+#> $ emissions_factor_units    <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …
+#> $ capacity                  <dbl> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …
+#> $ capacity_units            <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …
+#> $ capacity_factor           <dbl> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …
+#> $ year                      <dbl> 2015, 2015, 2015, 2015, 2015, 2016, 2016, 20…
+#> $ sector_name               <chr> "agriculture", "agriculture", "agriculture",…
+#> $ sub_sector                <chr> "cropland-fires", "cropland-fires", "croplan…
+#> $ sigla_uf                  <chr> "GO", "GO", "GO", "GO", "GO", "GO", "GO", "G…
+#> $ nome_regiao               <chr> "Centro-Oeste", "Centro-Oeste", "Centro-Oest…
+#> $ biome                     <chr> "CERR", "CERR", "CERR", "CERR", "CERR", "CER…
+#> $ flag_indigenous           <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FA…
+#> $ flag_conservation         <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FA…
+#> $ city_ref                  <chr> "Abadia De Goiás", "Abadia De Goiás", "Abadi…
+```
+
+#### Entrada com a Base: `nasa-xco2.rds`
+
+``` r
+nasa_xco2 <- read_rds("data/nasa-xco2.rds") |> 
+  filter(state %in% my_states)
+glimpse(nasa_xco2)
+#> Rows: 378,473
+#> Columns: 14
+#> $ longitude         <dbl> -53.55216, -53.53052, -53.58393, -53.57360, -53.5886…
+#> $ latitude          <dbl> -17.78172, -17.66517, -17.64105, -17.55926, -17.4514…
+#> $ time              <dbl> 1410110439, 1410110440, 1410110441, 1410110442, 1410…
+#> $ date              <date> 2014-09-07, 2014-09-07, 2014-09-07, 2014-09-07, 201…
+#> $ year              <dbl> 2014, 2014, 2014, 2014, 2014, 2014, 2014, 2014, 2014…
+#> $ month             <dbl> 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9…
+#> $ day               <int> 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7…
+#> $ xco2              <dbl> 397.6308, 400.0303, 397.4599, 397.8412, 397.5515, 39…
+#> $ xco2_quality_flag <int> 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0…
+#> $ xco2_incerteza    <dbl> 0.5256661, 0.6178920, 0.5998411, 0.5249712, 0.551944…
+#> $ path              <chr> "oco2_LtCO2_140907_B11100Ar_230523232629s.nc4", "oco…
+#> $ flag_br           <lgl> TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE…
+#> $ flag_nordeste     <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FAL…
+#> $ state             <chr> "MT", "MT", "MT", "MT", "MT", "MT", "MT", "MT", "MT"…
+```
+
+``` r
+nasa_xco2 |> 
+  filter(year == 2014) |> 
+  ggplot(aes(x=longitude,y=latitude)) +
+  geom_point()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+
+#### Filtrando os polígonos do municípios
+
+``` r
+munici_state <- municipality |> 
+  filter(abbrev_state %in% my_states)
+```
+
+``` r
+resul <- vector()
+nasa_xco2 |> 
+  group_by(longitude, latitude)
+  
+
+estado <- nasa_xco2$state
+for(i in 1:nrow(nasa_xco2)){
+  if(estado[i]!="Other"){
+    my_citys_obj <- municipality %>%
+      filter(abbrev_state == estado[i])
+    n_citys <- nrow(my_citys_obj)
+    my_citys_names <- my_citys_obj %>% pull(name_muni)
+    resul[i] <- "Other"
+    for(j in 1:n_citys){
+      pol_city <- my_citys_obj$geom  %>%
+        purrr::pluck(j) %>%
+        as.matrix()
+      if(def_pol(nasa_xco2$longitude[i],
+                 nasa_xco2$latitude[i],
+                 pol_city)){
+        resul[i] <- my_citys_names[j]
+      }
+    }
+  }
+}
+nasa_xco2$city_ref <- resul
+write_rds(nasa_xco2,"data/nasa-xco2.rds")
+```

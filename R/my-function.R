@@ -15,14 +15,6 @@ get_geobr_indigenous_pol <- function(i) {
   indigenous$geom |> purrr::pluck(i) |> as.matrix()
 }
 
-# Carregando os polígonos
-states <- geobr::read_state(showProgress = FALSE)
-biomes <- geobr::read_biomes(showProgress = FALSE)
-conservation <- geobr::read_conservation_units(showProgress = FALSE)
-indigenous <- geobr::read_indigenous_land(showProgress = FALSE)
-citys <- geobr::read_municipality(showProgress = FALSE)
-
-cat("Polygons loaded [states, citysbiomes, conservarion and indigenous]\n")
 
 # Criando lista de polígonos com todos os estados
 abbrev_states <- states$abbrev_state
@@ -351,8 +343,8 @@ get_tif <- function(file){
 #   }
 # }
 
-mapas_contorno1 <- read_state(code_state="MS")
-mapas_contorno2 <- read_state(code_state="MT")
-mapas_contorno3 <- read_state(code_state="MG")
-mapas_contorno4 <- read_state(code_state="PA")
-mapas_contorno5 <- read_state(code_state="GO")
+# mapas_contorno1 <- read_state(code_state="MS")
+# mapas_contorno2 <- read_state(code_state="MT")
+# mapas_contorno3 <- read_state(code_state="MG")
+# mapas_contorno4 <- read_state(code_state="PA")
+# mapas_contorno5 <- read_state(code_state="GO")
