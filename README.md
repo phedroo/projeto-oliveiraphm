@@ -108,7 +108,7 @@ Organização por regiões (Norte, Nordeste, Sudeste, Sul e Centro-Oeste);
 
 | Script de Tratamento | Dados Processados Para Download |
 |:--:|:--:|
-| [nasa-xco2](https://arpanosso.github.io//projeto-oliveiraphm//nasa-xco2.html) | ⬇️ [nasa-xco2.rds](https://drive.google.com/file/d/1kid1IDS-geePlg5q3jcz8nQ2i16YpRbv/view?usp=drive_link) |
+| [nasa-xco2](https://arpanosso.github.io//projeto-oliveiraphm//nasa-xco2.html) | ⬇️ [nasa-xco2.rds](https://drive.google.com/file/d/1sVsLvBLxUB1YbqWyDUg177Eua2oREvgH/view?usp=sharing) |
 | [gosat-xch4](https://arpanosso.github.io//projeto-oliveiraphm//gosat-xch4.html) | ⬇️ [gosat-xch4.rds](https://drive.google.com/file/d/1Rj-jcHOblEEb1ARMyJ1Jyfo4wCJnGliB/view?usp=drive_link) |
 | [oco2-sif](https://arpanosso.github.io//projeto-oliveiraphm//oco2-sif.html) | ⬇️ [oco2-sif.rds](https://drive.google.com/file/d/1Y64vA2y1q_3kG3SIAKNO2DqyaL6WJC2A/view?usp=sharing) |
 | [appeears-modis](https://arpanosso.github.io//projeto-oliveiraphm//appeears-modis.html) | ⬇️ [appeears-modis.rds](https://drive.google.com/file/d/15bpg2r2_XSWveyWrFu6oumt79UUlxzJr/view?usp=sharing) |
@@ -189,7 +189,7 @@ nasa_xco2 <- read_rds("data/nasa-xco2.rds") |>
   filter(state %in% my_states)
 glimpse(nasa_xco2)
 #> Rows: 378,473
-#> Columns: 14
+#> Columns: 15
 #> $ longitude         <dbl> -53.55216, -53.53052, -53.58393, -53.57360, -53.5886…
 #> $ latitude          <dbl> -17.78172, -17.66517, -17.64105, -17.55926, -17.4514…
 #> $ time              <dbl> 1410110439, 1410110440, 1410110441, 1410110442, 1410…
@@ -204,6 +204,7 @@ glimpse(nasa_xco2)
 #> $ flag_br           <lgl> TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE…
 #> $ flag_nordeste     <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FAL…
 #> $ state             <chr> "MT", "MT", "MT", "MT", "MT", "MT", "MT", "MT", "MT"…
+#> $ city_ref          <chr> "Alto Araguaia", "Alto Araguaia", "Alto Araguaia", "…
 ```
 
 ``` r
@@ -222,32 +223,70 @@ munici_state <- municipality |>
   filter(abbrev_state %in% my_states)
 ```
 
+#### Classificando cada ponto em município
+
 ``` r
 resul <- vector()
-nasa_xco2 |> 
-  group_by(longitude, latitude)
-  
 
-estado <- nasa_xco2$state
-for(i in 1:nrow(nasa_xco2)){
-  if(estado[i]!="Other"){
-    my_citys_obj <- municipality %>%
-      filter(abbrev_state == estado[i])
-    n_citys <- nrow(my_citys_obj)
-    my_citys_names <- my_citys_obj %>% pull(name_muni)
-    resul[i] <- "Other"
-    for(j in 1:n_citys){
-      pol_city <- my_citys_obj$geom  %>%
-        purrr::pluck(j) %>%
-        as.matrix()
-      if(def_pol(nasa_xco2$longitude[i],
-                 nasa_xco2$latitude[i],
-                 pol_city)){
-        resul[i] <- my_citys_names[j]
-      }
-    }
-  }
-}
-nasa_xco2$city_ref <- resul
-write_rds(nasa_xco2,"data/nasa-xco2.rds")
+# estado <- nasa_xco2$state
+# for(i in 1:nrow(nasa_xco2)){
+#   if(estado[i]!="Other"){
+#     my_citys_obj <- municipality %>%
+#       filter(abbrev_state == estado[i])
+#     n_citys <- nrow(my_citys_obj)
+#     my_citys_names <- my_citys_obj %>% pull(name_muni)
+#     resul[i] <- "Other"
+#     for(j in 1:n_citys){
+#       pol_city <- my_citys_obj$geom  %>%
+#         purrr::pluck(j) %>%
+#         as.matrix()
+#       if(def_pol(nasa_xco2$longitude[i],
+#                  nasa_xco2$latitude[i],
+#                  pol_city)){
+#         resul[i] <- my_citys_names[j]
+#       }
+#     }
+#   }
+# }
+# nasa_xco2$city_ref <- resul
+# write_rds(nasa_xco2,"data/nasa-xco2.rds")
 ```
+
+``` r
+my_year = 2022
+municipality |> 
+  filter(abbrev_state %in% my_states) |> 
+  left_join(
+    nasa_xco2 |> 
+      group_by(year, city_ref) |> 
+      summarise(
+        xco2 = mean(xco2,na.rm=TRUE),
+        .groups = "drop"
+      ) |> 
+      rename(  name_muni = city_ref),
+    by = c("name_muni")
+  ) |> 
+  filter(year == my_year) |> 
+  ggplot()  +
+  geom_sf(aes(fill=xco2), color="transparent",
+          size=.05, show.legend = TRUE)  +
+  geom_point(data = nasa_xco2 |> 
+               filter(year==my_year), 
+               aes(longitude, latitude, #size = emission,
+                   color="red"))+
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(size = rel(.9), color = "black"),
+    axis.title.x = element_text(size = rel(1.1), color = "black"),
+    axis.text.y = element_text(size = rel(.9), color = "black"),
+    axis.title.y = element_text(size = rel(1.1), color = "black"),
+    legend.text = element_text(size = rel(1), color = "black"),
+    legend.title = element_text(face = 'bold', size = rel(1.2))
+  ) +
+  labs(fill = 'xco2',
+       x = 'Longitude',
+       y = 'Latitude') +
+  scale_fill_viridis_c()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
