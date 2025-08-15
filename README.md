@@ -129,12 +129,11 @@ Formato dos arquivos:
 
 ``` r
 library(tidyverse)
-states <- geobr::read_state(showProgress = FALSE)
-biomes <- geobr::read_biomes(showProgress = FALSE)
-conservation <- geobr::read_conservation_units(showProgress = FALSE)
-indigenous <- geobr::read_indigenous_land(showProgress = FALSE)
-municipality <- geobr::read_municipality(showProgress = FALSE)
-
+library(ggridges)
+library(ggpubr)
+library(geobr)
+library(gstat)
+library(vegan)
 source("R/my-function.R")
 #> List of polygons loaded [list_pol]
 ```
@@ -207,27 +206,25 @@ glimpse(nasa_xco2)
 #> $ city_ref          <chr> "Alto Araguaia", "Alto Araguaia", "Alto Araguaia", "…
 ```
 
-``` r
-nasa_xco2 |> 
-  filter(year == 2014) |> 
-  ggplot(aes(x=longitude,y=latitude)) +
-  geom_point()
-```
-
-![](README_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
-
 #### Filtrando os polígonos do municípios
 
 ``` r
 munici_state <- municipality |> 
   filter(abbrev_state %in% my_states)
+pol_ms <- states |> filter(abbrev_state == "MS") |> 
+  pull(geom) |> pluck(1) |> as.matrix()
+pol_mt <- states |> filter(abbrev_state == "MT") |> 
+  pull(geom) |> pluck(1) |> as.matrix()
+pol_go <- states |> filter(abbrev_state == "GO") |> 
+  pull(geom) |> pluck(1) |> as.matrix()
+pol_df <- states |> filter(abbrev_state == "DF") |> 
+  pull(geom) |> pluck(1) |> as.matrix()
 ```
 
 #### Classificando cada ponto em município
 
 ``` r
-resul <- vector()
-
+# resul <- vector()
 # estado <- nasa_xco2$state
 # for(i in 1:nrow(nasa_xco2)){
 #   if(estado[i]!="Other"){
@@ -253,12 +250,13 @@ resul <- vector()
 ```
 
 ``` r
-my_year = 2022
+my_year = 2015
 municipality |> 
   filter(abbrev_state %in% my_states) |> 
   left_join(
     nasa_xco2 |> 
       group_by(year, city_ref) |> 
+      filter(year == my_year) |> 
       summarise(
         xco2 = mean(xco2,na.rm=TRUE),
         .groups = "drop"
@@ -266,7 +264,6 @@ municipality |>
       rename(  name_muni = city_ref),
     by = c("name_muni")
   ) |> 
-  filter(year == my_year) |> 
   ggplot()  +
   geom_sf(aes(fill=xco2), color="transparent",
           size=.05, show.legend = TRUE)  +
@@ -289,4 +286,180 @@ municipality |>
   scale_fill_viridis_c()
 ```
 
+![](README_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+
+#### Criando o grid para valores não amostrados
+
+``` r
+# vetores para coordenadas x e y selecionadas da base do IBGE1
+x<-nasa_xco2$longitude
+y<-nasa_xco2$latitude
+dis <- 0.5 # distância para o adensamento de pontos nos estados
+grid_geral <- expand.grid(
+  X=seq(min(x),max(x),dis),
+  Y=seq(min(y),max(y),dis)) |>
+  mutate(
+    flag_ms = def_pol(X, Y, pol_ms),
+    flag_mt = def_pol(X, Y, pol_mt),
+    flag_go = def_pol(X, Y, pol_go),
+    flag_df = def_pol(X, Y, pol_df)
+  ) |>
+  filter(flag_ms | flag_go | flag_mt | flag_df) |> 
+  select(-c(flag_ms,flag_mt,flag_go,flag_df))
+plot(grid_geral)
+```
+
 ![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+
+``` r
+sp::gridded(grid_geral) = ~ X + Y
+```
+
+#### Interpolação por Krigagem Ordinária
+
+``` r
+df_aux <- nasa_xco2 |> 
+  group_by(longitude, latitude) |> 
+  filter(year == my_year) |> 
+  summarise(
+    xco2 = mean(xco2,na.rm=TRUE),
+    .groups = "drop"
+  ) |> 
+  sample_n(5000) 
+sp::coordinates(df_aux) = ~ longitude + latitude
+form <- xco2 ~ 1
+vari_exp <- gstat::variogram(form, data = df_aux,
+                      cressie = FALSE,
+                      cutoff = 1, # distância máxima 8
+                      width = 0.075) # distancia entre pontos
+vari_exp  |>
+  ggplot(aes(x=dist, y=gamma)) +
+  geom_point() +
+  labs(x="lag (º)",
+       y=expression(paste(gamma,"(h)")))
+```
+
+![](README_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+
+``` r
+patamar=1.4
+alcance=0.2
+epepita=0.5
+modelo_1 <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
+modelo_2 <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
+modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
+plot_my_models(modelo_1,modelo_2,modelo_3)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-10-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-10-3.png)<!-- -->
+
+    #>   model     psill        range
+    #> 1   Nug 1.1225698  0.000000000
+    #> 2   Gau 0.5947321 -0.002231392
+    modelo <- modelo_2 ## sempre modificar
+
+``` r
+ko_variavel <- krige(formula=form, df_aux, grid_geral, model=modelo,
+                     block=c(0.1,0.1),
+                     nsim=0,
+                     na.action=na.pass,
+                     debug.level=-1
+)
+#> [using ordinary kriging]
+#>   0% done  2% done  6% done 10% done 13% done 17% done 21% done 25% done 28% done 32% done 35% done 39% done 42% done 46% done 50% done 53% done 57% done 61% done 64% done 68% done 72% done 75% done 79% done 83% done 87% done 91% done 94% done 98% done100% done
+```
+
+``` r
+ko_variavel |> 
+  as_tibble() |> 
+    ggplot(aes(x=X, y=Y)) +
+  geom_tile(aes(fill = var1.pred)) +
+  scale_fill_viridis_c(option = "mako") +
+  coord_equal() +
+  labs(x="Longitude",
+       y="Latitude",
+       fill="xco2",
+       title = my_year) +
+  theme_bw()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+
+``` r
+df_kgr <- ko_variavel |> 
+      as_tibble() |> 
+      select(-var1.var) |> 
+      rename(longitude=X,latitude=Y,xco2=var1.pred)  |> 
+      mutate(city_ref = "Other",
+             state = ifelse(def_pol(longitude, latitude, pol_ms),"MS",
+                            ifelse(def_pol(longitude, latitude, pol_mt),"MT",
+                            ifelse(def_pol(longitude, latitude, pol_go),"GO",
+                            "DF"))) 
+             )
+resul <- vector()
+estado <- df_kgr$state
+for(i in 1:nrow(df_kgr)){
+  if(estado[i]!="Other"){
+    my_citys_obj <- municipality %>%
+      filter(abbrev_state == estado[i])
+    n_citys <- nrow(my_citys_obj)
+    my_citys_names <- my_citys_obj %>% pull(name_muni)
+    resul[i] <- "Other"
+    for(j in 1:n_citys){
+      pol_city <- my_citys_obj$geom  %>%
+        purrr::pluck(j) %>%
+        as.matrix()
+      if(def_pol(df_kgr$longitude[i],
+                 df_kgr$latitude[i],
+                 pol_city)){
+        resul[i] <- my_citys_names[j]
+      }
+    }
+  }
+}
+df_kgr$city_ref <- resul
+```
+
+``` r
+municipality |> 
+  filter(abbrev_state %in% my_states) |> 
+  left_join(
+    nasa_xco2 |> 
+      filter(year == my_year) |> 
+      select(longitude,latitude,xco2,state,city_ref) |> 
+      rbind(
+        df_kgr
+      ) |> 
+      group_by(city_ref) |> 
+      summarise(
+        xco2 = mean(xco2,na.rm=TRUE),
+        .groups = "drop"
+      ) |> 
+      rename(  name_muni = city_ref),
+    by = c("name_muni")
+  ) |> 
+  mutate(
+    xco2 = ifelse(is.na(xco2),median(xco2,na.rm = TRUE),xco2)
+  ) |> 
+  ggplot()  +
+  geom_sf(aes(fill=xco2), color="transparent",
+          size=.05, show.legend = TRUE)  +
+  # geom_point(data = df_kgr, 
+  #            aes(longitude, latitude, #size = emission,
+  #                color="red")) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(size = rel(.9), color = "black"),
+    axis.title.x = element_text(size = rel(1.1), color = "black"),
+    axis.text.y = element_text(size = rel(.9), color = "black"),
+    axis.title.y = element_text(size = rel(1.1), color = "black"),
+    legend.text = element_text(size = rel(1), color = "black"),
+    legend.title = element_text(face = 'bold', size = rel(1.2))
+  ) +
+  labs(fill = 'xco2',
+       x = 'Longitude',
+       y = 'Latitude') +
+  scale_fill_viridis_c()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
