@@ -1,0 +1,95 @@
+---
+title: "nasa-firms"
+author: "Oliveira, P.H.M."
+date: "2025-08-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      eval = FALSE,
+                      message = FALSE,
+                      warning = FALSE,
+                      error = FALSE,
+                      collapse = TRUE,
+                      comment = "#>")
+source("../R/my-function.R")
+```
+
+### Faxina e Processamento de Dados de focos de incêndio do FIRMS-NASA
+
+  Para identificar e quantificar as anomalias que refletem a dinâmica das interações entre o solo, as plantas e a atmosfera, os dados diários dos focos de incêndio da série temporal serão obtidos no período de **2015 e 2023** para a região do Brasil Central, diretamente do **Atmosphere Near real-time Capability for EOS (LANCE) Fire Information for Resource Management System (FIRMS)** (https://firm.modaps.eosdis.nasa.gov/), calculado através do produto obtido pelo sensor MODIS a bordo dos satélites TERRA/AQUA. 
+
+**Objetivo**\
+  Este pipeline processa dados diários de focos de incêndio do sensor **MODIS** extraídos pelo **FIRMS-NASA**, contendo métricas essenciais para monitoramento vegetativo:
+  
+**Variáveis de interesse**:\
+  **frp**: Fire Radiative Power\
+  **daynight**: Foco detectado de dia ou noite\
+  **confidence**: Nível de confiança da detecção\
+  **bright**: Brilho medido (???).
+
+### Carregando pacotes
+```{r, eval=FALSE}
+library(tidyverse)
+library(dplyr)
+library(lubridate)
+library(sf)
+library(geobr)
+```
+
+### Carregando base de dados
+```{r, eval=FALSE}
+# Carregando base de dados do nasa firms
+nasa_firms <- read.csv("../data-raw/firms_nasa/fire_archive.csv")
+
+# Visualizando dados resumidos
+glimpse(nasa_firms)
+```
+
+#### Realizando tratamento dos dados
+```{r, eval=FALSE}
+nasa_firms <- nasa_firms |> 
+  filter(confidence >= 80) |> # Confiança de observação acima de 80%
+  mutate( # Extraindo ano, mes e dia
+    acq_date = ymd(acq_date),
+    ano = year(acq_date),
+    mes = month(acq_date),
+    dia = day(acq_date)
+  ) |> 
+  glimpse()
+```
+
+#### Verificando pontos dentro do Brasil Central
+```{r, eval=FALSE}
+# Carregando os limites estaduais
+estados <- geobr::read_state(year = 2020)
+
+# Filtrando apenas Brasil Central (MT, MS, GO, DF)
+br_central <- estados %>%
+  dplyr::filter(abbrev_state %in% c("MT", "MS", "GO", "DF"))
+
+# Transformando o data frame em objeto sf
+nasa_firms_sf <- sf::st_as_sf(nasa_firms, 
+                          coords = c("longitude", "latitude"), 
+                          crs = 4326,
+                          remove = FALSE)  # WGS84
+
+# Garante que br_central fique em WGS84 (EPSG:4326)
+br_central <- sf::st_transform(br_central, crs = 4326)
+
+# Filtrando apenas os pontos dentro do Brasil Central
+nasa_firms_central <- nasa_firms_sf[br_central, ]
+
+# Visualizar
+nasa_firms_central |> 
+  ggplot(aes(x = longitude, y = latitude)) +
+  geom_point()
+
+glimpse(nasa_firms_central)
+```
+
+```{r}
+write_rds(nasa_firms_central,"../data/nasa-firms.rds")
+```
+
