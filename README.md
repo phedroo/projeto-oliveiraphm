@@ -116,6 +116,7 @@ Organização por regiões (Norte, Nordeste, Sudeste, Sul e Centro-Oeste);
 | [nasa-power](https://arpanosso.github.io//projeto-oliveiraphm//nasa-xco2.html) | ⬇️ [nasa-power.rds](https://drive.google.com/file/d/13_PR3bQ9-ga_Wiv7jEv-GhYpAJwhmyTN/view?usp=sharing) |
 | [prodes-deforestation](https://arpanosso.github.io//projeto-oliveiraphm//prodes-deforestation.html) | ⬇️ [prodes-deforestation.rds](https://drive.google.com/file/d/1X4KJ_XK3GRcrwNCwWVEihJQBMGb72Z3S/view?usp=sharing) |
 | [deter-queimadas](https://arpanosso.github.io//projeto-oliveiraphm//deter-queimadas.html) | ⬇️ [deter-queimadas.rds](https://drive.google.com/file/d/1cmikkge6MtLJXuPBYeV-ZuMYoaNKP967/view?usp=sharing) |
+| [nasa-firms](https://arpanosso.github.io//projeto-oliveiraphm//nasa-firms.html) | ⬇️ [nasa-firms.rds](https://drive.google.com/file/d/1aMsbg35-QRBs-xiS8jl6lQ6feUySxM3e/view?usp=sharing) |
 
 Formato dos arquivos:
 
@@ -325,7 +326,7 @@ df_aux <- nasa_xco2 |>
     xco2 = mean(xco2,na.rm=TRUE),
     .groups = "drop"
   ) |> 
-  sample_n(5000) 
+  sample_n(8000) 
 sp::coordinates(df_aux) = ~ longitude + latitude
 form <- xco2 ~ 1
 vari_exp <- gstat::variogram(form, data = df_aux,
@@ -353,10 +354,9 @@ plot_my_models(modelo_1,modelo_2,modelo_3)
 
 ![](README_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-10-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-10-3.png)<!-- -->
 
-    #>   model     psill        range
-    #> 1   Nug 1.1225698  0.000000000
-    #> 2   Gau 0.5947321 -0.002231392
-    modelo <- modelo_2 ## sempre modificar
+``` r
+modelo <- modelo_1 ## sempre modificar
+```
 
 ``` r
 ko_variavel <- krige(formula=form, df_aux, grid_geral, model=modelo,
@@ -366,7 +366,7 @@ ko_variavel <- krige(formula=form, df_aux, grid_geral, model=modelo,
                      debug.level=-1
 )
 #> [using ordinary kriging]
-#>   0% done  2% done  6% done 10% done 13% done 17% done 21% done 25% done 28% done 32% done 35% done 39% done 42% done 46% done 50% done 53% done 57% done 61% done 64% done 68% done 72% done 75% done 79% done 83% done 87% done 91% done 94% done 98% done100% done
+#>   0% done  2% done  5% done  9% done 13% done 16% done 20% done 24% done 27% done 31% done 35% done 38% done 42% done 45% done 49% done 52% done 56% done 59% done 63% done 66% done 70% done 74% done 77% done 81% done 85% done 88% done 92% done 96% done100% done
 ```
 
 ``` r

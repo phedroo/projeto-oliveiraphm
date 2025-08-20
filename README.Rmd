@@ -48,7 +48,6 @@ Os scripts abaixo foram desenvolvidos em RMarkdown e estão disponíveis em form
     -   [Desmatamento - INPE - PRODES - Plataforma   Terrabrasilis](https://terrabrasilis.dpi.inpe.br/geonetwork/srv/eng/catalog.search#/metadata/fe02f2bf-2cc0-49d5-ab72-a3954f997408): Dados sobre desmatamento de 31/07/2000 a 30/07/2023\
     -   [nasapower](https://power.larc.nasa.gov/): Variáveis climáticas (Temperatura; precipitação; radiação solar; umidade relativa; velocidade do vento e pressão) de 2015 a 2024\
 
-
 ## 🧹 Faxina e Tratamento [script_geral](https://arpanosso.github.io//projeto-oliveiraphm//01_faxina_tratamento_dados.html) 
 
 Nessa etapa foi realizada a faxina, filtragem e organização inicial dos dados. Os dados de concentração atmosférica de dióxido de carbono (XCO2) e metano (XCH4) foram devidamente processados e filtrados para o território brasileiro, incluindo:
@@ -69,6 +68,8 @@ Organização por regiões (Norte, Nordeste, Sudeste, Sul e Centro-Oeste);
 | [nasa-power](https://arpanosso.github.io//projeto-oliveiraphm//nasa-xco2.html) | ⬇️ [nasa-power.rds](https://drive.google.com/file/d/13_PR3bQ9-ga_Wiv7jEv-GhYpAJwhmyTN/view?usp=sharing)
 | [prodes-deforestation](https://arpanosso.github.io//projeto-oliveiraphm//prodes-deforestation.html) | ⬇️ [prodes-deforestation.rds](https://drive.google.com/file/d/1X4KJ_XK3GRcrwNCwWVEihJQBMGb72Z3S/view?usp=sharing)
 | [deter-queimadas](https://arpanosso.github.io//projeto-oliveiraphm//deter-queimadas.html) | ⬇️ [deter-queimadas.rds](https://drive.google.com/file/d/1cmikkge6MtLJXuPBYeV-ZuMYoaNKP967/view?usp=sharing)
+| [nasa-firms](https://arpanosso.github.io//projeto-oliveiraphm//nasa-firms.html) | ⬇️ [nasa-firms.rds](https://drive.google.com/file/d/1aMsbg35-QRBs-xiS8jl6lQ6feUySxM3e/view?usp=sharing)
+
 Formato dos arquivos:
 
  > .rds (formato nativo do R para rápido carregamento)
@@ -214,7 +215,7 @@ df_aux <- nasa_xco2 |>
     xco2 = mean(xco2,na.rm=TRUE),
     .groups = "drop"
   ) |> 
-  sample_n(5000) 
+  sample_n(8000) 
 sp::coordinates(df_aux) = ~ longitude + latitude
 form <- xco2 ~ 1
 vari_exp <- gstat::variogram(form, data = df_aux,
@@ -237,7 +238,7 @@ modelo_1 <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
 modelo_2 <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
 modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
 plot_my_models(modelo_1,modelo_2,modelo_3)
-modelo <- modelo_2 ## sempre modificar
+modelo <- modelo_1 ## sempre modificar
 ```
 
 ```{r}
