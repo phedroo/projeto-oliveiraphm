@@ -1,10 +1,1 @@
-gosat-xch4.rds
-nasa-xco2.rds
-oco2-sif.rds
-appeears-modis.rds
-emissions-sources.rds
-nasa-power.rds
-prodes-brc.rds
-prodes-deforestation.rds
-deter-queimadas.rds
-nasa-firms.rds
+*.rds
