@@ -88,25 +88,27 @@ library(gstat)
 library(vegan)
 source("R/my-function.R")
 ```
-
+#### Definindo estados
+```{r, eval=FALSE}
+my_states <- c("MS","MT","GO","DF")
+```
 
 #### Entrada com a Base: `emissions-sources.rds`
-```{r}
-my_states <- c("MS","MT","GO","DF")
+```{r, eval=FALSE}
 emissions_sources <- read_rds("data/emissions-sources.rds")|> 
   filter(sigla_uf %in% my_states)
 glimpse(emissions_sources)
 ```
 
 #### Entrada com a Base: `nasa-xco2.rds`
-```{r}
+```{r, eval=FALSE}
 nasa_xco2 <- read_rds("data/nasa-xco2.rds") |> 
   filter(state %in% my_states)
 glimpse(nasa_xco2)
 ```
 
 #### Filtrando os polígonos do municípios
-```{r}
+```{r, eval=FALSE}
 munici_state <- municipality |> 
   filter(abbrev_state %in% my_states)
 pol_ms <- states |> filter(abbrev_state == "MS") |> 
@@ -549,53 +551,112 @@ municipality |>
 # unity ppb
 ```
 
+-->
+
 #### Entrada com a Base: `oco2-sif.rds`
 ```{r, eval=FALSE} 
-# original archive "oco-sif.rds" = 9,8mb
+# original archive "oco-sif.rds" = 9.8mb
+# original archive "oco-sif-complete.rds" = 4.5gb
 
-# DADOS DA SIF SOMENTE ATÉ O ANO DE 2020 VERIFICAR
+# Variables and their meanings in table 1 of pdf "Global GOSAT, OCO-2, and OCO-3 solar-induced chlorophyll fluorescence datasets"
 
 oco2_sif <- read_rds("data/oco2-sif.rds") |> 
-  filter(state %in% my_states)
+  select(-16) #remover coluna duplicada
+
 glimpse(oco2_sif)
 ```
 
-```{r, eval=FALSE}
-oco2_sif |> 
-  filter(year == 2020) |> 
-  ggplot(aes(x=longitude,y=latitude)) +
-  geom_point()
+```{r}
+# Classificando pontos - Faxina e Tratamento
+# data_set <- oco2_sif
+# state <- 0
+# x <- data_set |> dplyr::pull(longitude)
+# y <- data_set |> dplyr::pull(latitude)
+# for(i in 1:nrow(data_set)) state[i] <- get_geobr_state(x[i],y[i])
+# data_set <- data_set |> cbind(state)
+# dplyr::glimpse(data_set)
+# readr::write_rds(data_set,"data/oco2-sif-teste.rds")
 ```
 
-#### Classificando cada ponto em município
+#### Tratamento dos dados da sif - dando errado
 ```{r, eval=FALSE}
-resul <- vector()
 
-estado <- oco2_sif$state
-for(i in 1:nrow(oco2_sif)){
-  if(estado[i]!="Other"){
-    my_citys_obj <- municipality %>%
-      filter(abbrev_state == estado[i])
-    n_citys <- nrow(my_citys_obj)
-    my_citys_names <- my_citys_obj %>% pull(name_muni)
-    resul[i] <- "Other"
-    for(j in 1:n_citys){
-      pol_city <- my_citys_obj$geom  %>%
-        purrr::pluck(j) %>%
-        as.matrix()
-      if(def_pol(oco2_sif$longitude[i],
-                 oco2_sif$latitude[i],
-                 pol_city)){
-        resul[i] <- my_citys_names[j]
-      }
-    }
-  }
-}
-oco2_sif$city_ref <- resul
-glimpse(oco2_sif)
-write_rds(oco2_sif,"data-raw/oco2_sif.rds")
+# Carregando pacotes
+library(lubridate)
+library(dplyr)
+
+# Filtrando para obsevações sem nuvem, criando colunas mes, data, dia
+oco2_sif_preview <- oco2_sif |> 
+  # filter(
+  #   quality_flag == 0
+  # ) |>
+  mutate(
+    time = lubridate::as_datetime(time,
+                                  origin = '1993-01-01',
+                                  tz = "America/Sao_Paulo"),
+    year = lubridate::year(time),
+    month = lubridate::month(time),
+    day = lubridate::day(time)
+  ) |> 
+  glimpse()
+
+# Visualizar trechos específicos
+oco2_sif_preview |> 
+  slice(27462771:27462772)
+
+# Conferir
+# as_datetime(946744882, origin = "1993-01-01", tz = "America/Sao_Paulo")
+# as_datetime(946744882/1000, origin = "1993-01-01", tz = "America/Sao_Paulo")
 ```
 
+
+
+
+
+```{r, eval=FALSE}
+# oco2_sif_preview |> 
+#   filter(year == 2023) |> 
+#   ggplot(aes(x=longitude,y=latitude)) +
+#   geom_point()
+#imagem gerada salva no wpp - lerdo para rodar
+```
+
+#### Classificando cada ponto em município - não feito
+```{r, eval=FALSE}
+library(sf)
+library(dplyr)
+library(lwgeom) # para st_make_valid
+
+municipality_sf <- municipality %>%
+  st_transform(crs = 4326) %>%
+  st_make_valid()
+
+oco2_sif_preview_sf <- st_as_sf(
+  oco2_sif,
+  coords = c("lon", "lat"),
+  crs = 4326,
+  remove = FALSE # mantém as colunas originais lon/lat
+)
+
+oco2_sif_preview_sf <- st_join(
+  oco2_sif_preview_sf,
+  municipality_sf %>% select(name_muni),
+  join = st_within
+)
+
+oco2_sif_preview_sf <- oco2_sif_preview_sf %>%
+  mutate(city_ref = ifelse(is.na(name_muni), "Other", name_muni)) %>%
+  select(-name_muni) # remove coluna original se não quiser duplicada
+
+oco2_sif_preview <- as.data.frame(oco2_sif_preview_sf)
+
+glimpse(oco2_sif_preview)
+
+# Salvar
+# write_rds(oco2_sif_preview, "data-raw/oco2_sif_preview")
+```
+
+#### - não feito
 ```{r, eval=FALSE}
 my_year = 2020
 municipality |> 
@@ -776,7 +837,6 @@ nasa_power_sf <- nasa_power_sf %>%
 
 nasa_power <- as.data.frame(nasa_power_sf)
 
-# Conferir
 glimpse(nasa_power)
 
 # Salvar
@@ -846,12 +906,10 @@ library(sf)
 library(dplyr)
 library(lwgeom) # para st_make_valid
 
-# 1. Garantir que shapefile de municípios está no mesmo CRS e válido
 municipality_sf <- municipality %>%
   st_transform(crs = 4326) %>%
   st_make_valid()
 
-# 2. Converter seu data frame para sf sem perder colunas
 deter_queimadas_sf <- st_as_sf(
   deter_queimadas,
   coords = c("x", "y"),
@@ -859,22 +917,18 @@ deter_queimadas_sf <- st_as_sf(
   remove = FALSE # mantém as colunas originais lon/lat
 )
 
-# 3. Fazer o join espacial
 deter_queimadas_sf <- st_join(
   deter_queimadas_sf,
   municipality_sf %>% select(name_muni),
   join = st_within
 )
 
-# 4. Criar coluna "city_ref", substituindo NA por "Other"
 deter_queimadas_sf <- deter_queimadas_sf %>%
   mutate(city_ref = ifelse(is.na(name_muni), "Other", name_muni)) %>%
   select(-name_muni) # remove coluna original se não quiser duplicada
 
-# 5. Converter de volta para data frame se não quiser manter como sf
 deter_queimadas <- as.data.frame(deter_queimadas_sf)
 
-# Conferir
 glimpse(deter_queimadas)
 
 # Salvar
@@ -921,7 +975,7 @@ municipality |>
 
 #### Entrada com a Base: `prodes-deforestation.rds`
 ```{r, eval=FALSE} 
-# original archive "prodes-deforestation.rds" = 2,2gb
+# original archive "prodes-deforestation.rds" = 2.2gb
 
 prodes_deforestation <- read_rds("data/prodes-deforestation.rds")
   # "state" column previously filtred 
@@ -943,12 +997,10 @@ library(sf)
 library(dplyr)
 library(lwgeom) # para st_make_valid
 
-# 1. Garantir que shapefile de municípios está no mesmo CRS e válido
 municipality_sf <- municipality %>%
   st_transform(crs = 4326) %>%
   st_make_valid()
 
-# 2. Converter seu data frame para sf sem perder colunas
 prodes_deforestation_sf <- st_as_sf(
   deter_queimadas,
   coords = c("x", "y"),
@@ -956,22 +1008,18 @@ prodes_deforestation_sf <- st_as_sf(
   remove = FALSE # mantém as colunas originais lon/lat
 )
 
-# 3. Fazer o join espacial
 prodes_deforestation_sf <- st_join(
   deter_queimadas_sf,
   municipality_sf %>% select(name_muni),
   join = st_within
 )
 
-# 4. Criar coluna "city_ref", substituindo NA por "Other"
 prodes_deforestation_sf <- prodes_deforestation_sf %>%
   mutate(city_ref = ifelse(is.na(name_muni), "Other", name_muni)) %>%
   select(-name_muni) # remove coluna original se não quiser duplicada
 
-# 5. Converter de volta para data frame se não quiser manter como sf
 prodes_deforestation <- as.data.frame(prodes_deforestation_sf)
 
-# Conferir
 glimpse(prodes_deforestation)
 
 # Salvar
