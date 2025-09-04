@@ -148,7 +148,7 @@ pol_df <- states |> filter(abbrev_state == "DF") |>
 # write_rds(nasa_xco2,"data/nasa-xco2.rds")
 ```
 
-```{r}
+```{r, eval=FALSE}
 my_year = 2015
 municipality |> 
   filter(abbrev_state %in% my_states) |> 
@@ -188,7 +188,7 @@ municipality |>
 
 
 #### Criando o grid para valores não amostrados
-```{r}
+```{r, eval=FALSE}
 # vetores para coordenadas x e y selecionadas da base do IBGE1
 x<-nasa_xco2$longitude
 y<-nasa_xco2$latitude
@@ -209,7 +209,7 @@ sp::gridded(grid_geral) = ~ X + Y
 ```
 
 #### Interpolação por Krigagem Ordinária
-```{r}
+```{r, eval=FALSE}
 df_aux <- nasa_xco2 |> 
   group_by(longitude, latitude) |> 
   filter(year == my_year) |> 
@@ -231,7 +231,7 @@ vari_exp  |>
 ```
 
 
-```{r}
+```{r, eval=FALSE}
 patamar=1.4
 alcance=0.2
 epepita=0.5
@@ -242,7 +242,7 @@ plot_my_models(modelo_1,modelo_2,modelo_3)
 modelo <- modelo_1 ## sempre modificar
 ```
 
-```{r}
+```{r, eval=FALSE}
 ko_variavel <- krige(formula=form, df_aux, grid_geral, model=modelo,
                      block=c(0.1,0.1),
                      nsim=0,
@@ -252,7 +252,7 @@ ko_variavel <- krige(formula=form, df_aux, grid_geral, model=modelo,
 ```
 
 
-```{r}
+```{r, eval=FALSE}
 ko_variavel |> 
   as_tibble() |> 
     ggplot(aes(x=X, y=Y)) +
@@ -266,7 +266,7 @@ ko_variavel |>
   theme_bw()
 ```
 
-```{r}
+```{r, eval=FALSE}
 df_kgr <- ko_variavel |> 
       as_tibble() |> 
       select(-var1.var) |> 
@@ -302,7 +302,7 @@ df_kgr$city_ref <- resul
 ```
 
 
-```{r}
+```{r, eval=FALSE}
 municipality |> 
   filter(abbrev_state %in% my_states) |> 
   left_join(
@@ -345,7 +345,7 @@ municipality |>
 
 ### Estimativa de XCO2 para o Brasil Central
 
-```{r}
+```{r, eval=FALSE}
 # nasa_xco2_kgr <- map_df(2015:2023,~{
 #   set.seed(1235)
 #   df_aux <- nasa_xco2 |> 
@@ -417,11 +417,11 @@ municipality |>
 
 ```
 
-```{r}
+```{r, eval=FALSE}
 nasa_xco2_kgr <- read_rds("data-raw/nasa-xco2-kgr.rds")
 ```
 
-```{r}
+```{r, eval=FALSE}
 nasa_xco2_bind <- nasa_xco2 |> 
   select(longitude,latitude,xco2,city_ref,state,year) |> 
   rbind(nasa_xco2_kgr)
