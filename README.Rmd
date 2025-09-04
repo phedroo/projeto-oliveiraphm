@@ -561,7 +561,11 @@ municipality |>
 # Variables and their meanings in table 1 of pdf "Global GOSAT, OCO-2, and OCO-3 solar-induced chlorophyll fluorescence datasets"
 
 oco2_sif <- read_rds("data/oco2-sif.rds") |> 
-  select(-16) #remover coluna duplicada
+  select(-16) |> #remover coluna duplicada
+  filter(
+    state == my_states,
+    quality_flag == 0 | quality_flag == 1
+  )
 
 glimpse(oco2_sif)
 ```
@@ -578,35 +582,27 @@ glimpse(oco2_sif)
 # readr::write_rds(data_set,"data/oco2-sif-teste.rds")
 ```
 
-#### Tratamento dos dados da sif - dando errado
+#### Tratamento dos dados da sif
 ```{r, eval=FALSE}
 
 # Carregando pacotes
 library(lubridate)
 library(dplyr)
 
+glimpse(oco2_sif)
+
 # Filtrando para obsevações sem nuvem, criando colunas mes, data, dia
 oco2_sif_preview <- oco2_sif |> 
-  # filter(
-  #   quality_flag == 0
-  # ) |>
   mutate(
     time = lubridate::as_datetime(time,
-                                  origin = '1993-01-01',
+                                  origin = '1990-01-01 00:00:00',
                                   tz = "America/Sao_Paulo"),
     year = lubridate::year(time),
     month = lubridate::month(time),
     day = lubridate::day(time)
-  ) |> 
-  glimpse()
+  )
 
-# Visualizar trechos específicos
-oco2_sif_preview |> 
-  slice(27462771:27462772)
-
-# Conferir
-# as_datetime(946744882, origin = "1993-01-01", tz = "America/Sao_Paulo")
-# as_datetime(946744882/1000, origin = "1993-01-01", tz = "America/Sao_Paulo")
+tail(oco2_sif_preview)
 ```
 
 
@@ -614,14 +610,13 @@ oco2_sif_preview |>
 
 
 ```{r, eval=FALSE}
-# oco2_sif_preview |> 
-#   filter(year == 2023) |> 
-#   ggplot(aes(x=longitude,y=latitude)) +
-#   geom_point()
-#imagem gerada salva no wpp - lerdo para rodar
+oco2_sif_preview |>
+  filter(year == 2022) |>
+  ggplot(aes(x=longitude,y=latitude)) +
+  geom_point()
 ```
 
-#### Classificando cada ponto em município - não feito
+#### Classificando cada ponto em município
 ```{r, eval=FALSE}
 library(sf)
 library(dplyr)
@@ -632,8 +627,8 @@ municipality_sf <- municipality %>%
   st_make_valid()
 
 oco2_sif_preview_sf <- st_as_sf(
-  oco2_sif,
-  coords = c("lon", "lat"),
+  oco2_sif_preview,
+  coords = c("longitude", "latitude"),
   crs = 4326,
   remove = FALSE # mantém as colunas originais lon/lat
 )
@@ -662,10 +657,10 @@ my_year = 2020
 municipality |> 
   filter(abbrev_state %in% my_states) |> 
   left_join(
-    oco2_sif |> 
+    oco2_sif_preview |> 
       group_by(year, city_ref) |> 
       summarise(
-        sif = mean(sif,na.rm=TRUE),
+        sza = mean(sza,na.rm=TRUE),
         .groups = "drop"
       ) |> 
       rename(name_muni = city_ref),
@@ -673,9 +668,9 @@ municipality |>
   ) |> 
   filter(year == my_year) |> 
   ggplot()  +
-  geom_sf(aes(fill=sif), color="transparent",
+  geom_sf(aes(fill=sza), color="transparent",
           size=.05, show.legend = TRUE)  +
-  geom_point(data = oco2_sif |> 
+  geom_point(data = oco2_sif_preview |> 
                filter(year==my_year), 
                aes(longitude, latitude, #size = emission,
                    color="red"))+
@@ -688,7 +683,7 @@ municipality |>
     legend.text = element_text(size = rel(1), color = "black"),
     legend.title = element_text(face = 'bold', size = rel(1.2))
   ) +
-  labs(fill = 'Sif',
+  labs(fill = 'sza',
        x = 'Longitude',
        y = 'Latitude') +
   scale_fill_viridis_c()
