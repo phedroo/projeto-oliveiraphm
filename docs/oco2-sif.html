@@ -532,8 +532,8 @@ Brasil &lt;- read_state()$abbrev_state
 
 oco2_sif |&gt;
   filter(year == 2022,
-         # state == my_states, # Brasil Central
-         state == Brasil)|&gt;
+         # state == Brasil,
+         state == my_states) |&gt;  # Brasil Central
   ggplot(aes(x=longitude,y=latitude)) +
   geom_point()</code></pre>
 </div>
