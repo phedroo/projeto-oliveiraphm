@@ -5,4 +5,9 @@ deter_queimadas
 firms_nasa
 appeears_modis
 appeears_modis.rds
+deter_queimadas.rds
+gosat-xch4-kgr.rds
+gosat_xch4.rds
 nasa_power.rds
+oco2-sif-kgr.rds
+prodes_deforestation.rds
