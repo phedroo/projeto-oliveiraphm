@@ -352,6 +352,11 @@ display: none;
 </div>
 
 
+<div id="tratamento-da-primeira-base-sif-utilizada-não-é-a-atualmente-utilizada-04092025" class="section level4">
+<h4>Tratamento da primeira base sif utilizada (não é a atualmente
+utilizada 04/09/2025)</h4>
+<p><em>Base atualmente utilizada inicia-se na linha 107</em></p>
+</div>
 <div id="faxina-e-processamento-de-dados-de-sif-solar-induced-fluorescence-oco-2nasa." class="section level3">
 <h3>Faxina e Processamento de Dados de SIF (<em>solar induced
 fluorescence</em>) OCO-2/NASA.</h3>
@@ -442,7 +447,141 @@ y &lt;- data_set |&gt; dplyr::pull(latitude)
 for(i in 1:nrow(data_set)) state[i] &lt;- get_geobr_state(x[i],y[i])
 data_set &lt;- data_set |&gt; cbind(state)
 dplyr::glimpse(data_set)
-readr::write_rds(data_set,&quot;../data/oco2-sif.rds&quot;)</code></pre>
+# readr::write_rds(data_set,&quot;../data/oco2-sif.rds&quot;)</code></pre>
+</div>
+<div id="tratamento-da-segunda-base-sif-utilizada-atualmente-utilizada-04092025" class="section level3">
+<h3>Tratamento da segunda base sif utilizada (atualmente utilizada
+04/09/2025)</h3>
+<p><strong>Variables and their meanings in table 1 of pdf “Global GOSAT,
+OCO-2, and OCO-3 solar-induced chlorophyll fluorescence
+datasets”</strong></p>
+<p>-<strong><em>Chunk de classificação demorou cerca de 3 dias para
+finalizar</em></strong>-</p>
+<div id="classificando-pontos-dos-estados-com-base-nas-coordenadas" class="section level4">
+<h4>Classificando pontos dos estados com base nas coordenadas</h4>
+<pre class="r"><code># original archive &quot;oco-sif.rds&quot; = 9.8mb
+# original archive &quot;oco-sif-complete.rds&quot; = 4.5gb # Essa base não continha os dados classificados por estados
+
+# oco2_sif &lt;- read_rds(&quot;data/oco2-sif-complete.rds&quot;) 
+
+# data_set &lt;- oco2_sif
+# state &lt;- 0
+# x &lt;- data_set |&gt; dplyr::pull(longitude)
+# y &lt;- data_set |&gt; dplyr::pull(latitude)
+# for(i in 1:nrow(data_set)) state[i] &lt;- get_geobr_state(x[i],y[i])
+# data_set &lt;- data_set |&gt; cbind(state)
+# dplyr::glimpse(data_set)
+# readr::write_rds(data_set,&quot;data/oco2-sif-teste.rds&quot;)</code></pre>
+<p><strong>Agora, a base nomeada como “oco2-sif-teste.rds”, contém os
+dados classificados por estado</strong></p>
+<p><strong>Devemos classificá-los por município. Para isso:</strong></p>
+</div>
+<div id="entrada-com-a-base-oco2-sif-classificado.rds-essa-é-aquela-que-te-mandei-no-e-mail-nomeada-como-oco2-sif-teste" class="section level4">
+<h4>Entrada com a Base: <code>oco2-sif-classificado.rds</code>
+<strong>(essa é aquela que te mandei no e-mail, nomeada como
+oco2-sif-teste)</strong></h4>
+<pre class="r"><code>oco2_sif &lt;- read_rds(&quot;../data/oco2-sif-classificado.rds&quot;)
+
+glimpse(oco2_sif)</code></pre>
+</div>
+<div id="filtrando-base-para-facilitar-tratamento" class="section level4">
+<h4>Filtrando base para facilitar tratamento</h4>
+<ol style="list-style-type: decimal">
+<li><strong>O filtro consiste em:</strong>
+<ul>
+<li>Remover coluna “state” duplicada</li>
+<li>Filtrar para os estados do Brasil Central</li>
+<li>Filtrar pelos dados com melhores observações</li>
+</ul></li>
+</ol>
+<pre class="r"><code>my_states &lt;- c(&quot;MS&quot;,&quot;MT&quot;,&quot;GO&quot;,&quot;DF&quot;) # estados Brasil Central
+
+oco2_sif &lt;- oco2_sif |&gt; 
+  select(-16) |&gt; # remover coluna &quot;state&quot; duplicada
+  filter(
+    state == my_states,
+    # state == Brasil,
+    quality_flag == 0 | quality_flag == 1 # melhores observações 
+  )
+
+glimpse(oco2_sif)</code></pre>
+</div>
+<div id="tratamento-dos-dados-da-sif" class="section level4">
+<h4>Tratamento dos dados da sif</h4>
+<pre class="r"><code># Carregando pacotes necessários
+library(lubridate)
+library(dplyr)
+
+# Convertendo a coluna &quot;time&quot; para objeto de data-hora e extraindo colunas mes, data e dia para facilitar manipulações 
+oco2_sif &lt;- oco2_sif |&gt; 
+  mutate(
+    time = as_datetime(time,
+                       origin = &#39;1990-01-01 00:00:00&#39;,
+                       tz = &quot;America/Sao_Paulo&quot;),
+    year = year(time),
+    month = month(time),
+    day = day(time)
+  )
+
+# tail(oco2_sif) #observar últimas linhas</code></pre>
+</div>
+<div id="plotando-pontos-para-determinado-ano-para-verificar-pontos" class="section level4">
+<h4>Plotando pontos para determinado ano para verificar pontos</h4>
+<pre class="r"><code># Lendo os estados do Brasil pelo geobr e extraindo apenas a coluna de siglas
+Brasil &lt;- read_state()$abbrev_state
+
+oco2_sif |&gt;
+  filter(year == 2022,
+         # state == Brasil,
+         state == my_states) |&gt;  # Brasil Central
+  ggplot(aes(x=longitude,y=latitude)) +
+  geom_point()</code></pre>
+</div>
+<div id="classificando-cada-ponto-em-município" class="section level4">
+<h4>Classificando cada ponto em município</h4>
+<pre class="r"><code># Carregando pacotes
+library(sf)
+library(dplyr)
+library(lwgeom) # para st_make_valid
+
+# 1. Garantir que shapefile de municípios está no mesmo CRS (Coordinate Reference System) e seja válido
+municipality_sf &lt;- municipality %&gt;% # Do script &quot;my-function&quot; --&gt; municipality &lt;- geobr::read_municipality(showProgress = FALSE)
+  st_transform(crs = 4326) %&gt;%
+  st_make_valid()
+
+# 2. Converter data frame para sf
+oco2_sif_sf &lt;- st_as_sf(
+  oco2_sif,
+  coords = c(&quot;longitude&quot;, &quot;latitude&quot;),
+  crs = 4326,
+  remove = FALSE # mantém as colunas originais lon/lat
+)
+
+# 3. Fazer o join espacial
+# A função &quot;st_join&quot; faz uma junção entre dois objetos espaciais sf;
+  # Essa junção é feita com base em relações espaciais (geometria);
+    # Essa relação de geometria foi obtida do pacote geobr (municipality) e da base de dados da sif classificada por estado
+oco2_sif_sf &lt;- st_join(
+  oco2_sif_sf,
+  municipality_sf %&gt;% select(name_muni),
+  join = st_within
+) 
+# Observe que o número de linhas se manteve após o join (✅)
+
+
+# 4. Criar coluna &quot;city_ref&quot;, substituindo NA por &quot;Other&quot;
+oco2_sif_sf &lt;- oco2_sif_sf %&gt;%
+  mutate(city_ref = ifelse(is.na(name_muni), &quot;Other&quot;, name_muni)) %&gt;%
+  select(-name_muni) # remove coluna original para não duplicar
+
+# 5. Converter para data frame (para não manter como sf)
+oco2_sif &lt;- as.data.frame(oco2_sif_sf)
+
+glimpse(oco2_sif) 
+
+# Salvar arquivo 
+# write_rds(oco2_sif, &quot;../data/oco2-sif.rds&quot;)</code></pre>
+</div>
 </div>
 
 
