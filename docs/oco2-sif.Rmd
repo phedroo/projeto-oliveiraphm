@@ -13,7 +13,6 @@ knitr::opts_chunk$set(echo = TRUE,
                       error = FALSE,
                       collapse = TRUE,
                       comment = "#>")
-source("../R/my-function.R")
 ```
 
 ### Faxina e Processamento de Dados de SIF (*solar induced fluorescence*) OCO-2/NASA.
@@ -104,38 +103,178 @@ dplyr::glimpse(data_set)
 # readr::write_rds(data_set,"../data/oco2-sif.rds")
 ```
 
-### Tratamento da segunda base sif utilizada (atualmente utilizada 04/09/2025)
+### Tratamento da segunda base sif utilizada (utilizada desde 04/09/2025)
 
 **Variables and their meanings in table 1 of pdf "Global GOSAT, OCO-2, and OCO-3 solar-induced chlorophyll fluorescence datasets"** 
 
--***Chunk de classificação demorou cerca de 3 dias para finalizar***-
+***Chunk de classificação demorou cerca de 3 dias para finalizar***
 
+**Resumo da aquisição dos dados:**
+  - 1. https://search.earthdata.nasa.gov
+  - 2. No campo "Type to search for data", pesquisar por "oco2 sif 11r"
+  - 3. Selecione "OCO-2 Level 2 bias-corrected solar-induced fluorescence and other select fields from the IMAP-DOAS algorithm aggregated as daily files, Retrospective processing V11r (OCO2_L2_Lite_SIF) at GES DISC"
+  - 4. Filtre:
+    *A área de interesse* (Brasil)
+    *A data inicial* (2015-01-01 00:00:00)
+    *A data final* (2019-12-31 23:59:59)
+  - 5. Clique em "Download all data" 
+  - 6. Clique em "Download data"
+  - 7. Espere o Download e clique em "Download Files"
+    *Nessa etapa é necessário ter o aplicativo "Earthdata Download" instalado e estar logado.*
+      **Para instalar o "Earthdata Download", acesse: https://nasa.github.io/earthdata-download**
+      **Certifique-se de selecionar a pasta que deseja para download dos arquivos**
+  - 8. 
+
+Ressalta-se que foram realizados 2 downloads, um para a base no período de 2015 a 2019 (oco2-sif-brc.rds) e outro de 2020 a 2024 (oco2-sif.rds). Ao final do script, deveremos uní-las.
+  
+Função para leitura dos arquivos nc4 da SIF foi adicionada ao arquivo "my-function.R"
+e nomeada como "get_oco2_sif"
+
+
+```{r, eval=FALSE}
+# Adaptação do projeto de Mestrado Rodrigo Perim
+# <https://github.com/arpanosso/projeto-mestrado-perim>
+
+## Carregando Pacotes
+library(tidyverse)
+library(ncdf4)
+library(geobr)
+source("../R/my-function.R")
+```
+
+```{r, eval=FALSE}
+## Ler um arquivo de dados `.NC`
+my_year <- dir(path = "../data-raw/oco2_sif_brcentral/")
+
+# Buscar os nomes dos arquivo .nc4
+list_nc4 <- list.files("../data-raw/oco2_sif_brcentral/",
+           recursive = TRUE,
+           full.names = TRUE,
+           pattern = "\\.nc4$")
+
+list_nc4_sif <- grep("oco2_sif_brcentral", list_nc4, value = TRUE)
+length(list_nc4_sif)
+```
+
+```{r, eval=FALSE}
+# Abrindo o 1° arquivo
+nc_obj <- nc_open(list_nc4[1])
+```
+
+```{r, eval=FALSE}
+# buscando os nomes dos atributos no arquivo
+names(nc_obj[['var']])
+```
+
+```{r, eval=FALSE}
+## Função para ler um arquivo e extrair colunas de interesse
+## Vamos ler todos os arquivos na pasta
+ncdf_reader <- function(path){
+  id_stl <- stringr::str_split(path,"/",simplify = TRUE)[,3]
+  if(id_stl == "OCO2") {
+    df_aux <- get_oco2_xco2(path)
+    }else(
+    df_aux <- get_oco2_sif(path)
+    )
+  return(df_aux)
+}
+```
+
+```{r, eval=FALSE}
+## Usando multisession para deixar mais rápido
+future::plan("multisession")
+
+# Usando a função map do dplyr
+data_set_sif <- furrr::future_map_dfr(list_nc4_sif,ncdf_reader)
+# data_set_sif |> write_rds(paste0("../data/","data-set-sif-",my_year,".rds")) #dando erro
+
+# write_rds(data_set_sif, "../data/oco2-sif-brc.rds")
+```
+
+```{r, eval=FALSE}
+## Resumo dos dados
+data_set <- data_set_sif |>
+  mutate(
+    time_1 = lubridate::as_datetime(time, tz = "America/Sao_Paulo"),
+    time = lubridate::date(time),
+  )
+glimpse(data_set)
+```
+
+```{r, eval=FALSE}
+## Retirando 10000 obs do banco de dados e plotando
+data_set_sif |>
+  sample_n(10000) |>
+  ggplot(aes(x=longitude, y=latitude)) +
+  geom_point()
+```
+
+```{r, eval=FALSE}
+## Então vamos plotar dentro do mapa do Brasil
+## Pegando o contorno do BR
+br <- read_country(showProgress = FALSE)
+
+# fazer o plot do BR
+br |>
+  ggplot() +
+  geom_sf(fill="white", color="#FEBF57",
+          size=.15, show.legend = FALSE) +
+  geom_point(data= data_set_sif |>
+               sample_n(500) ,
+             aes(x=longitude, y=latitude),
+             shape=3,
+             col="red",
+             alpha=0.2)
+```
+
+```{r, eval=FALSE}
+## Compilar os arquivos
+list_of_batch <- list.files("../data/",all.files = TRUE,full.names = TRUE)
+list_of_sif_rds <- grep("../data/oco2-sif-brc.rds",list_of_batch,value = TRUE)
+data_set_sif <- map_df(list_of_sif_rds,read_rds)
+
+# Salvar
+# write_rds(data_set_sif,"../data/oco2-sif-brc-complete.rds")
+```
+
+
+ 
 #### Classificando pontos dos estados com base nas coordenadas
 ```{r, eval=FALSE}
 # original archive "oco-sif.rds" = 9.8mb
-# original archive "oco-sif-complete.rds" = 4.5gb # Essa base não continha os dados classificados por estados
+# original archive "oco-sif-complete.rds" = 4.5gb # Essa base não continha os dados classificados por estados e compreende o período de 01-01-2020 a 31-12-2024, assim como a base "data-set-sif.rds", baixada para o ano de 01-01-2015 a 31-21-2019.
 
-# oco2_sif <- read_rds("data/oco2-sif-complete.rds") 
+oco2_sif_brc <- read_rds("../data/oco2-sif-brc-complete.rds") |> 
+  filter( # Filtrando antes para reduzir tempo de processamento 
+    quality_flag == 0|quality_flag == 1
+  ) # |> sample_n(1000)
 
-# data_set <- oco2_sif
-# state <- 0
-# x <- data_set |> dplyr::pull(longitude)
-# y <- data_set |> dplyr::pull(latitude)
-# for(i in 1:nrow(data_set)) state[i] <- get_geobr_state(x[i],y[i])
-# data_set <- data_set |> cbind(state)
-# dplyr::glimpse(data_set)
-# readr::write_rds(data_set,"data/oco2-sif-teste.rds")
+data_set <- oco2_sif_brc
+state <- 0
+x <- data_set |> dplyr::pull(longitude)
+y <- data_set |> dplyr::pull(latitude)
+
+tictoc::tic() # Ver tempo
+for(i in 1:nrow(data_set)) state[i] <- get_geobr_state(x[i],y[i])
+tictoc::toc()
+
+tictoc::tic()
+data_set <- data_set |> cbind(state)
+tictoc::toc()
+
+dplyr::glimpse(data_set)
+# readr::write_rds(data_set,"../data/oco2-sif-brc-classificado.rds")
 ```
 
-**Agora, a base nomeada como "oco2-sif-teste.rds", contém os dados classificados por estado**
+**Agora, a base nomeada como "oco2-sif-brc-classificado.rds", contém os dados classificados por estado**
 
 **Devemos classificá-los por município. Para isso:**
 
 #### Entrada com a Base: `oco2-sif-classificado.rds` **(essa é aquela que te mandei no e-mail, nomeada como oco2-sif-teste)**
 ```{r, eval=FALSE} 
-oco2_sif <- read_rds("../data/oco2-sif-classificado.rds")
+oco2_sif_brc <- read_rds("../data/oco2-sif-brc-classificado.rds")
 
-glimpse(oco2_sif)
+glimpse(oco2_sif_brc)
 ```
 
 
@@ -149,15 +288,16 @@ glimpse(oco2_sif)
 ```{r, eval=FALSE}
 my_states <- c("MS","MT","GO","DF") # estados Brasil Central
 
-oco2_sif <- oco2_sif |> 
-  select(-16) |> # remover coluna "state" duplicada
+oco2_sif_brc <- oco2_sif_brc |> 
+  # select(-16) |> # remover coluna "state", em caso de sair duplicada
   filter(
-    state == my_states,
+    state %in% my_states,
     # state == Brasil,
-    quality_flag == 0 | quality_flag == 1 # melhores observações 
+    # quality_flag == 0 | quality_flag == 1 # melhores observações 
   )
 
-glimpse(oco2_sif)
+
+glimpse(oco2_sif_brc)
 ```
 
 #### Tratamento dos dados da sif
@@ -167,7 +307,7 @@ library(lubridate)
 library(dplyr)
 
 # Convertendo a coluna "time" para objeto de data-hora e extraindo colunas mes, data e dia para facilitar manipulações 
-oco2_sif <- oco2_sif |> 
+oco2_sif_brc <- oco2_sif_brc |> 
   mutate(
     time = as_datetime(time,
                        origin = '1990-01-01 00:00:00',
@@ -177,7 +317,7 @@ oco2_sif <- oco2_sif |>
     day = day(time)
   )
 
-# tail(oco2_sif) #observar últimas linhas
+# tail(oco2_sif_brc) #observar últimas linhas
 ```
 
 #### Plotando pontos para determinado ano para verificar pontos
@@ -185,10 +325,10 @@ oco2_sif <- oco2_sif |>
 # Lendo os estados do Brasil pelo geobr e extraindo apenas a coluna de siglas
 Brasil <- read_state()$abbrev_state
 
-oco2_sif |>
-  filter(year == 2022,
-         # state == Brasil,
-         state == my_states) |>  # Brasil Central
+oco2_sif_brc |>
+  filter(
+         state %in% Brasil,
+         state %in% my_states) |>  # Brasil Central
   ggplot(aes(x=longitude,y=latitude)) +
   geom_point()
 ```
@@ -207,8 +347,8 @@ municipality_sf <- municipality %>% # Do script "my-function" --> municipality <
   st_make_valid()
 
 # 2. Converter data frame para sf
-oco2_sif_sf <- st_as_sf(
-  oco2_sif,
+oco2_sif_brc_sf <- st_as_sf(
+  oco2_sif_brc,
   coords = c("longitude", "latitude"),
   crs = 4326,
   remove = FALSE # mantém as colunas originais lon/lat
@@ -218,26 +358,42 @@ oco2_sif_sf <- st_as_sf(
 # A função "st_join" faz uma junção entre dois objetos espaciais sf;
   # Essa junção é feita com base em relações espaciais (geometria);
     # Essa relação de geometria foi obtida do pacote geobr (municipality) e da base de dados da sif classificada por estado
-oco2_sif_sf <- st_join(
-  oco2_sif_sf,
+oco2_sif_brc_sf <- st_join(
+  oco2_sif_brc_sf,
   municipality_sf %>% select(name_muni),
   join = st_within
 ) 
 # Observe que o número de linhas se manteve após o join (✅)
 
-
 # 4. Criar coluna "city_ref", substituindo NA por "Other"
-oco2_sif_sf <- oco2_sif_sf %>%
+oco2_sif_brc_sf <- oco2_sif_brc_sf %>%
   mutate(city_ref = ifelse(is.na(name_muni), "Other", name_muni)) %>%
   select(-name_muni) # remove coluna original para não duplicar
 
 # 5. Converter para data frame (para não manter como sf)
-oco2_sif <- as.data.frame(oco2_sif_sf)
+oco2_sif_brc <- as.data.frame(oco2_sif_brc_sf)
 
-glimpse(oco2_sif) 
+glimpse(oco2_sif_brc) 
 
 # Salvar arquivo 
-# write_rds(oco2_sif, "../data/oco2-sif.rds")
+write_rds(oco2_sif_brc, "../data/oco2-sif-brc.rds")
 ```
+
+#### Unindo as bases oco2-sif-brc.rds e oco2-sif.rds
+
+```{r, eval=FALSE}
+# oco2_sif_brc <- read_rds("../data/oco2-sif-brc.rds")
+# glimpse(oco2_sif_brc)
+# 
+# oco2_sif <- read_rds("../data/oco2-sif.rds")
+# glimpse(oco2_sif)
+
+# Unindo
+oco2_un <- full_join(oco2_sif_brc, oco2_sif)
+
+# Salvando
+# write_rds(oco2_un, "../data/oco2-sif-final.rds")
+```
+
 
 
