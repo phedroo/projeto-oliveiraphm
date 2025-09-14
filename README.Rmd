@@ -4,13 +4,19 @@ output: github_document
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
+
+
 ```{r, include = FALSE}
+### 🌐 Opções globais para os chunks 
+
+# "include = FALSE" 
+  # Código vai ser executado, mas o código e saída ocultam-se no documento final.
 knitr::opts_chunk$set(
-  collapse = TRUE, 
-  message = FALSE, 
-  error = FALSE, 
-  warning = FALSE,
-  comment = "#>"
+  collapse = TRUE, # saída e código compilados no documento final
+  message = FALSE, # ocultar mensagens geradas no documento final
+  error = FALSE,   # ocultar mensagens de erro no documento final
+  warning = FALSE, # ocultar mensagens de warning no documento final
+  comment = "#>"   # define o prefixo usado nos resultados do código
 )
 ```
 
@@ -41,7 +47,7 @@ Os scripts abaixo foram desenvolvidos em RMarkdown e estão disponíveis em form
     -   [Climate TRACE](https://climatetrace.org/): Dados de emissões de GEE de 2015 a 2022\
     -   [AppEEARS](https://appeears.earthdatacloud.nasa.gov/task/point): Variáveis climáticas e vegetativas\
     -   [NASA](https://climate.nasa.gov/): Dados climáticos\
-    -   [NASA-FIRMS](https://firms.modaps.eosdis.nasa.gov): Dados de focos de incêndio de 2015 to 2025\
+    -   [NASA-FIRMS](https://firms.modaps.eosdis.nasa.gov): Dados de focos de incêndio de 2015 a 2025\
     -   [BDQUEIMADAS](https://terrabrasilis.dpi.inpe.br/queimadas/bdqueimadas/#exportar-dados): Dados de focos de incêndio de 2015 a 2025\
     -   [DETER](https://terrabrasilis.dpi.inpe.br/downloads/): Dados  de focos de fogo (cicatriz de queimadas)\
     -   [Programa Queimadas - INPE - Plataforma Terrabrasilis](https://terrabrasilis.dpi.inpe.br/queimadas/portal/): Dados de focos de queimadas x Supressão da vegetação nativa de 08/2018 a 01/2025 & Dados de focos de fogo ativo de 1998 a 21/01/2025\
@@ -86,6 +92,9 @@ library(ggpubr)
 library(geobr)
 library(gstat)
 library(vegan)
+library(sf)
+library(dplyr)
+library(lwgeom) # para st_make_valid
 source("R/my-function.R")
 ```
 #### Definindo estados
@@ -631,8 +640,6 @@ ko_variavel <- krige(formula=form, df_aux, grid_geral, model=modelo,
 )
 ```
 
-- Aperfeiçoar
-
 ```{r, eval=FALSE}
 ko_variavel |> 
   as_tibble() |> 
@@ -848,7 +855,7 @@ map(2015:2021,~{
 
 ### 💨 Entrada com a Base: `oco2-sif.rds`
 ```{r, eval=FALSE} 
-oco2_sif <- read_rds("data/oco2-sif.rds") |> 
+oco2_sif <- read_rds("data/oco2-sif-final.rds") |> 
   rename(SIF_757 = daily_sif757)
 
 glimpse(oco2_sif)
@@ -857,7 +864,7 @@ glimpse(oco2_sif)
 ```{r, eval=FALSE}
 oco2_sif |>
   filter(year == 2022,
-         state == my_states) |>  # Brasil Central
+         state %in% my_states) |>  # Brasil Central
   ggplot(aes(x=longitude,y=latitude)) +
   geom_point()
 ```
@@ -865,7 +872,7 @@ oco2_sif |>
 
 #### Gerar mapa
 ```{r, eval=FALSE}
-my_year = 2020
+my_year = 2022
 municipality |> 
   filter(abbrev_state %in% my_states) |> 
   left_join(
@@ -924,23 +931,32 @@ sp::gridded(grid_geral) = ~ X + Y
 
 #### Interpolação por Krigagem Ordinária - oco2-sif
 
-  Estimar valores médios de concentração de SIF entre 2020 e 2024
+Os parâmetros do semivariograma (alcance, patamar e efeito pepita) da sif foram estabelecidos com base na amostragem total dos pontos da base de dados (sem a parte de "sample_n()").
+
+  Estimar valores médios de concentração de SIF entre 2015 e 2023
+  
 ```{r, eval=FALSE}
 df_aux <- oco2_sif |> 
   filter(year == my_year) |> 
   group_by(longitude, latitude) |> 
   summarise(
-    SIF_757 = mean(SIF_757,na.rm=TRUE), # média xch4
+    SIF_757 = mean(SIF_757,na.rm=TRUE), # média sif
     .groups = "drop"
-  ) |> sample_n(20000) # amostra
-sp::coordinates(df_aux) = ~ longitude + latitude # Converter data frame para objeto espacial - atribuir as colunas longitude/latitude como coordenadas. Várias funções de geoestatística do pacote gstat (como variogram() e krige()) não aceitam um data frame, mas sim um objeto com coordenadas. Agora, a variável xch4 passa a ser o atributo associado a cada ponto espacial.
+  ) |> sample_n(10000) # amostra
+sp::coordinates(df_aux) = ~ longitude + latitude # Converter data frame para objeto espacial - atribuir as colunas longitude/latitude como coordenadas. Várias funções de geoestatística do pacote gstat (como variogram() e krige()) não aceitam um data frame, mas sim um objeto com coordenadas. Agora, a variável sif passa a ser o atributo associado a cada ponto espacial.
 
 form <- SIF_757 ~ 1 # "~ 1" modelo de média constante, mas desconhecida (somente intercepto - assume média global, sem covariáveis).
 
 vari_exp <- gstat::variogram(form, data = df_aux,
-                      cressie = FALSE, #estimador clássico do semivar.
-                      cutoff = 1, # distância semivar
+                      cressie = FALSE, # estimador clássico do semivar.
+                      cutoff = 1.25, # distância semivar
                       width = 0.08) # distancia entre pontos
+
+# vari_exp <- gstat::variogram(form, data = df_aux,
+#                       cressie = FALSE, #estimador clássico do semivar.
+#                       cutoff = 1, # distância semivar
+#                       width = 0.08) # distancia entre pontos
+
 vari_exp  |>
   ggplot(aes(x=dist, y=gamma)) +
   geom_point() +
@@ -949,9 +965,9 @@ vari_exp  |>
 ```
 
 ```{r, eval=FALSE}
-patamar=0.04
-alcance=0.375
-epepita=0.3
+patamar=0.039
+alcance=0.7
+epepita=0.0352
 modelo_1 <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
 modelo_2 <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
 modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
@@ -960,12 +976,14 @@ modelo <- modelo_2 ## sempre modificar
 ```
 
 ```{r, eval=FALSE}
+tictoc::tic()
 ko_variavel <- krige(formula=form, df_aux, grid_geral, model=modelo,
                      block=c(0.1,0.1),
                      nsim=0,
                      na.action=na.pass,
                      debug.level=-1
 )
+tictoc::toc()
 ```
 
 ```{r, eval=FALSE}
@@ -1062,7 +1080,7 @@ municipality |>
 #### Estimativa de SIF para o Brasil Central
 
 ```{r, eval=FALSE}
-oco2_sif_kgr <- map_df(2020:2024,~{
+oco2_sif_kgr <- map_df(2015:2023,~{
   set.seed(1235)
   df_aux <- oco2_sif |>
     group_by(longitude, latitude) |>
@@ -1070,22 +1088,22 @@ oco2_sif_kgr <- map_df(2020:2024,~{
     summarise(
       SIF_757 = mean(SIF_757,na.rm=TRUE),
       .groups = "drop"
-    ) |> sample_n(1000)
+    ) |> sample_n(10000)
   sp::coordinates(df_aux) = ~ longitude + latitude
   form <- SIF_757 ~ 1
   vari_exp <- gstat::variogram(form, data = df_aux,
                                cressie = FALSE,
-                               cutoff = 1, # distância máxima
+                               cutoff = 1.25, # distância máxima
                                width = 0.08) # distancia entre pontos
   vari_exp  |>
     ggplot(aes(x=dist, y=gamma)) +
     geom_point() +
     labs(x="lag (º)",
          y=expression(paste(gamma,"(h)")))
-  patamar=0.04
-  alcance=0.375
-  epepita=0.3
-  modelo <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
+  patamar=0.039
+  alcance=0.7
+  epepita=0.0352
+  modelo <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
   ko_variavel <- krige(formula=form, df_aux, grid_geral, model=modelo,
                        block=c(0.1,0.1),
                        nsim=0,
@@ -1141,7 +1159,7 @@ oco2_sif_bind <- oco2_sif |>
   select(longitude,latitude,SIF_757,city_ref,state,year) |> 
   rbind(oco2_sif_kgr)
 
-map(2020:2024,~{
+map(2015:2023,~{
   municipality |> 
     filter(abbrev_state %in% my_states) |> 
     left_join(
@@ -1180,13 +1198,13 @@ map(2020:2024,~{
     scale_fill_viridis_c()})
 ```
 
-
-### 💨 Entrada com a Base: `appeears-modis.rds`
+<!-- (Comentar todo o código seguinte)
+### 💨 Entrada com a Base: `appeears-modis.rds` - krigagem não feita ainda
 ```{r, eval=FALSE} 
 # original archive "appeears-modis.rds" = 8,7mb
 # appeears data requisited by API (project fapesp)
 
-appeears_modis <- read_rds("data/appeears-modis.rds") 
+appeears_modis <- read_rds("data-raw/appeears-modis.rds") 
   # don't have "state" column - previously filtred
 glimpse(appeears_modis)
 
@@ -1200,12 +1218,8 @@ appeears_modis |>
   geom_point()
 ```
 
-#### Classificando cada ponto em município
+#### Classificando cada ponto em município - appeears
 ```{r, eval=FALSE}
-library(sf)
-library(dplyr)
-library(lwgeom) # para st_make_valid
-
 # 1. Garantir que shapefile de municípios está no mesmo CRS e válido
 municipality_sf <- municipality %>%
   st_transform(crs = 4326) %>%
@@ -1238,12 +1252,12 @@ appeears_modis <- as.data.frame(appeears_modis_sf)
 glimpse(appeears_modis)
 
 # Salvar
-# write_rds(appeears_modis, "data-raw/appeears_modis.rds")
+# write_rds(appeears_modis, "data/appeears_modis.rds")
 ```
 
-#### Gerar mapa
+#### Gerar mapa - appeears
 ```{r, eval=FALSE}
-my_year = 2023
+my_year = 2022
 municipality |> 
   filter(abbrev_state %in% my_states) |> 
   left_join(
@@ -1279,12 +1293,79 @@ municipality |>
   scale_fill_viridis_c(limit = c(-1, 1))
 ```
 
-<!-- (Comentar todo o código seguinte)
+#### Criando o grid (malha de pontos) para valores não amostrados - appeears
+```{r, eval=FALSE}
+# vetores para coordenadas x e y selecionadas da base do IBGE1
+# Extrair coordenadas da base appeears_modis para definir extensão do grid
+x<-appeears_modis$lon
+y<-appeears_modis$lat
+dis <- 0.5 # distância (do grid) para adensamento de pontos nos estados
+grid_geral <- expand.grid( # Criar malha regular
+  X=seq(min(x),max(x),dis), # Combinar cada x e y
+  Y=seq(min(y),max(y),dis)) |>
+  mutate( #teste ponto-no-polígono, TRUE se (X,Y) caem no polígono
+    flag_ms = def_pol(X, Y, pol_ms),
+    flag_mt = def_pol(X, Y, pol_mt),
+    flag_go = def_pol(X, Y, pol_go),
+    flag_df = def_pol(X, Y, pol_df)
+  ) |>
+  filter(flag_ms | flag_go | flag_mt | flag_df) |> # manter pontos correspondentes ao menos 1 dos limites
+  select(-c(flag_ms,flag_mt,flag_go,flag_df)) # remover colunas criadas
+plot(grid_geral)
+sp::gridded(grid_geral) = ~ X + Y
+```
+
+#### Interpolação por Krigagem Ordinária - appeears
+
+```{r, eval=FALSE}
+df_aux <- appeears_modis |> 
+  filter(year == my_year) |> 
+  group_by(lon, lat) |> 
+  reframe(
+    media_ndvi = media_ndvi, # ALTERAR - média dos parâmetros
+    .groups = "drop"
+  ) # |> sample_n(10000) 
+sp::coordinates(df_aux) = ~ lon + lat # Converter data frame para objeto espacial - atribuir as colunas longitude/latitude como coordenadas. Várias funções de geoestatística do pacote gstat (como variogram() e krige()) não aceitam um data frame, mas sim um objeto com coordenadas. Agora, as variáveis vegetativas passam a ser o atributo associado a cada ponto espacial.
+
+form <- media_ndvi ~ 1 # "~ 1" modelo de média constante, mas desconhecida (somente intercepto - assume média global, sem covariáveis).
+
+vari_exp <- gstat::variogram(form, data = df_aux,
+                      cressie = FALSE, #estimador clássico do semivar.
+                      cutoff = 1, # distância  
+                      width = 0.08) # distancia entre pontos
+vari_exp  |>
+  ggplot(aes(x=dist, y=gamma)) +
+  geom_point() +
+  labs(x="lag (º)",
+       y=expression(paste(gamma,"(h)")))
+```
+
+```{r, eval=FALSE}
+patamar=800
+alcance=0.25
+epepita=780
+modelo_1 <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
+modelo_2 <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
+modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
+plot_my_models(modelo_1,modelo_2,modelo_3)
+modelo <- modelo_1 ## sempre modificar
+```
+
+(Finalizar/descomentar código) --> 
+
 #### 💨 Entrada com a Base: `nasa-power.rds`
 ```{r, eval=FALSE} 
 # original archive "nasa-power.rds" = 174,6mb
 
-nasa_power <- read_rds("data/nasa-power.rds")
+nasa_power <- read_rds("data/nasa_power.rds") |> 
+  rename(
+    Radiacao = allsky_sfc_sw_dwn,
+    Temperatura = t2m,
+    Precipitacao = prectotcorr,
+    Umidade = rh2m,
+    Vento = ws2m,
+    Pressao = ps
+  )
   # don't have "state" column - previously filtred
 glimpse(nasa_power)
 
@@ -1298,47 +1379,30 @@ nasa_power |>
   geom_point()
 ```
 
-#### Classificando cada ponto em município
-```{r, eval=FALSE}
-municipality_sf <- municipality %>%
-  st_transform(crs = 4326) %>%
-  st_make_valid()
+#### Classificando cada ponto em município 
 
-nasa_power_sf <- st_as_sf(
-  nasa_power,
-  coords = c("lon", "lat"),
-  crs = 4326,
-  remove = FALSE # mantém as colunas originais lon/lat
-)
-
-nasa_power_sf <- st_join(
-  nasa_power_sf,
-  municipality_sf %>% select(name_muni),
-  join = st_within
-)
-
-nasa_power_sf <- nasa_power_sf %>%
-  mutate(city_ref = ifelse(is.na(name_muni), "Other", name_muni)) %>%
-  select(-name_muni)
-
-nasa_power <- as.data.frame(nasa_power_sf)
-
-glimpse(nasa_power)
-
-# Salvar
-write_rds(nasa_power, "data-raw/nasa_power.rds")
-```
+Já feito no script de faxina "nasa-power.Rmd"
 
 #### Gerar mapa
 ```{r, eval=FALSE}
-my_year = 2023
+# Atribuir ao objeto "variavel" a variável climática da base do nasa power que iremos trabalhar
+# Radiacao 
+# Temperatura
+# Precipitacao
+# Umidade 
+# Vento
+# Pressao
+
+variavel <- "Pressao" #mudar
+
+my_year = 2022
 municipality |> 
   filter(abbrev_state %in% my_states) |> 
   left_join(
     nasa_power |> 
-      group_by(year, city_ref) |> 
+      group_by(year, city_ref) |>
       summarise(
-        t2m = mean(t2m,na.rm=TRUE),
+        !!variavel := mean(.data[[variavel]],na.rm=TRUE), #Criar coluna com mesmo nome da variavel
         .groups = "drop"
       ) |> 
       rename(name_muni = city_ref),
@@ -1346,7 +1410,7 @@ municipality |>
   ) |> 
   filter(year == my_year) |> 
   ggplot()  +
-  geom_sf(aes(fill=t2m), color="transparent",
+  geom_sf(aes(fill=.data[[variavel]]), color="transparent",
           size=.05, show.legend = TRUE)  +
   geom_point(data = nasa_power |> 
                filter(year==my_year), 
@@ -1361,12 +1425,342 @@ municipality |>
     legend.text = element_text(size = rel(1), color = "black"),
     legend.title = element_text(face = 'bold', size = rel(1.2))
   ) +
-  labs(fill = 'Temperatura',
+  labs(fill = variavel,
        x = 'Longitude',
        y = 'Latitude') +
-  scale_fill_viridis_c() #limits = c(22, 30)
+  scale_fill_viridis_c()
+```
+#### Criando o grid (malha de pontos) para valores não amostrados - nasa-power
+```{r, eval=FALSE}
+# vetores para coordenadas x e y selecionadas da base do IBGE1
+# Extrair coordenadas da base nasa_power para definir extensão do grid
+x<-nasa_power$lon
+y<-nasa_power$lat
+dis <- 0.5 # distância (do grid) para adensamento de pontos nos estados
+grid_geral <- expand.grid( # Criar malha regular
+  X=seq(min(x),max(x),dis), # Combinar cada x e y
+  Y=seq(min(y),max(y),dis)) |>
+  mutate( #teste ponto-no-polígono, TRUE se (X,Y) caem no polígono
+    flag_ms = def_pol(X, Y, pol_ms),
+    flag_mt = def_pol(X, Y, pol_mt),
+    flag_go = def_pol(X, Y, pol_go),
+    flag_df = def_pol(X, Y, pol_df)
+  ) |>
+  filter(flag_ms | flag_go | flag_mt | flag_df) |> # manter pontos correspondentes ao menos 1 dos limites
+  select(-c(flag_ms,flag_mt,flag_go,flag_df)) # remover colunas criadas
+plot(grid_geral)
+sp::gridded(grid_geral) = ~ X + Y
+```
+#### Interpolação por Krigagem Ordinária - nasa-power
+
+Parâmetros testados para contruir o semivariograma, com base na variável:
+  
+*Temperatura*
+  cutoff = 5,  
+  width = 0.09
+  patamar=2.2
+  alcance=4.5
+  epepita=0.2
+  
+*Radiacao*
+**Não consegui estabelecer o semivariograma adequado**
+  cutoff = -- 
+  width = --
+  patamar =
+  alcance =
+  epepita =
+  
+*Precipitacao*
+  cutoff = 6,  
+  width = 0.5
+  patamar= 1.35
+  alcance= 15
+  epepita= 0.01
+  
+*Umidade*
+**Muitos avisos de warning**
+  ***Warning in fit.variogram(vari_exp, vgm(patamar, "Sph", alcance, epepita)) :No convergence after 200 iterations: try different initial values?***
+  cutoff = 12,  
+  width = 0.5
+  patamar= 60
+  alcance= 11
+  epepita= 0.1
+  
+*Vento*
+**3 warning**
+  cutoff = 5,  
+  width = 0.08
+  patamar=.2
+  alcance=1.5
+  epepita=0
+  
+*Pressao* 
+  cutoff = 7, 
+  width = 0.35
+  patamar=4.2
+  alcance=5
+  epepita=.4
+
+```{r, eval=FALSE}
+df_aux <- nasa_power |> 
+  filter(year %in% my_year) |> 
+  group_by(lon, lat) |> 
+  summarise(
+    !!variavel := mean(.data[[variavel]],na.rm=TRUE), # média temperatura
+    .groups = "drop"
+  ) # |> sample_n(546) # tamanho máximo dos dados
+sp::coordinates(df_aux) = ~ lon + lat # Converter data frame para objeto espacial - atribuir as colunas longitude/latitude como coordenadas. Várias funções de geoestatística do pacote gstat (como variogram() e krige()) não aceitam um data frame, mas sim um objeto com coordenadas. Agora, a variável passa a ser o atributo associado a cada ponto espacial.
+
+# Converter string em fórmula para atribuir a variavel preestabelecida
+form <- as.formula(paste(variavel, "~ 1")) 
+
+vari_exp <- gstat::variogram(form, data = df_aux,
+                      cressie = FALSE, #estimador clássico do semivar.
+                      cutoff = 7, # distância  
+                      width = 0.35) # distancia entre pontos
+vari_exp  |>
+  ggplot(aes(x=dist, y=gamma)) +
+  geom_point() +
+  labs(x="lag (º)",
+       y=expression(paste(gamma,"(h)")))
 ```
 
+```{r, eval=FALSE}
+patamar=4.2
+alcance=5
+epepita=.4
+modelo_1 <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
+modelo_2 <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
+modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
+plot_my_models(modelo_1,modelo_2,modelo_3)
+modelo <- modelo_1 ## sempre modificar
+```
+
+```{r, eval=FALSE}
+ko_variavel <- krige(formula=form, df_aux, grid_geral, model=modelo,
+                     block=c(0.1,0.1),
+                     nsim=0,
+                     na.action=na.pass,
+                     debug.level=-1
+)
+```
+
+```{r, eval=FALSE}
+ko_variavel |> 
+  as_tibble() |> 
+    ggplot(aes(x=X, y=Y)) +
+  geom_tile(aes(fill = var1.pred)) +
+  scale_fill_viridis_c(option = "mako") +
+  coord_equal() +
+  labs(x="Longitude",
+       y="Latitude",
+       fill=variavel,
+       title = my_year) +
+  theme_bw()
+```
+
+```{r, eval=FALSE}
+df_kgr <- ko_variavel |> 
+      as_tibble() |> 
+      select(-var1.var) |> 
+      rename(lon=X,lat=Y,!!variavel :=var1.pred)  |> 
+      mutate(city_ref = "Other",
+             state = ifelse(def_pol(lon, lat, pol_ms),"MS",
+                            ifelse(def_pol(lon, lat, pol_mt),"MT",
+                            ifelse(def_pol(lon, lat, pol_go),"GO",
+                            "DF"))) 
+             )
+resul <- vector()
+estado <- df_kgr$state
+for(i in 1:nrow(df_kgr)){
+  if(estado[i]!="Other"){
+    my_citys_obj <- municipality %>%
+      filter(abbrev_state == estado[i])
+    n_citys <- nrow(my_citys_obj)
+    my_citys_names <- my_citys_obj %>% pull(name_muni)
+    resul[i] <- "Other"
+    for(j in 1:n_citys){
+      pol_city <- my_citys_obj$geom  %>%
+        purrr::pluck(j) %>%
+        as.matrix()
+      if(def_pol(df_kgr$lon[i],
+                 df_kgr$lat[i],
+                 pol_city)){
+        resul[i] <- my_citys_names[j]
+      }
+    }
+  }
+}
+df_kgr$city_ref <- resul
+```
+
+
+```{r, eval=FALSE}
+municipality |> 
+  filter(abbrev_state %in% my_states) |> 
+  left_join(
+    nasa_power |> 
+      filter(year == my_year) |> 
+      select(lon,lat,variavel,state,city_ref) |> 
+      rbind(
+        df_kgr
+      ) |> 
+      group_by(city_ref) |> 
+      summarise(
+        !!variavel := mean(.data[[variavel]],na.rm=TRUE),
+        .groups = "drop"
+      ) |> 
+      rename(  name_muni = city_ref),
+    by = c("name_muni")
+  ) |> 
+  mutate(
+    !!variavel := ifelse(is.na(.data[[variavel]]),median(.data[[variavel]],na.rm = TRUE),.data[[variavel]])) |>
+  ggplot()  +
+  geom_sf(aes(fill=.data[[variavel]]), color="transparent",
+          size=.05, show.legend = TRUE)  +
+  # geom_point(data = df_kgr, 
+  #            aes(lon, lat, #size = emission,
+  #                color="red")) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(size = rel(.9), color = "black"),
+    axis.title.x = element_text(size = rel(1.1), color = "black"),
+    axis.text.y = element_text(size = rel(.9), color = "black"),
+    axis.title.y = element_text(size = rel(1.1), color = "black"),
+    legend.text = element_text(size = rel(1), color = "black"),
+    legend.title = element_text(face = 'bold', size = rel(1.2))
+  ) +
+  labs(fill = variavel,
+       x = 'Longitude',
+       y = 'Latitude') +
+  scale_fill_viridis_c()
+```
+
+#### Estimativa da variável para o Brasil Central - nasa-power
+
+```{r, eval=FALSE}
+nome_variavel <- paste0("nasa_power_",variavel,"_kgr")
+
+nome_variavel <- map_df(2015:2023,~{
+  set.seed(1235)
+  df_aux <- nasa_power |>
+    group_by(lon, lat) |>
+    filter(year == .x) |>
+    summarise(
+      !!variavel := mean(.data[[variavel]],na.rm=TRUE),
+      .groups = "drop"
+    ) 
+  sp::coordinates(df_aux) = ~ lon + lat
+  form <- as.formula(paste(variavel, "~ 1")) 
+  vari_exp <- gstat::variogram(form, data = df_aux,
+                               cressie = FALSE,
+                               cutoff = 7, # !! mudar
+                               width = 0.35) # !! mudar
+  vari_exp  |>
+    ggplot(aes(x=dist, y=gamma)) +
+    geom_point() +
+    labs(x="lag (º)",
+         y=expression(paste(gamma,"(h)")))
+  patamar=2.2
+  alcance=4.5
+  epepita=0.2
+  modelo <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
+  ko_variavel <- krige(formula=form, df_aux, grid_geral, model=modelo,
+                       block=c(0.1,0.1),
+                       nsim=0,
+                       na.action=na.pass,
+                       debug.level=-1
+  )
+  df_kgr <- ko_variavel |>
+      as_tibble() |>
+      select(-var1.var) |>
+      rename(lon=X,lat=Y,!!variavel :=var1.pred)  |>
+      mutate(city_ref = "Other",
+             state = ifelse(def_pol(lon, lat, pol_ms),"MS",
+                            ifelse(def_pol(lon, lat, pol_mt),"MT",
+                            ifelse(def_pol(lon, lat, pol_go),"GO",
+                            "DF")))
+             )
+  resul <- vector()
+  estado <- df_kgr$state
+  for(i in 1:nrow(df_kgr)){
+    if(estado[i]!="Other"){
+      my_citys_obj <- municipality %>%
+        filter(abbrev_state == estado[i])
+      n_citys <- nrow(my_citys_obj)
+      my_citys_names <- my_citys_obj %>% pull(name_muni)
+      resul[i] <- "Other"
+      for(j in 1:n_citys){
+        pol_city <- my_citys_obj$geom  %>%
+          purrr::pluck(j) %>%
+          as.matrix()
+        if(def_pol(df_kgr$lon[i],
+                   df_kgr$lat[i],
+                   pol_city)){
+          resul[i] <- my_citys_names[j]
+        }
+      }
+    }
+  }
+  df_kgr$city_ref <- resul
+
+  df_final <- df_kgr |>
+        mutate(year = .x)
+  return(df_final)
+})
+write_rds(nome_variavel,paste0("data-raw/nasa-power-",variavel,"-kgr.rds"))
+```
+
+```{r, eval=FALSE}
+# Rodar somente quando necessário!!!!
+nasa_power_kgr <- read_rds(paste0("data-raw/nasa-power-",variavel,"-kgr.rds"))
+```
+
+```{r, eval=FALSE}
+nasa_power_bind <- nasa_power |> 
+  select(lon,lat,.data[[variavel]],city_ref,state,year) |> 
+  rbind(nasa_power_kgr)
+
+map(2015:2023,~{
+  municipality |> 
+    filter(abbrev_state %in% my_states) |> 
+    left_join(
+      nasa_power_bind |> 
+        filter(year == .x) |> 
+        select(lon,lat,.data[[variavel]],state,city_ref) |> 
+        group_by(city_ref) |> 
+        summarise(
+          !!variavel := mean(.data[[variavel]],na.rm=TRUE),
+          .groups = "drop"
+        ) |> 
+        rename(name_muni = city_ref),
+      by = c("name_muni")
+    ) |> 
+    mutate(
+      !!variavel := ifelse(is.na(.data[[variavel]]),median(.data[[variavel]],na.rm = TRUE),.data[[variavel]])) |>
+    ggplot()  +
+    geom_sf(aes(fill=.data[[variavel]]), color="transparent",
+            size=.05, show.legend = TRUE)  +
+    # geom_point(data = df_kgr, 
+    #            aes(longitude, latitude, #size = emission,
+    #                color="red")) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(size = rel(.9), color = "black"),
+      axis.title.x = element_text(size = rel(1.1), color = "black"),
+      axis.text.y = element_text(size = rel(.9), color = "black"),
+      axis.title.y = element_text(size = rel(1.1), color = "black"),
+      legend.text = element_text(size = rel(1), color = "black"),
+      legend.title = element_text(face = 'bold', size = rel(1.2))
+    ) +
+    labs(fill = variavel,
+         x = 'Longitude',
+         y = 'Latitude',
+         title = .x) +
+    scale_fill_viridis_c()})
+```
+
+<!-- (Comentar todo o código seguinte)
 #### Entrada com a Base: `deter-queimadas.rds`
 ```{r, eval=FALSE} 
 # original archive "deter-queimadas.rds" = 122,1mb
