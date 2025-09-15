@@ -392,3 +392,31 @@ plot_my_models <- function(modelo_1,modelo_2,modelo_3){
   print(plot(vari_exp,model=modelo_2, col=1,pl=F,pch=16,cex=1.2,cex.main=7,ylab=list("Semivariância",cex=1.3),xlab=list("Distância de Separação h (m)",cex=1.3),main =paste("Exp(C0= ",c02,"; C0+C1= ", c0_c12, "; a= ", a2,"; r2 = ", r22,")",sep="")))
   print(plot(vari_exp,model=modelo_3, col=1,pl=F,pch=16,cex=1.2,cex.main=7,ylab=list("Semivariância",cex=1.3),xlab=list("Distância de Separação h (m)",cex=1.3),main =paste("Gau(C0= ",c03,"; C0+C1= ", c0_c13, "; a= ", a3,"; r2 = ", r23,")",sep="")))
 }
+
+#'Função para leitura dos arquivos nc4 da SIF do OCO2 e OCO3
+get_oco2_sif <- function(file_path){
+  nc_file <- ncdf4::nc_open(file_path)
+  df <- data.frame(
+    "time"=ncdf4::ncvar_get(nc_file,varid="Delta_Time"),
+    "sza"=ncdf4::ncvar_get(nc_file,varid="SZA"),
+    "vza"=ncdf4::ncvar_get(nc_file,varid="VZA"),
+    "saz"=ncdf4::ncvar_get(nc_file,varid="SAz"),
+    "vaz"=ncdf4::ncvar_get(nc_file,varid="VAz"),
+    "longitude"=ncdf4::ncvar_get(nc_file,varid="Longitude"),
+    "latitude"=ncdf4::ncvar_get(nc_file,varid="Latitude"),
+    # "longitude_corners"=ncdf4::ncvar_get(nc_file,varid="Longitude_Corners"),
+    # "latitude_corners"=ncdf4::ncvar_get(nc_file,varid="Latitude_Corners"),
+    "sif740"=ncdf4::ncvar_get(nc_file,varid="SIF_740nm"),
+    "sif740_uncertainty"=ncdf4::ncvar_get(nc_file,varid="SIF_Uncertainty_740nm"),
+    "daily_sif740"=ncdf4::ncvar_get(nc_file,varid="Daily_SIF_740nm"),
+    "daily_sif757"=ncdf4::ncvar_get(nc_file,varid="Daily_SIF_757nm"),
+    "daily_sif771"=ncdf4::ncvar_get(nc_file,varid="Daily_SIF_771nm"),
+    "quality_flag"=ncdf4::ncvar_get(nc_file,varid="Quality_Flag"),
+    "path" = file_path
+  )
+  df <- df |>
+    dplyr::filter(latitude >= -35 & latitude <= 5,
+                  longitude >= -75 & longitude <= -34)
+  ncdf4::nc_close(nc_file)
+  return(df)
+}

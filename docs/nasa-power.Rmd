@@ -126,9 +126,108 @@ files_names <- list.files("../data-raw/nasa-power/",
 df_final <- purrr::map_dfr(files_names, read.csv)
 
 # Salvar o banco de dados final
-readr::write_rds(df_final |> 
-                   janitor::clean_names(), 
-                 '../data/nasa-power.rds')
+# readr::write_rds(df_final |> 
+#                    janitor::clean_names(), 
+#                  '../data-raw/nasa-power.rds')
 ```
+
+## Aquisição feita pela nasa search
+
+#### Classificando cada ponto em município
+```{r, eval=FALSE}
+# 1. Garantir que shapefile de municípios está no mesmo CRS e válido
+municipality_sf <- municipality %>%
+  st_transform(crs = 4326) %>%
+  st_make_valid()
+
+# 2. Converter seu data frame para sf sem perder colunas
+nasa_power_sf <- st_as_sf(
+  nasa_power,
+  coords = c("lon", "lat"),
+  crs = 4326,
+  remove = FALSE # mantém as colunas originais lon/lat
+)
+
+# 3. Fazer o join espacial
+nasa_power_sf <- st_join(
+  nasa_power_sf,
+  municipality_sf %>% select(name_muni),
+  join = st_within
+)
+
+# 4. Criar coluna "city_ref", substituindo NA por "Other"
+nasa_power_sf <- nasa_power_sf %>%
+  mutate(city_ref = ifelse(is.na(name_muni), "Other", name_muni)) %>%
+  select(-name_muni)
+
+# 5. Converter de volta para data frame se não quiser manter como sf
+nasa_power <- as.data.frame(nasa_power_sf)
+
+# 6. Conferir resumo
+glimpse(nasa_power)
+
+# Salvar arquivo
+# write_rds(nasa_power, "data-raw/nasa_power.rds")
+```
+
+#### Classificando pontos dos estados com base nas coordenadas
+
+Método mais rápido
+
+```{r, eval=FALSE}
+library(sf)
+library(geobr)
+
+# Transformar em objeto sf (coordenadas lon/lat, CRS WGS84), 
+# Nesse caso os pontos já estão em lon/lat, EPSG:4326
+nasa_sf <- st_as_sf(nasa_power, 
+                    coords = c("lon", "lat"), 
+                    crs = 4326,
+                    remove = FALSE)
+
+# Estados do geobr (CRS do pacote é o SIRGAS 4674)
+estados <- geobr::read_state(year = 2020) |> 
+  st_transform(crs = 4326)   # transforma para mesmo sistema de referência de coord (WGS84)
+
+# Join espacial
+nasa_joined <- st_join(nasa_sf, estados["abbrev_state"])
+
+# Converter para data frame e renomear coluna 
+nasa_joined <- as_data_frame(nasa_joined |> 
+                               rename("state" = abbrev_state))
+
+# Visualizar resumo
+glimpse(nasa_joined)
+# tail(nasa_joined)
+
+# Salvar
+# write_rds(nasa_joined, "../data/nasa_power.rds")
+```
+
+<!--
+
+#### Classificando pontos dos estados com base nas coordenadas
+```{r, eval=FALSE}
+# # Lendo base
+# nasa_power <- read_rds("../data-raw/nasa_power.rds")
+# 
+# data_set <- nasa_power
+# state <- 0
+# x <- data_set |> dplyr::pull(lon)
+# y <- data_set |> dplyr::pull(lat)
+# 
+# tictoc::tic() # Ver tempo
+# for(i in 1:nrow(data_set)) state[i] <- get_geobr_state(x[i],y[i])
+# tictoc::toc()
+# 
+# tictoc::tic()
+# data_set <- data_set |> cbind(state)
+# tictoc::toc()
+# 
+# dplyr::glimpse(data_set)
+# # readr::write_rds(data_set,"../data/nasa_power.rds")
+```
+
+
 
 
