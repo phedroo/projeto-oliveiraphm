@@ -182,8 +182,6 @@ deter_queimadas <- read_rds("data-raw/deter-queimadas.rds") |>
   )
 
 glimpse(deter_queimadas)
-
-# Essa base tem os municípios definidos, no entanto alguns estão classificados como "NA" Deve-se classificá-los com base nas coordenadas de longitude e latitude
 ```
 
 

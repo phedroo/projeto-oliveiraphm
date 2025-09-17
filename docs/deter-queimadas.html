@@ -512,9 +512,7 @@ deter_queimadas &lt;- read_rds(&quot;data-raw/deter-queimadas.rds&quot;) |&gt;
     latitude = y
   )
 
-glimpse(deter_queimadas)
-
-# Essa base tem os municípios definidos, no entanto alguns estão classificados como &quot;NA&quot; Deve-se classificá-los com base nas coordenadas de longitude e latitude</code></pre>
+glimpse(deter_queimadas)</code></pre>
 <div id="classificando-cada-ponto-em-município" class="section level4">
 <h4>Classificando cada ponto em município</h4>
 <pre class="r"><code>library(sf)
