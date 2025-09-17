@@ -167,10 +167,10 @@ nasa_power <- as.data.frame(nasa_power_sf)
 glimpse(nasa_power)
 
 # Salvar arquivo
-# write_rds(nasa_power, "data-raw/nasa_power.rds")
+# write_rds(nasa_power, "data-raw/nasa_power.rds") # arquivo excluído após rodar chunk 7
 ```
 
-#### Classificando pontos dos estados com base nas coordenadas
+#### Classificando cada ponto em estado
 
 Método mais rápido
 
