@@ -247,6 +247,16 @@ deter_queimadas <- as_data_frame(deter_queimadas |>
 glimpse(deter_queimadas)
 tail(deter_queimadas)
 
+# Padronizar colunas
+deter_queimadas <- deter_queimadas |> 
+  mutate(CLASSNAME = case_when(
+    CLASSNAME == "cicatriz de queimada" ~ "CICATRIZ_DE_QUEIMADA",
+    TRUE ~ CLASSNAME
+  ))
+
+# Converter para data frame novamente 
+deter_queimadas <- as_data_frame(deter_queimadas)
+
 # Salvar
 # write_rds(deter_queimadas, "../data/deter_queimadas.rds")
 ```
