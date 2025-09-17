@@ -168,7 +168,89 @@ df <- deter_all |>
 ) 
 df |> 
   as_tibble() |> 
-  write_rds("../data/deter-queimadas.rds")
+  # write_rds("../data-raw/deter-queimadas.rds")
+```
+
+### 💨 Entrada com a Base: `deter-queimadas.rds`
+```{r, eval=FALSE} 
+# original archive "deter-queimadas.rds" = 122,1mb
+
+deter_queimadas <- read_rds("data-raw/deter-queimadas.rds") |> 
+  rename(
+    longitude = x,
+    latitude = y
+  )
+
+glimpse(deter_queimadas)
+
+# Essa base tem os municípios definidos, no entanto alguns estão classificados como "NA" Deve-se classificá-los com base nas coordenadas de longitude e latitude
+```
+
+
+#### Classificando cada ponto em município
+```{r, eval=FALSE}
+library(sf)
+library(dplyr)
+library(lwgeom) # para st_make_valid
+
+municipality_sf <- municipality %>%
+  st_transform(crs = 4326) %>%
+  st_make_valid()
+
+deter_queimadas_sf <- st_as_sf(
+  deter_queimadas,
+  coords = c("longitude", "latitude"),
+  crs = 4326,
+  remove = FALSE # mantém as colunas originais lon/lat
+)
+
+deter_queimadas_sf <- st_join(
+  deter_queimadas_sf,
+  municipality_sf %>% select(name_muni),
+  join = st_within
+)
+
+deter_queimadas_sf <- deter_queimadas_sf %>%
+  mutate(city_ref = ifelse(is.na(name_muni), "Other", name_muni)) %>%
+  select(-name_muni) # remove coluna original para evitra duplicada
+
+deter_queimadas <- as.data.frame(deter_queimadas_sf)
+
+glimpse(deter_queimadas)
+
+# Salvar
+write_rds(deter_queimadas, "data-raw/deter_queimadas.rds")
+```
+
+#### Classificando cada ponto em estado
+```{r, eval=FALSE}
+library(sf)
+library(geobr)
+
+# Transformar em objeto sf (coordenadas lon/lat, CRS WGS84), 
+# Nesse caso os pontos já estão em lon/lat, EPSG:4326
+deter_queimadas_sf <- st_as_sf(deter_queimadas, 
+                    coords = c("longitude", "latitude"), 
+                    crs = 4326,
+                    remove = FALSE)
+
+# Estados do geobr (CRS do pacote é o SIRGAS 4674)
+estados <- geobr::read_state(year = 2020) |> 
+  st_transform(crs = 4326)   # transforma para mesmo sistema de referência de coord (WGS84)
+
+# Join espacial
+deter_queimadas <- st_join(deter_queimadas_sf, estados["abbrev_state"])
+
+# Converter para data frame e renomear coluna 
+deter_queimadas <- as_data_frame(deter_queimadas |> 
+                               rename("state" = abbrev_state))
+
+# Visualizar resumo
+glimpse(deter_queimadas)
+tail(deter_queimadas)
+
+# Salvar
+# write_rds(deter_queimadas, "../data/deter_queimadas.rds")
 ```
 
 
