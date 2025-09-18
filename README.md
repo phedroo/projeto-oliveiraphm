@@ -527,10 +527,10 @@ map(2015:2023,~{
     scale_fill_viridis_c()})
 ```
 
-<!-- (Comentar todo o código seguinte)
+<!-- 
 &#10;### 💨 Entrada com a Base: `gosat-xch4.rds`
 &#10;``` r
-gosat_xch4 <- read_rds("data/gosat-xch4.rds") |> 
+gosat_xch4 <- read_rds("data/gosat_xch4.rds") |> 
   filter(state %in% my_states) |> 
   select(-flag_nordeste, -flag_br)
 &#10;glimpse(gosat_xch4)
@@ -543,37 +543,10 @@ gosat_xch4 |>
   geom_point()
 ```
 &#10;#### Classificando cada ponto em município
+&#10;Já feito no arquivo da pasta docs
+&#10;#### Gerar mapa
 &#10;``` r
-# resul <- vector()
-# 
-# estado <- gosat_xch4$state
-# for(i in 1:nrow(gosat_xch4)){
-#   if(estado[i]!="Other"){
-#     my_citys_obj <- municipality %>%
-#       filter(abbrev_state == estado[i])
-#     n_citys <- nrow(my_citys_obj)
-#     my_citys_names <- my_citys_obj %>% pull(name_muni)
-#     resul[i] <- "Other"
-#     for(j in 1:n_citys){
-#       pol_city <- my_citys_obj$geom  %>%
-#         purrr::pluck(j) %>%
-#         as.matrix()
-#       if(def_pol(gosat_xch4$longitude[i],
-#                  gosat_xch4$latitude[i],
-#                  pol_city)){
-#         resul[i] <- my_citys_names[j]
-#       }
-#     }
-#   }
-# }
-# gosat_xch4$city_ref <- resul
-# glimpse(gosat_xch4)
-# write_rds(gosat_xch4,"data-raw/gosat_xch4.rds")
-```
-&#10;
-#### Gerar mapa
-&#10;``` r
-gosat_xch4 <- read_rds("data-raw/gosat_xch4.rds") # os arquivos com underline foram tratados, classificados por município e deverão ser repassados para a pasta data futuramente
+gosat_xch4 <- read_rds("data/gosat_xch4.rds") # os arquivos com underline foram tratados, classificados por município e deverão ser repassados para a pasta data futuramente
 &#10;my_year = 2021
 municipality |> 
   filter(abbrev_state %in% my_states) |> 
@@ -667,7 +640,7 @@ modelo_1 <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
 modelo_2 <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
 modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
 plot_my_models(modelo_1,modelo_2,modelo_3)
-modelo <- modelo_2 ## sempre modificar
+modelo <- modelo_1 ## sempre modificar
 ```
 &#10;
 ``` r
@@ -838,7 +811,7 @@ gosat_xch4_kgr <- map_df(2015:2021,~{
         mutate(year = .x)
   return(df_final)
 })
-write_rds(gosat_xch4_kgr,"data-raw/gosat-xch4-kgr.rds")
+# write_rds(gosat_xch4_kgr,"data-raw/gosat-xch4-kgr.rds")
 ```
 &#10;
 ``` r
@@ -887,9 +860,10 @@ gosat_xch4_bind <- gosat_xch4 |>
          title = .x) +
     scale_fill_viridis_c()})
 ```
+&#10;<!-- comentar código
 &#10;### 💨 Entrada com a Base: `oco2-sif.rds`
 &#10;``` r
-oco2_sif <- read_rds("data/oco2-sif-final.rds") |> 
+oco2_sif <- read_rds("data/oco2-sif.rds") |> 
   rename(SIF_757 = daily_sif757)
 &#10;glimpse(oco2_sif)
 ```
@@ -1743,18 +1717,81 @@ nasa_power_bind <- nasa_power |>
          title = .x) +
     scale_fill_viridis_c()})
 ```
-&#10;(Finalizar/descomentar código) -->
+&#10;descomentar código -->
 
-### 💨 Entrada com a Base: `deter_queimadas.rds`
+### 💨 Entrada com a Base: `prodes-deforestation.rds`
 
 ``` r
-# original archive "deter-queimadas.rds" = 122,1mb
+# original archive "prodes-deforestation.rds" = 2.2gb
 
-deter_queimadas <- read_rds("data/deter_queimadas.rds")
+prodes_deforestation <- read_rds("data/prodes-deforestation.rds")
+  # sample_n(1000000)
+  # "state" column previously filtred 
 
-glimpse(deter_queimadas)
+glimpse(prodes_deforestation)
 ```
 
+``` r
+prodes_deforestation |> 
+  sample_n(100000) |> 
+  filter(categorie == 15) |> 
+  ggplot(aes(x=x,y=y)) +
+  geom_point()
+```
+
+#### Gerar mapa
+
+``` r
+# Alocando intensidade com base nas observações de desmatamento no ano
+df_prodes <- prodes_deforestation |> 
+  group_by(categorie, state, muni) |> 
+  count() |> 
+  group_by(categorie) |> 
+  mutate(
+    percent = n/sum(n)*100
+  )
+```
+
+``` r
+# Gerando o mapa de intensidade de desmatamento
+ municipality |> 
+    filter(abbrev_state %in% my_states) |> 
+    left_join(
+      df_prodes |> 
+        filter(categorie == 16) |> 
+        rename(name_muni = muni),
+      by = c("name_muni")
+    ) |> 
+  ggplot() +
+   geom_sf(aes(fill=percent), color="transparent",
+            size=.05, show.legend = TRUE)  +
+    # geom_point(data = df_kgr, 
+    #            aes(longitude, latitude, #size = emission,
+    #                color="red")) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(size = rel(.9), color = "black"),
+      axis.title.x = element_text(size = rel(1.1), color = "black"),
+      axis.text.y = element_text(size = rel(.9), color = "black"),
+      axis.title.y = element_text(size = rel(1.1), color = "black"),
+      legend.text = element_text(size = rel(1), color = "black"),
+      legend.title = element_text(face = 'bold', size = rel(1.2))
+    ) +
+    labs(fill = 'intensidade',
+         x = 'Longitude',
+         y = 'Latitude',
+         title = 'Desmatamento') +
+    scale_fill_viridis_c()
+```
+
+<!--
+&#10;### 💨 Entrada com a Base: `deter_queimadas.rds`
+&#10;``` r
+# original archive "deter-queimadas.rds" = 122,1mb
+&#10;deter_queimadas <- read_rds("data/deter_queimadas.rds")
+&#10;glimpse(deter_queimadas)
+```
+&#10;
 ``` r
 deter_queimadas |> 
   # pull(ANO) |> unique()
@@ -1762,14 +1799,11 @@ deter_queimadas |>
   ggplot(aes(x=longitude,y=latitude)) +
   geom_point()
 ```
-
-#### Classificação de cada ponto em município e estado - deter
-
-Feita no script do tratamento (pasta docs)
-
-#### Gerar mapa - deter
-
-``` r
+&#10;
+&#10;#### Classificação de cada ponto em município e estado - deter
+&#10;Feita no script do tratamento (pasta docs)
+&#10;#### Gerar mapa  - deter
+&#10;``` r
 my_year = 2023
 municipality |> 
   filter(abbrev_state %in% my_states) |> 
@@ -1805,10 +1839,8 @@ municipality |>
        y = 'Latitude') +
   scale_fill_viridis_c()
 ```
-
-#### Criando o grid (malha de pontos) para valores não amostrados - deter
-
-``` r
+&#10;#### Criando o grid (malha de pontos) para valores não amostrados - deter
+&#10;``` r
 # vetores para coordenadas x e y selecionadas da base do IBGE1
 # Extrair coordenadas da base nasa_xco2 para definir extensão do grid
 x<-deter_queimadas$longitude
@@ -1828,13 +1860,11 @@ grid_geral <- expand.grid( # Criar malha regular
 plot(grid_geral)
 sp::gridded(grid_geral) = ~ X + Y
 ```
-
 #### Interpolação por Krigagem Ordinária - deter
-
+&#10;
 ``` r
 # deter_queimadas <- as_data_frame(deter_queimadas)
-
-df_aux <- deter_queimadas |> 
+&#10;df_aux <- deter_queimadas |> 
   filter(ANO == my_year) |> 
   group_by(longitude, latitude) |> 
   summarise(
@@ -1842,22 +1872,19 @@ df_aux <- deter_queimadas |>
     .groups = "drop"
   ) |> sample_n(8952) # tamanho máximo
 sp::coordinates(df_aux) = ~ longitude + latitude 
-
-form <- AREAMUNKM ~ 1 # "~ 1" modelo de média constante, mas desconhecida (somente intercepto - assume média global, sem covariáveis).
-
-vari_exp <- gstat::variogram(form, data = df_aux,
+&#10;form <- AREAMUNKM ~ 1 # "~ 1" modelo de média constante, mas desconhecida (somente intercepto - assume média global, sem covariáveis).
+&#10;vari_exp <- gstat::variogram(form, data = df_aux,
                       cressie = FALSE, #estimador clássico do semivar.
                       cutoff = 100, # distância máxima = 8
                       width = 1) # distancia entre pontos
-
-vari_exp  |>
+&#10;vari_exp  |>
   ggplot(aes(x=dist, y=gamma)) +
   geom_point() +
   labs(x="lag (º)",
        y=expression(paste(gamma,"(h)")))
 ```
-
-``` r
+&#10;
+&#10;``` r
 patamar=1.4
 alcance=0.2
 epepita=0.5
@@ -1867,7 +1894,7 @@ modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
 plot_my_models(modelo_1,modelo_2,modelo_3)
 modelo <- modelo_1 ## sempre modificar
 ```
-
+&#10;
 ``` r
 ko_variavel <- krige(formula=form, df_aux, grid_geral, model=modelo,
                      block=c(0.1,0.1),
@@ -1876,8 +1903,8 @@ ko_variavel <- krige(formula=form, df_aux, grid_geral, model=modelo,
                      debug.level=-1
 )
 ```
-
-``` r
+&#10;
+&#10;``` r
 ko_variavel |> 
   as_tibble() |> 
     ggplot(aes(x=X, y=Y)) +
@@ -1890,7 +1917,7 @@ ko_variavel |>
        title = my_year) +
   theme_bw()
 ```
-
+&#10;
 ``` r
 df_kgr <- ko_variavel |> 
       as_tibble() |> 
@@ -1925,8 +1952,8 @@ for(i in 1:nrow(df_kgr)){
 }
 df_kgr$city_ref <- resul
 ```
-
-``` r
+&#10;
+&#10;``` r
 municipality |> 
   filter(abbrev_state %in% my_states) |> 
   left_join(
@@ -1962,87 +1989,6 @@ municipality |>
     legend.title = element_text(face = 'bold', size = rel(1.2))
   ) +
   labs(fill = 'xco2',
-       x = 'Longitude',
-       y = 'Latitude') +
-  scale_fill_viridis_c()
-```
-
-<!-- (Comentar todo o código seguinte)
-&#10;#### Entrada com a Base: `prodes-deforestation.rds`
-&#10;``` r
-# original archive "prodes-deforestation.rds" = 2.2gb
-&#10;prodes_deforestation <- read_rds("data/prodes-deforestation.rds")
-  # "state" column previously filtred 
-&#10;glimpse(prodes_deforestation)
-```
-&#10;
-``` r
-prodes_deforestation |> 
-  # pull(ANO) |> unique()
-  filter(ANO == 2024) |> 
-  ggplot(aes(x=x,y=y)) +
-  geom_point()
-```
-&#10;#### Classificando cada ponto em município
-&#10;``` r
-library(sf)
-library(dplyr)
-library(lwgeom) # para st_make_valid
-&#10;municipality_sf <- municipality %>%
-  st_transform(crs = 4326) %>%
-  st_make_valid()
-&#10;prodes_deforestation_sf <- st_as_sf(
-  deter_queimadas,
-  coords = c("x", "y"),
-  crs = 4326,
-  remove = FALSE # mantém as colunas originais lon/lat
-)
-&#10;prodes_deforestation_sf <- st_join(
-  deter_queimadas_sf,
-  municipality_sf %>% select(name_muni),
-  join = st_within
-)
-&#10;prodes_deforestation_sf <- prodes_deforestation_sf %>%
-  mutate(city_ref = ifelse(is.na(name_muni), "Other", name_muni)) %>%
-  select(-name_muni) # remove coluna original se não quiser duplicada
-&#10;prodes_deforestation <- as.data.frame(prodes_deforestation_sf)
-&#10;glimpse(prodes_deforestation)
-&#10;# Salvar
-write_rds(prodes_deforestation, "data-raw/prodes_deforestation.rds")
-```
-&#10;#### Gerar mapa
-&#10;``` r
-my_year = 2023 # "categorie" column
-municipality |> 
-  filter(abbrev_state %in% my_states) |> 
-  left_join(
-    prodes_deforestation |> 
-      group_by(ANO, city_ref) |> 
-      summarise(
-        AREAMUNKM = mean(AREAMUNKM,na.rm=TRUE), 
-        .groups = "drop"
-      ) |> 
-      rename(name_muni = city_ref),
-    by = c("name_muni")
-  ) |> 
-  filter(ANO == my_year) |> 
-  ggplot()  +
-  geom_sf(aes(fill=AREAMUNKM), color="transparent",
-          size=.05, show.legend = TRUE)  +
-  geom_point(data = prodes_deforestation |> 
-               filter(ANO==my_year), 
-               aes(x, y, #size = emission,
-                   color="red"))+
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(size = rel(.9), color = "black"),
-    axis.title.x = element_text(size = rel(1.1), color = "black"),
-    axis.text.y = element_text(size = rel(.9), color = "black"),
-    axis.title.y = element_text(size = rel(1.1), color = "black"),
-    legend.text = element_text(size = rel(1), color = "black"),
-    legend.title = element_text(face = 'bold', size = rel(1.2))
-  ) +
-  labs(fill = 'Deforestation (area km)',
        x = 'Longitude',
        y = 'Latitude') +
   scale_fill_viridis_c()
