@@ -524,7 +524,7 @@ data_set &lt;- data_set |&gt; cbind(state)
 dplyr::glimpse(data_set)
 # readr::write_rds(data_set,&quot;data/gosat-xch4.rds&quot;)
 
-dff &lt;- readr::read_rds(&quot;../data/gosat-xch4.rds&quot;)
+dff &lt;- readr::read_rds(&quot;../data-raw/gosat-xch4.rds&quot;)
 br |&gt;
   ggplot2::ggplot() +
   ggplot2::geom_sf(fill=&quot;white&quot;, color=&quot;#FEBF57&quot;,
@@ -536,6 +536,52 @@ br |&gt;
                       shape=3,
                       col=&quot;red&quot;,
                       alpha=0.2)</code></pre>
+<div id="classificando-cada-ponto-em-município" class="section level4">
+<h4>Classificando cada ponto em município</h4>
+<pre class="r"><code>gosat_xch4 &lt;- read_rds(&quot;../data-raw/gosat-xch4.rds&quot;)
+
+# Carregando pacotes
+library(sf)
+library(dplyr)
+library(lwgeom) 
+
+# 1. Garantir que shapefile de municípios está no mesmo CRS (Coordinate Reference System) e seja válido
+municipality_sf &lt;- municipality %&gt;% # Do script &quot;my-function&quot; --&gt; municipality &lt;- geobr::read_municipality(showProgress = FALSE)
+  st_transform(crs = 4326) %&gt;%
+  st_make_valid()
+
+# 2. Converter data frame para sf
+gosat_xch4_sf &lt;- st_as_sf(
+  gosat_xch4,
+  coords = c(&quot;longitude&quot;, &quot;latitude&quot;),
+  crs = 4326,
+  remove = FALSE # mantém as colunas originais lon/lat
+)
+
+# 3. Fazer o join espacial
+# A função &quot;st_join&quot; faz uma junção entre dois objetos espaciais sf;
+  # Essa junção é feita com base em relações espaciais (geometria);
+    # Essa relação de geometria foi obtida do pacote geobr (municipality) e da base de dados da sif classificada por estado
+gosat_xch4_sf &lt;- st_join(
+  gosat_xch4_sf,
+  municipality_sf %&gt;% select(name_muni),
+  join = st_within
+) 
+# Observe que o número de linhas se manteve após o join (✅)
+
+# 4. Criar coluna &quot;city_ref&quot;, substituindo NA por &quot;Other&quot;
+gosat_xch4_sf &lt;- gosat_xch4_sf %&gt;%
+  mutate(city_ref = ifelse(is.na(name_muni), &quot;Other&quot;, name_muni)) %&gt;%
+  select(-name_muni) # remove coluna original para não duplicar
+
+# 5. Converter para data frame (para não manter como sf)
+gosat_xch4 &lt;- as.data.frame(gosat_xch4_sf)
+
+glimpse(gosat_xch4) 
+
+# Salvar arquivo 
+# write_rds(gosat_xch4, &quot;../data/gosat_xch4.rds&quot;)</code></pre>
+</div>
 </div>
 
 
