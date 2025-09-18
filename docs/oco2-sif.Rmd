@@ -100,7 +100,7 @@ y <- data_set |> dplyr::pull(latitude)
 for(i in 1:nrow(data_set)) state[i] <- get_geobr_state(x[i],y[i])
 data_set <- data_set |> cbind(state)
 dplyr::glimpse(data_set)
-# readr::write_rds(data_set,"../data/oco2-sif.rds")
+# readr::write_rds(data_set,"../data/oco2-sif-br.rds")
 ```
 
 ### Tratamento da segunda base sif utilizada (utilizada desde 04/09/2025)
@@ -125,7 +125,7 @@ dplyr::glimpse(data_set)
       **Certifique-se de selecionar a pasta que deseja para download dos arquivos**
   - 8. 
 
-Ressalta-se que foram realizados 2 downloads, um para a base no período de 2015 a 2019 (oco2-sif-brc.rds) e outro de 2020 a 2024 (oco2-sif.rds). Ao final do script, deveremos uní-las.
+Ressalta-se que foram realizados 2 downloads, um para a base no período de 2015 a 2019 (oco2-sif-brc.rds) e outro de 2020 a 2024 (oco2-sif-br.rds). Ao final do script, deveremos uní-las.
   
 Função para leitura dos arquivos nc4 da SIF foi adicionada ao arquivo "my-function.R"
 e nomeada como "get_oco2_sif"
@@ -238,7 +238,6 @@ data_set_sif <- map_df(list_of_sif_rds,read_rds)
 ```
 
 
- 
 #### Classificando pontos dos estados com base nas coordenadas
 ```{r, eval=FALSE}
 # original archive "oco-sif.rds" = 9.8mb
@@ -271,6 +270,8 @@ dplyr::glimpse(data_set)
 **Devemos classificá-los por município. Para isso:**
 
 #### Entrada com a Base: `oco2-sif-classificado.rds` **(essa é aquela que te mandei no e-mail, nomeada como oco2-sif-teste)**
+
+(A base foi excluída após tratamento)
 ```{r, eval=FALSE} 
 oco2_sif_brc <- read_rds("../data/oco2-sif-brc-classificado.rds")
 
@@ -379,20 +380,20 @@ glimpse(oco2_sif_brc)
 write_rds(oco2_sif_brc, "../data/oco2-sif-brc.rds")
 ```
 
-#### Unindo as bases oco2-sif-brc.rds e oco2-sif.rds
+#### Unindo as bases oco2-sif-brc.rds e oco2-sif-br.rds
 
 ```{r, eval=FALSE}
 # oco2_sif_brc <- read_rds("../data/oco2-sif-brc.rds")
 # glimpse(oco2_sif_brc)
 # 
-# oco2_sif <- read_rds("../data/oco2-sif.rds")
-# glimpse(oco2_sif)
+# oco2_sif_br <- read_rds("../data/oco2-sif-br.rds")
+# glimpse(oco2_sif-br)
 
 # Unindo
-oco2_un <- full_join(oco2_sif_brc, oco2_sif)
+oco2_un <- full_join(oco2_sif_brc, oco2_sif_br)
 
 # Salvando
-# write_rds(oco2_un, "../data/oco2-sif-final.rds")
+# write_rds(oco2_un, "../data/oco2-sif.rds")
 ```
 
 

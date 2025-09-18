@@ -501,7 +501,93 @@ df &lt;- deter_all |&gt;
 ) 
 df |&gt; 
   as_tibble() |&gt; 
-  write_rds(&quot;../data/deter-queimadas.rds&quot;)</code></pre>
+  # write_rds(&quot;../data-raw/deter-queimadas.rds&quot;)</code></pre>
+<div id="entrada-com-a-base-deter-queimadas.rds" class="section level3">
+<h3>💨 Entrada com a Base: <code>deter-queimadas.rds</code></h3>
+<pre class="r"><code># original archive &quot;deter-queimadas.rds&quot; = 122,1mb
+
+deter_queimadas &lt;- read_rds(&quot;data-raw/deter-queimadas.rds&quot;) |&gt; 
+  rename(
+    longitude = x,
+    latitude = y
+  )
+
+glimpse(deter_queimadas)</code></pre>
+<div id="classificando-cada-ponto-em-município" class="section level4">
+<h4>Classificando cada ponto em município</h4>
+<pre class="r"><code>library(sf)
+library(dplyr)
+library(lwgeom) # para st_make_valid
+
+municipality_sf &lt;- municipality %&gt;%
+  st_transform(crs = 4326) %&gt;%
+  st_make_valid()
+
+deter_queimadas_sf &lt;- st_as_sf(
+  deter_queimadas,
+  coords = c(&quot;longitude&quot;, &quot;latitude&quot;),
+  crs = 4326,
+  remove = FALSE # mantém as colunas originais lon/lat
+)
+
+deter_queimadas_sf &lt;- st_join(
+  deter_queimadas_sf,
+  municipality_sf %&gt;% select(name_muni),
+  join = st_within
+)
+
+deter_queimadas_sf &lt;- deter_queimadas_sf %&gt;%
+  mutate(city_ref = ifelse(is.na(name_muni), &quot;Other&quot;, name_muni)) %&gt;%
+  select(-name_muni) # remove coluna original para evitra duplicada
+
+deter_queimadas &lt;- as.data.frame(deter_queimadas_sf)
+
+glimpse(deter_queimadas)
+
+# Salvar
+write_rds(deter_queimadas, &quot;data-raw/deter_queimadas.rds&quot;)</code></pre>
+</div>
+<div id="classificando-cada-ponto-em-estado" class="section level4">
+<h4>Classificando cada ponto em estado</h4>
+<pre class="r"><code>library(sf)
+library(geobr)
+
+# Transformar em objeto sf (coordenadas lon/lat, CRS WGS84), 
+# Nesse caso os pontos já estão em lon/lat, EPSG:4326
+deter_queimadas_sf &lt;- st_as_sf(deter_queimadas, 
+                    coords = c(&quot;longitude&quot;, &quot;latitude&quot;), 
+                    crs = 4326,
+                    remove = FALSE)
+
+# Estados do geobr (CRS do pacote é o SIRGAS 4674)
+estados &lt;- geobr::read_state(year = 2020) |&gt; 
+  st_transform(crs = 4326)   # transforma para mesmo sistema de referência de coord (WGS84)
+
+# Join espacial
+deter_queimadas &lt;- st_join(deter_queimadas_sf, estados[&quot;abbrev_state&quot;])
+
+# Converter para data frame e renomear coluna 
+deter_queimadas &lt;- as_data_frame(deter_queimadas |&gt; 
+                               rename(&quot;state&quot; = abbrev_state))
+
+# Visualizar resumo
+glimpse(deter_queimadas)
+tail(deter_queimadas)
+
+# Padronizar colunas
+deter_queimadas &lt;- deter_queimadas |&gt; 
+  mutate(CLASSNAME = case_when(
+    CLASSNAME == &quot;cicatriz de queimada&quot; ~ &quot;CICATRIZ_DE_QUEIMADA&quot;,
+    TRUE ~ CLASSNAME
+  ))
+
+# Converter para data frame novamente 
+deter_queimadas &lt;- as_data_frame(deter_queimadas)
+
+# Salvar
+# write_rds(deter_queimadas, &quot;../data/deter_queimadas.rds&quot;)</code></pre>
+</div>
+</div>
 </div>
 
 

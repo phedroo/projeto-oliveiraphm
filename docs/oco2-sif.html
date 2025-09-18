@@ -447,7 +447,7 @@ y &lt;- data_set |&gt; dplyr::pull(latitude)
 for(i in 1:nrow(data_set)) state[i] &lt;- get_geobr_state(x[i],y[i])
 data_set &lt;- data_set |&gt; cbind(state)
 dplyr::glimpse(data_set)
-# readr::write_rds(data_set,&quot;../data/oco2-sif.rds&quot;)</code></pre>
+# readr::write_rds(data_set,&quot;../data/oco2-sif-br.rds&quot;)</code></pre>
 </div>
 <div id="tratamento-da-segunda-base-sif-utilizada-utilizada-desde-04092025" class="section level3">
 <h3>Tratamento da segunda base sif utilizada (utilizada desde
@@ -472,7 +472,7 @@ o aplicativo “Earthdata Download” instalado e estar logado.</em>
 arquivos</strong> - 8.</p>
 <p>Ressalta-se que foram realizados 2 downloads, um para a base no
 período de 2015 a 2019 (oco2-sif-brc.rds) e outro de 2020 a 2024
-(oco2-sif.rds). Ao final do script, deveremos uní-las.</p>
+(oco2-sif-br.rds). Ao final do script, deveremos uní-las.</p>
 <p>Função para leitura dos arquivos nc4 da SIF foi adicionada ao arquivo
 “my-function.R” e nomeada como “get_oco2_sif”</p>
 <pre class="r"><code># Adaptação do projeto de Mestrado Rodrigo Perim
@@ -584,6 +584,7 @@ contém os dados classificados por estado</strong></p>
 <h4>Entrada com a Base: <code>oco2-sif-classificado.rds</code>
 <strong>(essa é aquela que te mandei no e-mail, nomeada como
 oco2-sif-teste)</strong></h4>
+<p>(A base foi excluída após tratamento)</p>
 <pre class="r"><code>oco2_sif_brc &lt;- read_rds(&quot;../data/oco2-sif-brc-classificado.rds&quot;)
 
 glimpse(oco2_sif_brc)</code></pre>
@@ -686,19 +687,19 @@ glimpse(oco2_sif_brc)
 # Salvar arquivo 
 write_rds(oco2_sif_brc, &quot;../data/oco2-sif-brc.rds&quot;)</code></pre>
 </div>
-<div id="unindo-as-bases-oco2-sif-brc.rds-e-oco2-sif.rds" class="section level4">
-<h4>Unindo as bases oco2-sif-brc.rds e oco2-sif.rds</h4>
+<div id="unindo-as-bases-oco2-sif-brc.rds-e-oco2-sif-br.rds" class="section level4">
+<h4>Unindo as bases oco2-sif-brc.rds e oco2-sif-br.rds</h4>
 <pre class="r"><code># oco2_sif_brc &lt;- read_rds(&quot;../data/oco2-sif-brc.rds&quot;)
 # glimpse(oco2_sif_brc)
 # 
-# oco2_sif &lt;- read_rds(&quot;../data/oco2-sif.rds&quot;)
-# glimpse(oco2_sif)
+# oco2_sif_br &lt;- read_rds(&quot;../data/oco2-sif-br.rds&quot;)
+# glimpse(oco2_sif-br)
 
 # Unindo
-oco2_un &lt;- full_join(oco2_sif_brc, oco2_sif)
+oco2_un &lt;- full_join(oco2_sif_brc, oco2_sif_br)
 
 # Salvando
-# write_rds(oco2_un, &quot;../data/oco2-sif-final.rds&quot;)</code></pre>
+# write_rds(oco2_un, &quot;../data/oco2-sif.rds&quot;)</code></pre>
 </div>
 </div>
 
