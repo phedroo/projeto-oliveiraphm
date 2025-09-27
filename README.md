@@ -1872,55 +1872,83 @@ deter_queimadas |>
 
 ``` r
 # Alocando área de queimadas
+deter_queimadas |> 
+  filter(UF %in% my_states)
+
 df_deter <- deter_queimadas |> 
-  select(ANO, AREAMUNKM, state, city_ref) |>
-  group_by(ANO, city_ref) |> 
+  filter(UF %in% my_states) |> 
+  rename(name_muni = MUNICIPALI) |> 
+  select(name_muni, ANO, AREAMUNKM,) |> 
+  arrange(name_muni) |> 
+  group_by(ANO, name_muni) |> 
   summarise(
     area_queimada_muni_km = sum(AREAMUNKM, na.rm = TRUE),
     .groups = "drop"
+  ) |> 
+  mutate(
+    name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
+    name_muni = trimws(name_muni)
   )
 
-glimpse(df_deter)
+# glimpse(df_deter)
 
-# Conferindo
-# deter_queimadas |> 
-#   select(city_ref, AREAMUNKM) |> 
-#   filter(
-#     city_ref == "ABADIÂNIA"
-#   ) |> 
-#   summarise(
-#     area = sum(AREAMUNKM)
-#   )
+# df_deter |> 
+#   pull(name_muni)
 ```
 
-#### Classificação de cada ponto em município e estado - deter
+### Padronizando nomes dos municípios da base DETER com os do pacote geobr
 
-Foi necessário para que os nomes dos municípios correspondessem aos do
-pacote geobr, para fazer o “join”
+Este chunk tem como objetivo padronizar para posterior incorporação,
+necessária para evitar perda de informação durante a geração dos mapas
 
-Feita no script do tratamento (pasta docs)
+``` r
+library(stringi)  # para normalização de strings
+library(fuzzyjoin) # se precisar de match aproximado
+
+# Pacote geobr 
+munic_geobr <- municipality |> 
+  filter(abbrev_state %in% my_states) |> 
+  select(name_muni, abbrev_state) |> 
+  arrange(name_muni) |>  
+  mutate(
+    name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
+    #stri_trans_general(..., "Latin-ASCII") → remove acentos e normaliza para comparação;
+    #tolower() → padroniza para minúsculas;
+    #trimws() → remove espaços extras.
+    name_muni = trimws(name_muni)
+  )
+
+# Base DETER - Feita diretamente no "df_deter" d chunk anterior
+# munic_deter <- deter_queimadas |>
+#   filter(UF %in% my_states) |>
+#   rename(name_muni = MUNICIPALI) |>
+#   select(name_muni) |>
+#   arrange(name_muni) |>
+#   unique() |>
+#   mutate(
+#     name_pad = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
+#     name_pad = trimws(name_pad)
+#   )
+```
 
 #### Gerar mapa - deter
 
 ``` r
-my_year = 2022 # mudar anos
+my_year = 2020 # mudar anos
 
-municipality |> 
+munic_geobr |> 
   filter(abbrev_state %in% my_states) |> 
   left_join(
     df_deter |> 
-      group_by(ANO, city_ref) |> 
-      rename(name_muni = city_ref),
+      group_by(ANO, name_muni),
     by = c("name_muni")
   ) |>
-  filter(
-    ANO == my_year
-  ) |> 
+  filter(ANO == my_year) |> 
   ggplot()  +
   geom_sf(aes(fill=area_queimada_muni_km), color="transparent",
           size=.05, show.legend = TRUE)  +
-  # geom_point(data = deter_queimadas |> 
-  #              filter(ANO==my_year), 
+  # geom_point(data = deter_queimadas |>
+  #              filter(ANO==my_year),
   #              aes(longitude, latitude, #size = emission,
   #                  color="red"))+
   theme_bw() +
