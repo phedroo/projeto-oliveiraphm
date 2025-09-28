@@ -507,11 +507,10 @@ nasa_power &lt;- as.data.frame(nasa_power_sf)
 glimpse(nasa_power)
 
 # Salvar arquivo
-# write_rds(nasa_power, &quot;data-raw/nasa_power.rds&quot;)</code></pre>
+# write_rds(nasa_power, &quot;data-raw/nasa_power.rds&quot;) # arquivo excluído após rodar chunk 7</code></pre>
 </div>
-<div id="classificando-cada-ponto-em-estado" class="section level4">
-<h4>Classificando cada ponto em estado</h4>
-<p>Método mais rápido</p>
+<div id="classificando-cada-ponto-em-estado-método-mais-rápido" class="section level4">
+<h4>Classificando cada ponto em estado (Método mais rápido)</h4>
 <pre class="r"><code>library(sf)
 library(geobr)
 
@@ -541,8 +540,8 @@ glimpse(nasa_joined)
 # write_rds(nasa_joined, &quot;../data/nasa_power.rds&quot;)</code></pre>
 <p>&lt;!–</p>
 </div>
-<div id="classificando-pontos-dos-estados-com-base-nas-coordenadas" class="section level4">
-<h4>Classificando pontos dos estados com base nas coordenadas</h4>
+<div id="classificando-cada-ponto-em-estado" class="section level4">
+<h4>Classificando cada ponto em estado</h4>
 <pre class="r"><code># # Lendo base
 # nasa_power &lt;- read_rds(&quot;../data-raw/nasa_power.rds&quot;)
 # 
