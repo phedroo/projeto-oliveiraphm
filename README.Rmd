@@ -1181,67 +1181,40 @@ map(2015:2023,~{
 # original archive "appeears-modis.rds" = 8,7mb
 # appeears data requisited by API (project fapesp)
 
-appeears_modis <- read_rds("data-raw/appeears-modis.rds") 
+appeears_modis <- read_rds("data/appeears_modis.rds") 
   # don't have "state" column - previously filtred
 glimpse(appeears_modis)
 
-# variables: FPAR, LAI, TE, EVI, NDVI
+# variables: FPAR, LAI, ET, EVI, NDVI
 ```
 
 ```{r, eval=FALSE}
 appeears_modis |> 
-  filter(year == 2020) |> 
+  filter(year == 2020) |>
   ggplot(aes(x=lon,y=lat)) +
   geom_point()
-```
-
-#### Classificando cada ponto em município - appeears
-```{r, eval=FALSE}
-# 1. Garantir que shapefile de municípios está no mesmo CRS e válido
-municipality_sf <- municipality %>%
-  st_transform(crs = 4326) %>%
-  st_make_valid()
-
-# 2. Converter seu data frame para sf sem perder colunas
-appeears_modis_sf <- st_as_sf(
-  appeears_modis,
-  coords = c("lon", "lat"),
-  crs = 4326,
-  remove = FALSE # mantém as colunas originais lon/lat
-)
-
-# 3. Fazer o join espacial
-appeears_modis_sf <- st_join(
-  appeears_modis_sf,
-  municipality_sf %>% select(name_muni),
-  join = st_within
-)
-
-# 4. Criar coluna "city_ref", substituindo NA por "Other"
-appeears_modis_sf <- appeears_modis_sf %>%
-  mutate(city_ref = ifelse(is.na(name_muni), "Other", name_muni)) %>%
-  select(-name_muni) # remove coluna original se não quiser duplicada
-
-# 5. Converter de volta para data frame se não quiser manter como sf
-appeears_modis <- as.data.frame(appeears_modis_sf)
-
-# Conferir
-glimpse(appeears_modis)
-
-# Salvar
-# write_rds(appeears_modis, "data/appeears_modis.rds")
 ```
 
 #### Gerar mapa - appeears
 ```{r, eval=FALSE}
 my_year = 2022
+
+# Variáveis
+# media_ndvi
+# media_evi
+# media_et
+# media_lai
+# media_fpar
+
+variavel <- "media_ndvi" # <-- mudar
+
 municipality |> 
   filter(abbrev_state %in% my_states) |> 
   left_join(
     appeears_modis |> 
       group_by(year, city_ref) |> 
       summarise(
-        media_ndvi = media_ndvi,na.rm=TRUE, # VERIFICAR - municipios em cinza ao cacular a media
+        !!variavel := .data[[variavel]],na.rm=TRUE, # VERIFICAR - municipios em cinza ao cacular a media
         .groups = "drop"
       ) |> 
       rename(name_muni = city_ref),
@@ -1249,12 +1222,12 @@ municipality |>
   ) |> 
   filter(year == my_year) |> 
   ggplot()  +
-  geom_sf(aes(fill=media_ndvi), color="transparent",
+  geom_sf(aes(fill=.data[[variavel]]), color="transparent",
           size=.05, show.legend = TRUE)  +
-  geom_point(data = appeears_modis |> 
-               filter(year==my_year), 
-               aes(lon, lat, #size = emission,
-                   color="red"))+
+  # geom_point(data = appeears_modis |> 
+  #              filter(year==my_year), 
+  #              aes(lon, lat, #size = emission,
+  #                  color="red"))+
   theme_bw() +
   theme(
     axis.text.x = element_text(size = rel(.9), color = "black"),
@@ -1264,10 +1237,10 @@ municipality |>
     legend.text = element_text(size = rel(1), color = "black"),
     legend.title = element_text(face = 'bold', size = rel(1.2))
   ) +
-  labs(fill = 'NDVI',
+  labs(fill = variavel,
        x = 'Longitude',
        y = 'Latitude') +
-  scale_fill_viridis_c(limit = c(-1, 1))
+  scale_fill_viridis_c(limit = c(-1, 1)) # Resolver --> se remover limit fica errado
 ```
 
 #### Criando o grid (malha de pontos) para valores não amostrados - appeears
@@ -1308,8 +1281,8 @@ form <- media_ndvi ~ 1 # "~ 1" modelo de média constante, mas desconhecida (som
 
 vari_exp <- gstat::variogram(form, data = df_aux,
                       cressie = FALSE, #estimador clássico do semivar.
-                      cutoff = 1, # distância  
-                      width = 0.08) # distancia entre pontos
+                      cutoff = 15, # distância  
+                      width = .05) # distancia entre pontos
 vari_exp  |>
   ggplot(aes(x=dist, y=gamma)) +
   geom_point() +
@@ -1817,27 +1790,43 @@ df_prodes <- prodes_deforestation |>
 -->
 
 ### 💨 Entrada com a Base: `deter_queimadas.rds`
+
+É importante ressaltar que, embora diversos estados estejam contemplados nas observações, estes não apresentam informações referentes a queimadas, somente desmatamento ou outras.
+
+Apenas o estado do Mato Grosso apresenta observações de queimadas
+
+Disponibilidade de dados de cicatriz de queimada para biomas como Amazônia e Pantanal (https://terrabrasilis.dpi.inpe.br/downloads)
+
 ```{r, eval=FALSE} 
 # original archive "deter-queimadas.rds" = 122,1mb
 
 deter_queimadas <- read_rds("data/deter_queimadas.rds")
 
-glimpse(deter_queimadas)
+# glimpse(deter_queimadas)
+
+# deter_queimadas |> 
+#   filter(UF == "MT",
+#          ANO == 2024,
+#          CLASSNAME == "CICATRIZ_DE_QUEIMADA") |> 
+#   glimpse()
 ```
 
 ```{r, eval=FALSE}
 deter_queimadas |> 
   # pull(ANO) |> unique()
-  filter(ANO == 2022) |> 
+  filter(ANO == 2020) |> 
   ggplot(aes(x=longitude,y=latitude)) +
   geom_point()
 ```
 
-```{r, eval=FALSE}
-# Alocando área de queimadas
-deter_queimadas |> 
-  filter(UF %in% my_states)
+### Padronizando nomes dos municípios da base DETER com os do pacote geobr
 
+Este chunk tem como objetivo padronizar para posterior incorporação, necessária para evitar perda de informação durante a geração dos mapas
+
+```{r, eval=FALSE}
+library(stringi)  # para normalização de strings
+
+# Alocando área de queimadas
 df_deter <- deter_queimadas |> 
   filter(UF %in% my_states) |> 
   rename(name_muni = MUNICIPALI) |> 
@@ -1855,18 +1844,6 @@ df_deter <- deter_queimadas |>
 
 # glimpse(df_deter)
 
-# df_deter |> 
-#   pull(name_muni)
-```
-
-### Padronizando nomes dos municípios da base DETER com os do pacote geobr
-
-Este chunk tem como objetivo padronizar para posterior incorporação, necessária para evitar perda de informação durante a geração dos mapas
-
-```{r, eval=FALSE}
-library(stringi)  # para normalização de strings
-library(fuzzyjoin) # se precisar de match aproximado
-
 # Pacote geobr 
 munic_geobr <- municipality |> 
   filter(abbrev_state %in% my_states) |> 
@@ -1880,38 +1857,31 @@ munic_geobr <- municipality |>
     name_muni = trimws(name_muni)
   )
 
-# Base DETER - Feita diretamente no "df_deter" d chunk anterior
-# munic_deter <- deter_queimadas |>
-#   filter(UF %in% my_states) |>
-#   rename(name_muni = MUNICIPALI) |>
-#   select(name_muni) |>
-#   arrange(name_muni) |>
-#   unique() |>
-#   mutate(
-#     name_pad = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
-#     name_pad = trimws(name_pad)
-#   )
+glimpse(munic_geobr)
 ```
+
+
 
 #### Gerar mapa  - deter
 ```{r, eval=FALSE}
-my_year = 2020 # mudar anos
+my_year = 2022 # mudar anos (detalhe: alguns anos, como 2016, só tem para 1 estado)
+
+# Fazer filtro por ano antes do join para passar NA = 0 nos municípios faltantes
+df_deter_ano <- df_deter |> 
+  filter(ANO == my_year)
 
 munic_geobr |> 
   filter(abbrev_state %in% my_states) |> 
   left_join(
-    df_deter |> 
-      group_by(ANO, name_muni),
-    by = c("name_muni")
-  ) |>
-  filter(ANO == my_year) |> 
-  ggplot()  +
+    df_deter_ano |> 
+      group_by(ANO, name_muni) |> 
+      summarise(area_queimada_muni_km = sum(area_queimada_muni_km, na.rm = TRUE)),
+    by = "name_muni"
+  ) |> 
+  mutate(area_queimada_muni_km = replace_na(area_queimada_muni_km, 0)) |>
+  ggplot() +
   geom_sf(aes(fill=area_queimada_muni_km), color="transparent",
-          size=.05, show.legend = TRUE)  +
-  # geom_point(data = deter_queimadas |>
-  #              filter(ANO==my_year),
-  #              aes(longitude, latitude, #size = emission,
-  #                  color="red"))+
+          size=.05, show.legend = TRUE) +
   theme_bw() +
   theme(
     axis.text.x = element_text(size = rel(.9), color = "black"),
@@ -1924,7 +1894,9 @@ munic_geobr |>
   labs(fill = 'Queimadas (área km)',
        x = 'Longitude',
        y = 'Latitude') +
-  scale_fill_viridis_c()
+  scale_fill_viridis_c(
+    option = "inferno"
+  )
 ```
 
 
