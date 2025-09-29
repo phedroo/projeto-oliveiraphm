@@ -588,6 +588,39 @@ deter_queimadas &lt;- as_data_frame(deter_queimadas)
 # write_rds(deter_queimadas, &quot;../data/deter_queimadas.rds&quot;)</code></pre>
 </div>
 </div>
+<div id="focos-de-queimadas---terrabrasilis" class="section level3">
+<h3>Focos de queimadas - TErrabrasilis</h3>
+<p>Esta base não contém dados de queimada por município, somente
+estados</p>
+<p>Arquivo deter-fogo-28-09-2025-20_46_38.csv (baixado em: <a href="https://terrabrasilis.dpi.inpe.br/app/dashboard/fires/biomes/aggregated/#" class="uri">https://terrabrasilis.dpi.inpe.br/app/dashboard/fires/biomes/aggregated/#</a>)</p>
+<pre class="r"><code>focos_queimadas &lt;- read.csv(&quot;../data-raw/deter-fogo-28-09-2025-20_46_38.csv&quot;,
+         sep = &quot;;&quot;)
+
+# Considerando todo tipo de foco de incêndio
+focos_queimadas |&gt; 
+  mutate(
+    uf = case_when(
+      uf == &quot;GOIÁS&quot; ~ &quot;GO&quot;,
+      uf == &quot;MATO GROSSO DO SUL&quot; ~ &quot;MS&quot;,
+      uf == &quot;MATO GROSSO&quot; ~ &quot;MT&quot;
+    )
+  ) |&gt; 
+  filter(
+  uf == c(&quot;GO&quot;, &quot;MS&quot;, &quot;MT&quot;)) |&gt;
+  separate(date, into = c(&quot;ano&quot;, &quot;mes&quot;), sep = &quot;/&quot;) |&gt; 
+  mutate(
+    ano = as.integer(ano),
+    mes = as.integer(mes)
+  ) |&gt; 
+  arrange(ano) |&gt; 
+  group_by(uf, ano) |&gt; 
+  summarise(
+    focos = sum(focuses, na.rm = TRUE)
+  )
+
+# Salvar
+write_rds(focos_queimadas, &quot;../data/focos_queimadas.rds&quot;)</code></pre>
+</div>
 </div>
 
 

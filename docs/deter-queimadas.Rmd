@@ -261,6 +261,43 @@ deter_queimadas <- as_data_frame(deter_queimadas)
 # write_rds(deter_queimadas, "../data/deter_queimadas.rds")
 ```
 
+### Focos de queimadas - TErrabrasilis 
+
+Esta base não contém dados de queimada por município, somente estados
+
+Arquivo deter-fogo-28-09-2025-20_46_38.csv (baixado em: https://terrabrasilis.dpi.inpe.br/app/dashboard/fires/biomes/aggregated/#)
+
+```{r, eval=FALSE}
+focos_queimadas <- read.csv("../data-raw/deter-fogo-28-09-2025-20_46_38.csv",
+         sep = ";")
+
+# Considerando todo tipo de foco de incêndio
+focos_queimadas |> 
+  mutate(
+    uf = case_when(
+      uf == "GOIÁS" ~ "GO",
+      uf == "MATO GROSSO DO SUL" ~ "MS",
+      uf == "MATO GROSSO" ~ "MT"
+    )
+  ) |> 
+  filter(
+  uf == c("GO", "MS", "MT")) |>
+  separate(date, into = c("ano", "mes"), sep = "/") |> 
+  mutate(
+    ano = as.integer(ano),
+    mes = as.integer(mes)
+  ) |> 
+  arrange(ano) |> 
+  group_by(uf, ano) |> 
+  summarise(
+    focos = sum(focuses, na.rm = TRUE)
+  )
+
+# Salvar
+write_rds(focos_queimadas, "../data/focos_queimadas.rds")
+```
+
+
 
 
 
