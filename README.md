@@ -1234,11 +1234,16 @@ map(2015:2023,~{
 # original archive "appeears-modis.rds" = 8,7mb
 # appeears data requisited by API (project fapesp)
 
-appeears_modis <- read_rds("data/appeears_modis.rds") 
-  # don't have "state" column - previously filtred
-glimpse(appeears_modis)
+appeears_modis <- read_rds("data/appeears_modis.rds") |> 
+  rename(
+    FPAR = media_fpar,
+    LAI = media_lai,
+    NDVI = media_ndvi,
+    EVI = media_evi,
+    ET = media_et
+  )
 
-# variables: FPAR, LAI, ET, EVI, NDVI
+glimpse(appeears_modis)
 ```
 
 ``` r
@@ -1248,29 +1253,50 @@ appeears_modis |>
   geom_point()
 ```
 
-#### Gerar mapa - appeears
+#### Gerar mapas das variáveis - appeears
 
 ``` r
-my_year = 2022
+# my_year = 2021
 
 # Variáveis
-# media_ndvi
-# media_evi
-# media_et
-# media_lai
-# media_fpar
+  # NDVI
+  # EVI
+  # ET - só tem a partir de 2021 !!
+  # LAI
+  # FPAR
 
-variavel <- "media_ndvi" # <-- mudar
+# Definir a variável
+variavel <- "FPAR" # <-- mudar
 
-municipality |> 
+# Definir os limites esperados para cada índice
+limits_map <- list(
+  NDVI = c(-1, 1),
+  EVI  = c(-1, 1),
+  FPAR = c(0, 1),
+  LAI  = c(0, 7), # máximo valor = 6,85 (após remoção de outliers)
+  ET   = NULL     # sem limite fixo
+)
+
+# Limite para a variável atual
+limites <- limits_map[[variavel]]
+
+# .data[[variavel]] # Para reconhecer o objeto "variavel" como nome de coluna, e não como string
+
+# Definir os anos
+anos <- if (variavel == "ET") 2021:2023 else 2015:2023
+
+for (my_year in anos) {
+
+p <- municipality |> 
   filter(abbrev_state %in% my_states) |> 
   left_join(
     appeears_modis |> 
       group_by(year, city_ref) |> 
-      summarise(
+      reframe( #retornar somente coluna da variavel
         !!variavel := .data[[variavel]],na.rm=TRUE, # VERIFICAR - municipios em cinza ao cacular a media
         .groups = "drop"
-      ) |> 
+      ) |>  
+      filter(.data[[variavel]] <= 200) |> # Filtrar outliers absurdos
       rename(name_muni = city_ref),
     by = c("name_muni")
   ) |> 
@@ -1294,7 +1320,13 @@ municipality |>
   labs(fill = variavel,
        x = 'Longitude',
        y = 'Latitude') +
-  scale_fill_viridis_c(limit = c(-1, 1)) # Resolver --> se remover limit fica errado
+  scale_fill_viridis_c(limits = limites)
+  
+  print(p)
+  
+    ggsave(filename = paste0("img/mapa_", variavel, "_", my_year, ".png"),
+         plot = p)
+} 
 ```
 
 #### Criando o grid (malha de pontos) para valores não amostrados - appeears
