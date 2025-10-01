@@ -879,7 +879,7 @@ map(2015:2021,~{
     scale_fill_viridis_c()})
 ```
 
-### 💨 Entrada com a Base: `oco2-sif.rds`
+### 🍃 Entrada com a Base: `oco2-sif.rds`
 
 ``` r
 oco2_sif <- read_rds("data/oco2-sif.rds") |> 
@@ -1228,7 +1228,7 @@ map(2015:2023,~{
     scale_fill_viridis_c()})
 ```
 
-### 💨 Entrada com a Base: `appeears-modis.rds` - krigagem não feita ainda
+### 🍃 Entrada com a Base: `appeears-modis.rds`
 
 ``` r
 # original archive "appeears-modis.rds" = 8,7mb
@@ -1258,17 +1258,10 @@ appeears_modis |>
 ``` r
 # my_year = 2021
 
-# Variáveis
-  # NDVI
-  # EVI
-  # ET - só tem a partir de 2021 !!
-  # LAI
-  # FPAR
-
 # Definir a variável
 variavel <- "FPAR" # <-- mudar
 
-# Definir os limites esperados para cada índice
+# Definir os limites esperados para cada variável - padronizar visualização
 limits_map <- list(
   NDVI = c(-1, 1),
   EVI  = c(-1, 1),
@@ -1285,8 +1278,10 @@ limites <- limits_map[[variavel]]
 # Definir os anos
 anos <- if (variavel == "ET") 2021:2023 else 2015:2023
 
+# Aplicando função para geração dos mapas de cada ano
 for (my_year in anos) {
 
+  # Gerando mapas
 p <- municipality |> 
   filter(abbrev_state %in% my_states) |> 
   left_join(
@@ -1329,64 +1324,8 @@ p <- municipality |>
 } 
 ```
 
-#### Criando o grid (malha de pontos) para valores não amostrados - appeears
-
-``` r
-# vetores para coordenadas x e y selecionadas da base do IBGE1
-# Extrair coordenadas da base appeears_modis para definir extensão do grid
-x<-appeears_modis$lon
-y<-appeears_modis$lat
-dis <- 0.5 # distância (do grid) para adensamento de pontos nos estados
-grid_geral <- expand.grid( # Criar malha regular
-  X=seq(min(x),max(x),dis), # Combinar cada x e y
-  Y=seq(min(y),max(y),dis)) |>
-  mutate( #teste ponto-no-polígono, TRUE se (X,Y) caem no polígono
-    flag_ms = def_pol(X, Y, pol_ms),
-    flag_mt = def_pol(X, Y, pol_mt),
-    flag_go = def_pol(X, Y, pol_go),
-    flag_df = def_pol(X, Y, pol_df)
-  ) |>
-  filter(flag_ms | flag_go | flag_mt | flag_df) |> # manter pontos correspondentes ao menos 1 dos limites
-  select(-c(flag_ms,flag_mt,flag_go,flag_df)) # remover colunas criadas
-plot(grid_geral)
-sp::gridded(grid_geral) = ~ X + Y
-```
-
-#### Interpolação por Krigagem Ordinária - appeears
-
-``` r
-df_aux <- appeears_modis |> 
-  filter(year == my_year) |> 
-  group_by(lon, lat) |> 
-  reframe(
-    media_ndvi = media_ndvi, # ALTERAR - média dos parâmetros
-    .groups = "drop"
-  ) # |> sample_n(10000) 
-sp::coordinates(df_aux) = ~ lon + lat # Converter data frame para objeto espacial - atribuir as colunas longitude/latitude como coordenadas. Várias funções de geoestatística do pacote gstat (como variogram() e krige()) não aceitam um data frame, mas sim um objeto com coordenadas. Agora, as variáveis vegetativas passam a ser o atributo associado a cada ponto espacial.
-
-form <- media_ndvi ~ 1 # "~ 1" modelo de média constante, mas desconhecida (somente intercepto - assume média global, sem covariáveis).
-
-vari_exp <- gstat::variogram(form, data = df_aux,
-                      cressie = FALSE, #estimador clássico do semivar.
-                      cutoff = 15, # distância  
-                      width = .05) # distancia entre pontos
-vari_exp  |>
-  ggplot(aes(x=dist, y=gamma)) +
-  geom_point() +
-  labs(x="lag (º)",
-       y=expression(paste(gamma,"(h)")))
-```
-
-``` r
-patamar=800
-alcance=0.25
-epepita=780
-modelo_1 <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
-modelo_2 <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
-modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
-plot_my_models(modelo_1,modelo_2,modelo_3)
-modelo <- modelo_1 ## sempre modificar
-```
+Não foi feita a interpolação para dados do appeears, pois todos os
+municípios estão presentes, os dados agrupados por média.
 
 #### 💨 Entrada com a Base: `nasa-power.rds`
 
@@ -1422,18 +1361,26 @@ Já feito no script de faxina “nasa-power.Rmd”
 #### Gerar mapa
 
 ``` r
+my_year <- 2022
+
 # Atribuir ao objeto "variavel" a variável climática da base do nasa power que iremos trabalhar
-# Radiacao 
-# Temperatura
-# Precipitacao
-# Umidade 
-# Vento
-# Pressao
+  # Radiacao 
+  # Temperatura
+  # Precipitacao
+  # Umidade 
+  # Vento
+  # Pressao
 
-variavel <- "Pressao" #mudar
+# Definir variável
+variavel <- "Radiacao" #mudar
 
-my_year = 2022
-municipality |> 
+# Estabelecer anos
+anos <- 2015:2023
+
+# Aplicando função para geração dos mapas de cada ano
+for (my_year in anos) {
+
+n <- municipality |> 
   filter(abbrev_state %in% my_states) |> 
   left_join(
     nasa_power |> 
@@ -1449,10 +1396,6 @@ municipality |>
   ggplot()  +
   geom_sf(aes(fill=.data[[variavel]]), color="transparent",
           size=.05, show.legend = TRUE)  +
-  geom_point(data = nasa_power |> 
-               filter(year==my_year), 
-               aes(lon, lat, #size = emission,
-                   color="red"))+
   theme_bw() +
   theme(
     axis.text.x = element_text(size = rel(.9), color = "black"),
@@ -1466,6 +1409,12 @@ municipality |>
        x = 'Longitude',
        y = 'Latitude') +
   scale_fill_viridis_c()
+
+  print(n)
+  
+  ggsave(filename = paste0("img/mapa_nasapower", variavel, "_", my_year, ".png"),
+         plot = n)
+}
 ```
 
 #### Criando o grid (malha de pontos) para valores não amostrados - nasa-power
@@ -1499,8 +1448,8 @@ variável:
 *Temperatura* cutoff = 5,  
 width = 0.09 patamar=2.2 alcance=4.5 epepita=0.2
 
-*Radiacao* **Não consegui estabelecer o semivariograma adequado** cutoff
-= – width = – patamar = alcance = epepita =
+*Radiacao* **Modelo Gaussiano teve menro R2, mas melhor interpolação**
+cutoff = 12.5 width = 0.5 patamar = 1.4 alcance = 11.25 epepita = 0.1
 
 *Precipitacao* cutoff = 6,  
 width = 0.5 patamar= 1.35 alcance= 15 epepita= 0.01
@@ -1531,8 +1480,8 @@ form <- as.formula(paste(variavel, "~ 1"))
 
 vari_exp <- gstat::variogram(form, data = df_aux,
                       cressie = FALSE, #estimador clássico do semivar.
-                      cutoff = 7, # distância  
-                      width = 0.35) # distancia entre pontos
+                      cutoff = 12.5, # distância  
+                      width = 0.5) # distancia entre pontos
 vari_exp  |>
   ggplot(aes(x=dist, y=gamma)) +
   geom_point() +
@@ -1541,14 +1490,14 @@ vari_exp  |>
 ```
 
 ``` r
-patamar=4.2
-alcance=5
-epepita=.4
+patamar=1.4
+alcance=11.25
+epepita=.1
 modelo_1 <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
 modelo_2 <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
 modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
 plot_my_models(modelo_1,modelo_2,modelo_3)
-modelo <- modelo_1 ## sempre modificar
+modelo <- modelo_3 ## sempre modificar
 ```
 
 ``` r
@@ -1668,17 +1617,17 @@ nome_variavel <- map_df(2015:2023,~{
   form <- as.formula(paste(variavel, "~ 1")) 
   vari_exp <- gstat::variogram(form, data = df_aux,
                                cressie = FALSE,
-                               cutoff = 7, # !! mudar
-                               width = 0.35) # !! mudar
+                               cutoff = 12.5, # !! mudar
+                               width = 0.5) # !! mudar
   vari_exp  |>
     ggplot(aes(x=dist, y=gamma)) +
     geom_point() +
     labs(x="lag (º)",
          y=expression(paste(gamma,"(h)")))
-  patamar=2.2
-  alcance=4.5
-  epepita=0.2
-  modelo <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
+  patamar=1.4 # !! mudar
+  alcance=11.25 # !! mudar
+  epepita=.1 # !! mudar
+  modelo <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))  # !! mudar
   ko_variavel <- krige(formula=form, df_aux, grid_geral, model=modelo,
                        block=c(0.1,0.1),
                        nsim=0,
@@ -1776,7 +1725,7 @@ map(2015:2023,~{
 
 –\>
 
-### 💨 Entrada com a Base: `prodes-deforestation.rds`
+### 🪓 Entrada com a Base: `prodes-deforestation.rds`
 
 ``` r
 # original archive "prodes-deforestation.rds" = 2.2gb
@@ -1856,7 +1805,7 @@ df_prodes <- prodes_deforestation |>
 
 –\>
 
-### 💨 Entrada com a Base: `deter_queimadas.rds`
+### 🔥 Entrada com a Base: `deter_queimadas.rds`
 
 É importante ressaltar que, embora diversos estados estejam contemplados
 nas observações, estes não apresentam informações referentes a
