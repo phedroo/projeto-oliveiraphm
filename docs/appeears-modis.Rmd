@@ -97,7 +97,76 @@ appeears |>
   ggplot2::ggplot(ggplot2::aes(lon,lat)) +
   ggplot2::geom_point()
 # Gerar arquivo com os dados
-# readr::write_rds(appeears, '../data/appeears-modis.rds')
+# readr::write_rds(appeears, '../data-raw/appeears-modis.rds')
+```
+
+#### Classificando cada ponto em município
+
+```{r, eval=FALSE}
+appeears_modis <- read_rds("../data-raw/appeears-modis.rds")
+
+# 1. Garantir que shapefile de municípios está no mesmo CRS e válido
+municipality_sf <- municipality %>%
+  st_transform(crs = 4326) %>%
+  st_make_valid()
+
+# 2. Converter seu data frame para sf sem perder colunas
+appeears_modis_sf <- st_as_sf(
+  appeears_modis,
+  coords = c("lon", "lat"),
+  crs = 4326,
+  remove = FALSE # mantém as colunas originais lon/lat
+)
+
+# 3. Fazer o join espacial
+appeears_modis_sf <- st_join(
+  appeears_modis_sf,
+  municipality_sf %>% select(name_muni),
+  join = st_within
+)
+
+# 4. Criar coluna "city_ref", substituindo NA por "Other"
+appeears_modis_sf <- appeears_modis_sf %>%
+  mutate(city_ref = ifelse(is.na(name_muni), "Other", name_muni)) %>%
+  select(-name_muni) # remove coluna original se não quiser duplicada
+
+# 5. Converter de volta para data frame se não quiser manter como sf
+appeears_modis <- as.data.frame(appeears_modis_sf)
+
+# Conferir
+glimpse(appeears_modis)
+```
+
+#### Classificando cada ponto em estado (Método mais rápido)
+
+```{r, eval=FALSE}
+library(sf)
+library(geobr)
+
+# Transformar em objeto sf (coordenadas lon/lat, CRS WGS84), 
+# Nesse caso os pontos já estão em lon/lat, EPSG:4326
+appeears_modis_sf <- st_as_sf(appeears_modis, 
+                    coords = c("lon", "lat"), 
+                    crs = 4326,
+                    remove = FALSE)
+
+# Estados do geobr (CRS do pacote é o SIRGAS 4674)
+estados <- geobr::read_state(year = 2020) |> 
+  st_transform(crs = 4326)   # transforma para mesmo sistema de referência de coord (WGS84)
+
+# Join espacial
+appeears_modis_incorporado <- st_join(appeears_modis_sf, estados["abbrev_state"])
+
+# Converter para data frame e renomear coluna 
+appeears_modis_incorporado <- as_tibble(appeears_modis_incorporado |> 
+                               rename("state" = abbrev_state))
+
+# Visualizar resumo
+glimpse(appeears_modis_incorporado)
+# tail(appeears_modis_incorporado)
+
+# Salvar
+# write_rds(appeears_modis_incorporado, "../data/appeears_modis.rds")
 ```
 
 

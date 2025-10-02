@@ -177,7 +177,7 @@ data_set <- data_set |> cbind(state)
 dplyr::glimpse(data_set)
 # readr::write_rds(data_set,"data/gosat-xch4.rds")
 
-dff <- readr::read_rds("../data/gosat-xch4.rds")
+dff <- readr::read_rds("../data-raw/gosat-xch4.rds")
 br |>
   ggplot2::ggplot() +
   ggplot2::geom_sf(fill="white", color="#FEBF57",
@@ -190,5 +190,53 @@ br |>
                       col="red",
                       alpha=0.2)
 ```
+
+#### Classificando cada ponto em município
+```{r, eval=FALSE}
+gosat_xch4 <- read_rds("../data-raw/gosat-xch4.rds")
+
+# Carregando pacotes
+library(sf)
+library(dplyr)
+library(lwgeom) 
+
+# 1. Garantir que shapefile de municípios está no mesmo CRS (Coordinate Reference System) e seja válido
+municipality_sf <- municipality %>% # Do script "my-function" --> municipality <- geobr::read_municipality(showProgress = FALSE)
+  st_transform(crs = 4326) %>%
+  st_make_valid()
+
+# 2. Converter data frame para sf
+gosat_xch4_sf <- st_as_sf(
+  gosat_xch4,
+  coords = c("longitude", "latitude"),
+  crs = 4326,
+  remove = FALSE # mantém as colunas originais lon/lat
+)
+
+# 3. Fazer o join espacial
+# A função "st_join" faz uma junção entre dois objetos espaciais sf;
+  # Essa junção é feita com base em relações espaciais (geometria);
+    # Essa relação de geometria foi obtida do pacote geobr (municipality) e da base de dados da sif classificada por estado
+gosat_xch4_sf <- st_join(
+  gosat_xch4_sf,
+  municipality_sf %>% select(name_muni),
+  join = st_within
+) 
+# Observe que o número de linhas se manteve após o join (✅)
+
+# 4. Criar coluna "city_ref", substituindo NA por "Other"
+gosat_xch4_sf <- gosat_xch4_sf %>%
+  mutate(city_ref = ifelse(is.na(name_muni), "Other", name_muni)) %>%
+  select(-name_muni) # remove coluna original para não duplicar
+
+# 5. Converter para data frame (para não manter como sf)
+gosat_xch4 <- as.data.frame(gosat_xch4_sf)
+
+glimpse(gosat_xch4) 
+
+# Salvar arquivo 
+# write_rds(gosat_xch4, "../data/gosat_xch4.rds")
+```
+
 
 

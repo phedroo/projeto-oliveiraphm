@@ -442,7 +442,72 @@ appeears |&gt;
   ggplot2::ggplot(ggplot2::aes(lon,lat)) +
   ggplot2::geom_point()
 # Gerar arquivo com os dados
-# readr::write_rds(appeears, &#39;../data/appeears-modis.rds&#39;)</code></pre>
+# readr::write_rds(appeears, &#39;../data-raw/appeears-modis.rds&#39;)</code></pre>
+<div id="classificando-cada-ponto-em-município" class="section level4">
+<h4>Classificando cada ponto em município</h4>
+<pre class="r"><code>appeears_modis &lt;- read_rds(&quot;../data-raw/appeears-modis.rds&quot;)
+
+# 1. Garantir que shapefile de municípios está no mesmo CRS e válido
+municipality_sf &lt;- municipality %&gt;%
+  st_transform(crs = 4326) %&gt;%
+  st_make_valid()
+
+# 2. Converter seu data frame para sf sem perder colunas
+appeears_modis_sf &lt;- st_as_sf(
+  appeears_modis,
+  coords = c(&quot;lon&quot;, &quot;lat&quot;),
+  crs = 4326,
+  remove = FALSE # mantém as colunas originais lon/lat
+)
+
+# 3. Fazer o join espacial
+appeears_modis_sf &lt;- st_join(
+  appeears_modis_sf,
+  municipality_sf %&gt;% select(name_muni),
+  join = st_within
+)
+
+# 4. Criar coluna &quot;city_ref&quot;, substituindo NA por &quot;Other&quot;
+appeears_modis_sf &lt;- appeears_modis_sf %&gt;%
+  mutate(city_ref = ifelse(is.na(name_muni), &quot;Other&quot;, name_muni)) %&gt;%
+  select(-name_muni) # remove coluna original se não quiser duplicada
+
+# 5. Converter de volta para data frame se não quiser manter como sf
+appeears_modis &lt;- as.data.frame(appeears_modis_sf)
+
+# Conferir
+glimpse(appeears_modis)</code></pre>
+</div>
+<div id="classificando-cada-ponto-em-estado-método-mais-rápido" class="section level4">
+<h4>Classificando cada ponto em estado (Método mais rápido)</h4>
+<pre class="r"><code>library(sf)
+library(geobr)
+
+# Transformar em objeto sf (coordenadas lon/lat, CRS WGS84), 
+# Nesse caso os pontos já estão em lon/lat, EPSG:4326
+appeears_modis_sf &lt;- st_as_sf(appeears_modis, 
+                    coords = c(&quot;lon&quot;, &quot;lat&quot;), 
+                    crs = 4326,
+                    remove = FALSE)
+
+# Estados do geobr (CRS do pacote é o SIRGAS 4674)
+estados &lt;- geobr::read_state(year = 2020) |&gt; 
+  st_transform(crs = 4326)   # transforma para mesmo sistema de referência de coord (WGS84)
+
+# Join espacial
+appeears_modis_incorporado &lt;- st_join(appeears_modis_sf, estados[&quot;abbrev_state&quot;])
+
+# Converter para data frame e renomear coluna 
+appeears_modis_incorporado &lt;- as_tibble(appeears_modis_incorporado |&gt; 
+                               rename(&quot;state&quot; = abbrev_state))
+
+# Visualizar resumo
+glimpse(appeears_modis_incorporado)
+# tail(appeears_modis_incorporado)
+
+# Salvar
+# write_rds(appeears_modis_incorporado, &quot;../data/appeears_modis.rds&quot;)</code></pre>
+</div>
 </div>
 
 

@@ -170,9 +170,7 @@ glimpse(nasa_power)
 # write_rds(nasa_power, "data-raw/nasa_power.rds") # arquivo excluído após rodar chunk 7
 ```
 
-#### Classificando cada ponto em estado
-
-Método mais rápido
+#### Classificando cada ponto em estado (Método mais rápido)
 
 ```{r, eval=FALSE}
 library(sf)
@@ -206,7 +204,7 @@ glimpse(nasa_joined)
 
 <!--
 
-#### Classificando pontos dos estados com base nas coordenadas
+#### Classificando cada ponto em estado
 ```{r, eval=FALSE}
 # # Lendo base
 # nasa_power <- read_rds("../data-raw/nasa_power.rds")
