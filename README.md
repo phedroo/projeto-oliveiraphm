@@ -1341,7 +1341,7 @@ nasa_power <- read_rds("data/nasa_power.rds") |>
     Vento = ws2m,
     Pressao = ps
   )
-  # don't have "state" column - previously filtred
+
 glimpse(nasa_power)
 
 # Temperatura (t2m), precipitação (prectotcorr), radiação solar (allsky) e umidade relativa a 2 m (rh2m), velocidade do vento a 2 metros (ws2m) e pressão na superfície (ps).
@@ -1415,6 +1415,114 @@ n <- municipality |>
   ggsave(filename = paste0("img/mapa_nasapower", variavel, "_", my_year, ".png"),
          plot = n)
 }
+```
+
+#### Interpolação IDW (Inverse Distance Weighting). - em andamento 02/10/2025 - ainda não finalizado
+
+``` r
+# Carregando pacotes
+library(sp)
+library(raster)
+library(tidyverse)
+library(gstat)
+
+nasa_power <- read_rds("data/nasa_power.rds") |> 
+  rename(
+    Radiacao = allsky_sfc_sw_dwn,
+    Temperatura = t2m,
+    Precipitacao = prectotcorr,
+    Umidade = rh2m,
+    Vento = ws2m,
+    Pressao = ps
+  )
+
+nasa_interpol_var <- nasa_power |> select(lon,lat, all_of(variavel)) |> as.data.frame()
+nasa_interpol_var
+# all_of ou any_of(variavel) ao invés de ".data[[variavel]]"
+
+coordinates(nasa_interpol_var) <- c('lon','lat')
+
+idw_for_cv <- gstat(
+  formula = all_of(variavel)~1,
+  data=nasa_interpol_var,
+  nmax=5,  # Número máximo de pontos vizinhos considerados na interpolação.
+  set=list(idp=5) # idp baixo (~2)→ interpolação mais suave (distantes ainda influenciam);                     idp alto (>2) → interpolação mais localizada (só os mais próximos contam).
+)
+
+cv <- gstat.cv(idw_for_cv)
+
+# cv |> as_tibble() |> 
+#   ggplot(aes(x=observed,y=var1.pred))+
+#   geom_point()+
+#   geom_smooth(method='lm')+
+#   ggpubr::stat_cor()
+
+dist <- 0.5
+grid_br <- expand.grid(lon=seq(-74,
+                               -27,dist),
+                       lat=seq(-34,
+                               6,
+                               dist))
+plot(grid_br)
+
+br <- geobr::read_country(showProgress = FALSE)
+region <- geobr::read_region(showProgress = FALSE)
+
+pol_br <- br$geom |> purrr::pluck(1) |> as.matrix()
+pol_north <- region$geom |> purrr::pluck(1) |> as.matrix()
+pol_northeast <- region$geom |> purrr::pluck(2) |> as.matrix()
+pol_southeast <- region$geom |> purrr::pluck(3) |> as.matrix()
+pol_south <- region$geom |> purrr::pluck(4) |> as.matrix()
+pol_midwest<- region$geom |> purrr::pluck(5) |> as.matrix()
+
+# correcting poligions
+
+pol_br <- pol_br[pol_br[,1]<=-34,]
+pol_br <- pol_br[!((pol_br[,1]>=-38.8 & pol_br[,1]<=-38.6) &
+                     (pol_br[,2]>= -19 & pol_br[,2]<= -16)),]
+
+pol_northeast <- pol_northeast[pol_northeast[,1]<=-34,]
+pol_northeast <- pol_northeast[!((pol_northeast[,1]>=-38.7 &
+                                    pol_northeast[,1]<=-38.6) &
+                                   pol_northeast[,2]<= -15),]
+
+pol_southeast <- pol_southeast[pol_southeast[,1]<=-30,]
+
+
+### filtering expanded grid to the brazil boundries
+
+grid_br_cut <- grid_br |>
+  dplyr::mutate(
+    flag_br = def_pol(lon,lat,pol_br),
+    flag_north = def_pol(lon,lat,pol_north),
+    flag_northeast = def_pol(lon,lat,pol_northeast),
+    flag_midwest= def_pol(lon,lat,pol_midwest),
+    flag_southeast = def_pol(lon,lat,pol_southeast),
+    flag_south = def_pol(lon,lat,pol_south)
+  ) |>
+  tidyr::pivot_longer(
+    tidyr::starts_with('flag'),
+    names_to = 'region',
+    values_to = 'flag'
+  ) |>
+  dplyr::filter(flag) |>
+  dplyr::select(lon,lat) |>
+  dplyr::group_by(lon,lat) |>
+  dplyr::summarise(
+    n_obs = dplyr::n()
+  )
+
+plot(grid_br_cut$lon,grid_br_cut$lat)
+
+grid_br_cut <- grid_br_cut |> select(lon,lat)
+coordinates(grid_br_cut) <- c('lon','lat')
+
+idw_fco2 <- idw(
+  all_of(variavel)~1,
+  nasa_interpol_var,
+  newdata=grid_br_cut,
+  idp=5,
+  nmax=5)
 ```
 
 #### Criando o grid (malha de pontos) para valores não amostrados - nasa-power
