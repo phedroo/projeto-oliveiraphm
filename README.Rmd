@@ -87,14 +87,10 @@ Formato dos arquivos:
 ### 🛠 Preparação dos dados para análise.
 ```{r}
 library(tidyverse)
-library(ggridges)
-library(ggpubr)
 library(geobr)
 library(gstat)
-library(vegan)
 library(sf)
 library(dplyr)
-library(lwgeom) # para st_make_valid
 source("R/my-function.R")
 ```
 #### Definindo estados
@@ -123,7 +119,7 @@ pol_df <- states |> filter(abbrev_state == "DF") |>
   pull(geom) |> pluck(1) |> as.matrix()
 ```
 
-##W Carregando as bases
+### Carregando as bases
 
 ```{r}
 file_kgr <- list.files("data-raw/",
@@ -150,17 +146,56 @@ data_set_kgr |>
   group_by(year, state, city_ref, variable) |> 
   summarise(
     value_mean = mean(value, na.rm=TRUE),
-    .groups = "drop") |> 
+    .groups = "drop") |>
   pivot_wider(names_from = variable, values_from = value_mean)
 
-data_set_kgr |> 
-  group_by(year,state) |> 
-  count()
+# data_set_kgr |> 
+#   group_by(year,state) |> 
+#   count()
+
+data_set_kgr |>
+  select(variable, city_ref) |>
+  pull(city_ref) |> unique() |> sort()
 ```
 
 ## Criar os mapas por variáveis por ano... como a base do geobr
 ## para verifcar os municípios não plotados 
 vamos ver onde estão os NA
+
+```{r, eval=FALSE}
+# my_year <- 2016
+variavel <- "temperatura"
+anos <- if (variavel == "xch4") 2015:2021 else 2015:2023
+
+mapas <- map(anos, function(my_year) {
+  municipality |> 
+    filter(abbrev_state %in% my_states) |> 
+    left_join( 
+      data_set_kgr |>
+        filter(variable == all_of(variavel)) |> 
+        group_by(year, city_ref) |> 
+        rename(name_muni = city_ref),
+      by = c("name_muni")
+    ) |> 
+    filter(year == my_year) |> 
+    ungroup() |> 
+    ggplot()  +
+    geom_sf(aes(fill = variavel), color="transparent",
+            size=.05, show.legend = TRUE) +
+    labs(title = paste("Ano:", my_year, "-", variavel))
+  
+})
+
+mapas[[1]]
+
+# municipality |>
+#   filter(abbrev_state %in% my_states) |> 
+#   ggplot() +
+#   geom_sf() +
+#   geom_point(data = data_set_kgr,
+#              aes(x = lon, y = lat, color = "red"))
+```
+
 
 
 
