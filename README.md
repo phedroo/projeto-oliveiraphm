@@ -134,7 +134,7 @@ library(geobr)
 library(gstat)
 library(sf)
 library(dplyr)
-source("R/my-function.R")
+source("R/my-function.R") 
 #> List of polygons loaded [list_pol]
 ```
 
@@ -147,7 +147,7 @@ my_states <- c("MS","MT","GO","DF")
 ### 💨 Entrada com a Base: `emissions-sources.rds`
 
 ``` r
-emissions_sources <- read_rds("data/emissions-sources.rds")|> 
+emissions_sources <- read_rds("../data/emissions-sources.rds")|> 
   filter(sigla_uf %in% my_states)
 glimpse(emissions_sources)
 ```
@@ -204,220 +204,16 @@ read_kgr <- function(path){
 #> # ℹ 3,805 more rows
 
 data_set_kgr <- map_df(file_kgr,read_kgr)
-data_set_kgr |> 
+data_set_kgr2 <- data_set_kgr |> 
   group_by(year, state, city_ref, variable) |> 
   summarise(
     value_mean = mean(value, na.rm=TRUE),
     .groups = "drop") |>
   pivot_wider(names_from = variable, values_from = value_mean)
-#> # A tibble: 3,281 × 13
-#>     year state city_ref  precipitacao pressao radiacao sif_757   t2m temperatura
-#>    <int> <chr> <chr>            <dbl>   <dbl>    <dbl>   <dbl> <dbl>       <dbl>
-#>  1  2015 DF    Brasília          2.62    90.7     20.5   0.234  23.2        23.2
-#>  2  2015 GO    Abadiânia        NA       NA       NA    NA      NA          NA  
-#>  3  2015 GO    Acreúna           3.33    94.4     19.8   0.241  24.7        24.7
-#>  4  2015 GO    Alexânia         NA       NA       NA    NA      NA          NA  
-#>  5  2015 GO    Alto Par…        NA       NA       NA    NA      NA          NA  
-#>  6  2015 GO    Alvorada…        NA       NA       NA     0.153  NA          NA  
-#>  7  2015 GO    Amaralina         2.71    97.1     20.4  NA      27.9        27.9
-#>  8  2015 GO    Amorinóp…        NA       NA       NA     0.229  NA          NA  
-#>  9  2015 GO    Anicuns           3.25    93.5     20.1  NA      24.6        24.6
-#> 10  2015 GO    Anápolis          3.30    90.7     20.2  NA      22.9        22.9
-#> # ℹ 3,271 more rows
-#> # ℹ 4 more variables: umidade <dbl>, vento <dbl>, xch4 <dbl>, xco2 <dbl>
 
-# data_set_kgr |> 
-#   group_by(year,state) |> 
+# data_set_kgr |>
+#   group_by(year,state) |>
 #   count()
-
-data_set_kgr |>
-  select(variable, city_ref) |>
-  pull(city_ref) |> unique() |> sort()
-#>   [1] "Abadiânia"                        "Acorizal"                        
-#>   [3] "Acreúna"                          "Água Boa"                        
-#>   [5] "Água Clara"                       "Água Fria De Goiás"              
-#>   [7] "Água Limpa"                       "Alcinópolis"                     
-#>   [9] "Alexânia"                         "Alta Floresta"                   
-#>  [11] "Alto Araguaia"                    "Alto Boa Vista"                  
-#>  [13] "Alto Garças"                      "Alto Paraguai"                   
-#>  [15] "Alto Paraíso De Goiás"            "Alto Taquari"                    
-#>  [17] "Alvorada Do Norte"                "Amambai"                         
-#>  [19] "Amaralina"                        "Amorinópolis"                    
-#>  [21] "Anápolis"                         "Anastácio"                       
-#>  [23] "Anaurilândia"                     "Angélica"                        
-#>  [25] "Anicuns"                          "Aparecida Do Taboado"            
-#>  [27] "Apiacás"                          "Aporé"                           
-#>  [29] "Aquidauana"                       "Araguaiana"                      
-#>  [31] "Araguapaz"                        "Aral Moreira"                    
-#>  [33] "Araputanga"                       "Arenápolis"                      
-#>  [35] "Arenópolis"                       "Aripuanã"                        
-#>  [37] "Aruanã"                           "Baliza"                          
-#>  [39] "Bandeirantes"                     "Barão De Melgaço"                
-#>  [41] "Barra Do Bugres"                  "Barra Do Garças"                 
-#>  [43] "Barro Alto"                       "Bataguassu"                      
-#>  [45] "Batayporã"                        "Bela Vista"                      
-#>  [47] "Bela Vista De Goiás"              "Bodoquena"                       
-#>  [49] "Bom Jardim De Goiás"              "Bom Jesus De Goiás"              
-#>  [51] "Bom Jesus Do Araguaia"            "Bonito"                          
-#>  [53] "Bonópolis"                        "Brasilândia"                     
-#>  [55] "Brasília"                         "Brasnorte"                       
-#>  [57] "Brazabrantes"                     "Britânia"                        
-#>  [59] "Buriti Alegre"                    "Caarapó"                         
-#>  [61] "Cabeceiras"                       "Cáceres"                         
-#>  [63] "Cachoeira Alta"                   "Cachoeira Dourada"               
-#>  [65] "Caçu"                             "Caiapônia"                       
-#>  [67] "Caldas Novas"                     "Camapuã"                         
-#>  [69] "Campinaçu"                        "Campinápolis"                    
-#>  [71] "Campinorte"                       "Campo Alegre De Goiás"           
-#>  [73] "Campo Grande"                     "Campo Novo Do Parecis"           
-#>  [75] "Campo Verde"                      "Campos Belos"                    
-#>  [77] "Campos De Júlio"                  "Canabrava Do Norte"              
-#>  [79] "Canarana"                         "Caracol"                         
-#>  [81] "Carlinda"                         "Cassilândia"                     
-#>  [83] "Castanheira"                      "Catalão"                         
-#>  [85] "Cavalcante"                       "Chapada Dos Guimarães"           
-#>  [87] "Chapadão Do Céu"                  "Chapadão Do Sul"                 
-#>  [89] "Cidade Ocidental"                 "Cláudia"                         
-#>  [91] "Cocalinho"                        "Cocalzinho De Goiás"             
-#>  [93] "Colíder"                          "Colinas Do Sul"                  
-#>  [95] "Colniza"                          "Comodoro"                        
-#>  [97] "Confresa"                         "Conquista D'oeste"               
-#>  [99] "Corguinho"                        "Coronel Sapucaia"                
-#> [101] "Córrego Do Ouro"                  "Corumbá"                         
-#> [103] "Corumbá De Goiás"                 "Corumbaíba"                      
-#> [105] "Costa Rica"                       "Cotriguaçu"                      
-#> [107] "Coxim"                            "Cristalina"                      
-#> [109] "Crixás"                           "Cuiabá"                          
-#> [111] "Curvelândia"                      "Damianópolis"                    
-#> [113] "Denise"                           "Deodápolis"                      
-#> [115] "Diamantino"                       "Dois Irmãos Do Buriti"           
-#> [117] "Dom Aquino"                       "Douradina"                       
-#> [119] "Dourados"                         "Doverlândia"                     
-#> [121] "Edealina"                         "Edéia"                           
-#> [123] "Faina"                            "Fátima Do Sul"                   
-#> [125] "Fazenda Nova"                     "Feliz Natal"                     
-#> [127] "Figueirão"                        "Figueirópolis D'oeste"           
-#> [129] "Flores De Goiás"                  "Formosa"                         
-#> [131] "Formoso"                          "Gameleira De Goiás"              
-#> [133] "Gaúcha Do Norte"                  "General Carneiro"                
-#> [135] "Glória D'oeste"                   "Glória De Dourados"              
-#> [137] "Goianápolis"                      "Goiandira"                       
-#> [139] "Goianésia"                        "Goiânia"                         
-#> [141] "Goianira"                         "Goiás"                           
-#> [143] "Goiatuba"                         "Gouvelândia"                     
-#> [145] "Guapó"                            "Guarani De Goiás"                
-#> [147] "Guarantã Do Norte"                "Guia Lopes Da Laguna"            
-#> [149] "Guiratinga"                       "Hidrolândia"                     
-#> [151] "Hidrolina"                        "Iaciara"                         
-#> [153] "Iguatemi"                         "Inaciolândia"                    
-#> [155] "Indiara"                          "Inocência"                       
-#> [157] "Ipameri"                          "Ipiranga De Goiás"               
-#> [159] "Ipiranga Do Norte"                "Iporá"                           
-#> [161] "Israelândia"                      "Itaberaí"                        
-#> [163] "Itajá"                            "Itanhangá"                       
-#> [165] "Itapaci"                          "Itapirapuã"                      
-#> [167] "Itaporã"                          "Itapuranga"                      
-#> [169] "Itaquiraí"                        "Itarumã"                         
-#> [171] "Itaúba"                           "Itiquira"                        
-#> [173] "Itumbiara"                        "Ivinhema"                        
-#> [175] "Ivolândia"                        "Jaciara"                         
-#> [177] "Jandaia"                          "Jaraguá"                         
-#> [179] "Jaraguari"                        "Jardim"                          
-#> [181] "Jataí"                            "Jateí"                           
-#> [183] "Jauru"                            "Juara"                           
-#> [185] "Juína"                            "Juruena"                         
-#> [187] "Juscimeira"                       "Jussara"                         
-#> [189] "Ladário"                          "Laguna Carapã"                   
-#> [191] "Lambari D'oeste"                  "Leopoldo De Bulhões"             
-#> [193] "Lucas Do Rio Verde"               "Luciara"                         
-#> [195] "Luziânia"                         "Mairipotaba"                     
-#> [197] "Mambaí"                           "Mara Rosa"                       
-#> [199] "Maracaju"                         "Marcelândia"                     
-#> [201] "Matrinchã"                        "Matupá"                          
-#> [203] "Maurilândia"                      "Mimoso De Goiás"                 
-#> [205] "Minaçu"                           "Mineiros"                        
-#> [207] "Miranda"                          "Moiporá"                         
-#> [209] "Monte Alegre De Goiás"            "Montes Claros De Goiás"          
-#> [211] "Montividiu"                       "Montividiu Do Norte"             
-#> [213] "Morrinhos"                        "Mossâmedes"                      
-#> [215] "Mozarlândia"                      "Mundo Novo"                      
-#> [217] "Naviraí"                          "Nazário"                         
-#> [219] "Nioaque"                          "Niquelândia"                     
-#> [221] "Nobres"                           "Nossa Senhora Do Livramento"     
-#> [223] "Nova Alvorada Do Sul"             "Nova América"                    
-#> [225] "Nova Andradina"                   "Nova Bandeirantes"               
-#> [227] "Nova Brasilândia"                 "Nova Canaã Do Norte"             
-#> [229] "Nova Crixás"                      "Nova Guarita"                    
-#> [231] "Nova Iguaçu De Goiás"             "Nova Lacerda"                    
-#> [233] "Nova Marilândia"                  "Nova Maringá"                    
-#> [235] "Nova Monte Verde"                 "Nova Mutum"                      
-#> [237] "Nova Nazaré"                      "Nova Olímpia"                    
-#> [239] "Nova Roma"                        "Nova Santa Helena"               
-#> [241] "Nova Ubiratã"                     "Nova Xavantina"                  
-#> [243] "Novo Brasil"                      "Novo Horizonte Do Norte"         
-#> [245] "Novo Horizonte Do Sul"            "Novo Mundo"                      
-#> [247] "Novo Planalto"                    "Novo Santo Antônio"              
-#> [249] "Novo São Joaquim"                 "Orizona"                         
-#> [251] "Other"                            "Padre Bernardo"                  
-#> [253] "Palestina De Goiás"               "Palmeiras De Goiás"              
-#> [255] "Palmelo"                          "Paranaíba"                       
-#> [257] "Paranaíta"                        "Paranatinga"                     
-#> [259] "Paranhos"                         "Paraúna"                         
-#> [261] "Pedra Preta"                      "Pedro Gomes"                     
-#> [263] "Peixoto De Azevedo"               "Perolândia"                      
-#> [265] "Petrolina De Goiás"               "Piracanjuba"                     
-#> [267] "Piranhas"                         "Pirenópolis"                     
-#> [269] "Planaltina"                       "Planalto Da Serra"               
-#> [271] "Poconé"                           "Ponta Porã"                      
-#> [273] "Pontal Do Araguaia"               "Pontalina"                       
-#> [275] "Ponte Branca"                     "Pontes E Lacerda"                
-#> [277] "Porangatu"                        "Porto Alegre Do Norte"           
-#> [279] "Porto Dos Gaúchos"                "Porto Esperidião"                
-#> [281] "Porto Estrela"                    "Porto Murtinho"                  
-#> [283] "Posse"                            "Poxoréo"                         
-#> [285] "Primavera Do Leste"               "Querência"                       
-#> [287] "Quirinópolis"                     "Reserva Do Cabaçal"              
-#> [289] "Ribas Do Rio Pardo"               "Ribeirão Cascalheira"            
-#> [291] "Ribeirãozinho"                    "Rio Brilhante"                   
-#> [293] "Rio Negro"                        "Rio Verde"                       
-#> [295] "Rio Verde De Mato Grosso"         "Rochedo"                         
-#> [297] "Rondolândia"                      "Rondonópolis"                    
-#> [299] "Rosário Oeste"                    "Rubiataba"                       
-#> [301] "Salto Do Céu"                     "Santa Bárbara De Goiás"          
-#> [303] "Santa Carmem"                     "Santa Cruz Do Xingu"             
-#> [305] "Santa Fé De Goiás"                "Santa Isabel"                    
-#> [307] "Santa Rita Do Novo Destino"       "Santa Rita Do Pardo"             
-#> [309] "Santa Rita Do Trivelato"          "Santa Tereza De Goiás"           
-#> [311] "Santa Terezinha"                  "Santa Terezinha De Goiás"        
-#> [313] "Santo Afonso"                     "Santo Antônio Da Barra"          
-#> [315] "Santo Antônio Do Descoberto"      "Santo Antônio Do Leste"          
-#> [317] "Santo Antônio Do Leverger"        "São Domingos"                    
-#> [319] "São Félix Do Araguaia"            "São Gabriel Do Oeste"            
-#> [321] "São João D'aliança"               "São João Da Paraúna"             
-#> [323] "São José Do Rio Claro"            "São José Do Xingu"               
-#> [325] "São José Dos Quatro Marcos"       "São Luís De Montes Belos"        
-#> [327] "São Miguel Do Araguaia"           "São Miguel Do Passa Quatro"      
-#> [329] "São Simão"                        "Sapezal"                         
-#> [331] "Selvíria"                         "Serra Nova Dourada"              
-#> [333] "Serranópolis"                     "Sidrolândia"                     
-#> [335] "Silvânia"                         "Sinop"                           
-#> [337] "Sítio D'abadia"                   "Sonora"                          
-#> [339] "Sorriso"                          "Tabaporã"                        
-#> [341] "Tacuru"                           "Tangará Da Serra"                
-#> [343] "Tapurah"                          "Taquaral De Goiás"               
-#> [345] "Taquarussu"                       "Terenos"                         
-#> [347] "Terezópolis De Goiás"             "Terra Nova Do Norte"             
-#> [349] "Tesouro"                          "Torixoréu"                       
-#> [351] "Três Lagoas"                      "Três Ranchos"                    
-#> [353] "Trombas"                          "Turvânia"                        
-#> [355] "Turvelândia"                      "Uirapuru"                        
-#> [357] "União Do Sul"                     "Uruaçu"                          
-#> [359] "Uruana"                           "Urutaí"                          
-#> [361] "Vale De São Domingos"             "Varjão"                          
-#> [363] "Várzea Grande"                    "Vera"                            
-#> [365] "Vianópolis"                       "Vicentinópolis"                  
-#> [367] "Vila Bela Da Santíssima Trindade" "Vila Boa"                        
-#> [369] "Vila Propício"                    "Vila Rica"
 ```
 
 ## Criar os mapas por variáveis por ano… como a base do geobr
@@ -427,16 +223,17 @@ data_set_kgr |>
 vamos ver onde estão os NA
 
 ``` r
-# my_year <- 2016
-variavel <- "temperatura"
+my_year <- 2015
+variavel <- "xch4"
 anos <- if (variavel == "xch4") 2015:2021 else 2015:2023
 
 mapas <- map(anos, function(my_year) {
   municipality |> 
     filter(abbrev_state %in% my_states) |> 
     left_join( 
-      data_set_kgr |>
-        filter(variable == all_of(variavel)) |> 
+      data_set_kgr_bind2 |>
+        filter(variavel == all_of(variavel),
+               state %in% my_states) |> 
         group_by(year, city_ref) |> 
         rename(name_muni = city_ref),
       by = c("name_muni")
@@ -458,4 +255,98 @@ mapas[[1]]
 #   geom_sf() +
 #   geom_point(data = data_set_kgr,
 #              aes(x = lon, y = lat, color = "red"))
+```
+
+### Testando kgrs individualmente para verificar NAs
+
+``` r
+# Goiás: 246 municípios <- PROBLEMA AQUI, todas as bases com menos de 90 municípios (confirmando o plot das cidades faltantes)
+# Mato Grosso: 141 municípios
+# Mato Grosso do Sul: 77 municípios
+
+gosat <- read_rds("data/gosat_xch4_bind.rds")     
+xco2 <- read_rds("data/nasa-xco2-bind.rds")              
+sif <- read_rds("data/oco2-sif-bind.rds")  
+
+glimpse(sif) |> 
+  filter(state == "GO") |> 
+  pull(city_ref) |> unique()
+
+gosat |> 
+  ggplot() +
+  geom_point(aes(x = longitude, y = latitude))
+
+np_ps |> 
+  ggplot() +
+  geom_point(aes(x = lon, y = lat))
+
+sif |> 
+  ggplot() +
+  geom_point(aes(x = longitude, y = latitude))
+
+xco2 |> 
+  ggplot() +
+  geom_point(aes(x = longitude, y = latitude))
+```
+
+Foram verificados: 1. Classificação por estado e municípios das bases 2.
+Adição da base 3. Krigagem
+
+Desde a varificação 1, observa-se somente cerca de 90 observações para
+os municípios do estado de GO, estando ausentes mais de 150 municípios.
+Não foram verificados problemas em nenhuma destas verificações.
+
+O problema esta que, a krigagem é feita, mas não adicionam os valores
+observados, apenas é possível visualizá-los no plot, ou seja, o arquivo
+kgr.rds gerado não contém tais dados, ficando como “NA”.
+
+Para resolver, deve-se agregar a krigagem à geometria municipal para que
+todos os municípios sejam preenchidos.  
+Isto ja havia sido feito em “nasa_xco2_bind”, no entanto, não foi este o
+arquivo kgr salvo na pasta data-raw, logo gerando os NAs mesmo após a
+krigagem. Sendo assim, basta salvar fazer o bind e salvar os arquivos de
+cada variável
+
+### Carregando as bases
+
+``` r
+file_kgr_bind <- list.files("data/",
+                      full.names = TRUE,pattern = "bind")
+new_names_b = c(lat = "latitude", lon = "longitude")
+
+read_kgr <- function(path){
+  df <- readr::read_rds(path) |> 
+    janitor::clean_names() |> 
+    dplyr::rename(dplyr::any_of(new_names_b))
+  
+  nome <- df[3] |> names()    
+  new_name_b <- c(value = nome)
+  df <- df |> 
+    mutate(
+      variable = nome
+    ) |> 
+    dplyr::rename(dplyr::any_of(new_name_b))
+  return(df)  
+};read_kgr(file_kgr_bind[1])
+
+data_set_kgr_bind <- map_df(file_kgr_bind,read_kgr)
+data_set_kgr_bind2 <- data_set_kgr_bind |> 
+  filter(year >= 2015,
+         state %in% my_states) |> 
+  group_by(year, state, city_ref, variable) |> 
+  summarise(
+    value_mean = mean(value, na.rm=TRUE),
+    .groups = "drop") |>
+  pivot_wider(names_from = variable, values_from = value_mean)
+
+# data_set_kgr_bind |> 
+#   group_by(year,state) |> 
+#   count()
+# 
+data_set_kgr_bind2 |>
+  select(variable, city_ref) |>
+  pull(city_ref) |> unique() |> sort()
+
+# sum(is.na(data_set_kgr_bind2))
+# sum(is.na(data_set_kgr2))
 ```
