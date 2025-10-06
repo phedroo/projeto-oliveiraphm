@@ -134,6 +134,8 @@ library(geobr)
 library(gstat)
 library(sf)
 library(dplyr)
+library(purrr) # criar funções
+library(tibble)
 source("R/my-function.R") 
 #> List of polygons loaded [list_pol]
 ```
@@ -216,18 +218,17 @@ data_set_kgr2 <- data_set_kgr |>
 #   count()
 ```
 
-## Criar os mapas por variáveis por ano… como a base do geobr
+### Criar os mapas por variáveis por ano para verifcar os municípios não plotados
 
-## para verifcar os municípios não plotados
-
-vamos ver onde estão os NA
+Vamos verificar onde estão os NA
 
 ``` r
-my_year <- 2015
-variavel <- "xch4"
-anos <- if (variavel == "xch4") 2015:2021 else 2015:2023
+my_year <- 2015 # definindo ano
+variavel <- "xch4" # definindo a variável
+anos <- if (variavel == "xch4") 2015:2021 else 2015:2023 #definindo anos, caso a variável seja xch4, anos até 2021, que é até onde contém os dados da variável
 
-mapas <- map(anos, function(my_year) {
+# Plotando mapas variável/ano
+mapas <- map(anos, function(my_year) { #map -> Aplicando função para cada elemento de vetor
   municipality |> 
     filter(abbrev_state %in% my_states) |> 
     left_join( 
@@ -257,38 +258,6 @@ mapas[[1]]
 #              aes(x = lon, y = lat, color = "red"))
 ```
 
-### Testando kgrs individualmente para verificar NAs
-
-``` r
-# Goiás: 246 municípios <- PROBLEMA AQUI, todas as bases com menos de 90 municípios (confirmando o plot das cidades faltantes)
-# Mato Grosso: 141 municípios
-# Mato Grosso do Sul: 77 municípios
-
-gosat <- read_rds("data/gosat_xch4_bind.rds")     
-xco2 <- read_rds("data/nasa-xco2-bind.rds")              
-sif <- read_rds("data/oco2-sif-bind.rds")  
-
-glimpse(sif) |> 
-  filter(state == "GO") |> 
-  pull(city_ref) |> unique()
-
-gosat |> 
-  ggplot() +
-  geom_point(aes(x = longitude, y = latitude))
-
-np_ps |> 
-  ggplot() +
-  geom_point(aes(x = lon, y = lat))
-
-sif |> 
-  ggplot() +
-  geom_point(aes(x = longitude, y = latitude))
-
-xco2 |> 
-  ggplot() +
-  geom_point(aes(x = longitude, y = latitude))
-```
-
 Foram verificados: 1. Classificação por estado e municípios das bases 2.
 Adição da base 3. Krigagem
 
@@ -307,16 +276,20 @@ arquivo kgr salvo na pasta data-raw, logo gerando os NAs mesmo após a
 krigagem. Sendo assim, basta salvar fazer o bind e salvar os arquivos de
 cada variável
 
-### Carregando as bases
+### ⛓️ Carregando as novas bases
 
 ``` r
+# Empilhando lista de caminho de arquivos
 file_kgr_bind <- list.files("data/",
                       full.names = TRUE,pattern = "bind")
+
+# Vetor para padronizar nomes para lat e lon
 new_names_b = c(lat = "latitude", lon = "longitude")
 
+# Função para leitura e padronização dos nomes das colunas/variáveis dos arquivos kgr
 read_kgr <- function(path){
   df <- readr::read_rds(path) |> 
-    janitor::clean_names() |> 
+    janitor::clean_names() |> # padronizar colunas
     dplyr::rename(dplyr::any_of(new_names_b))
   
   nome <- df[3] |> names()    
@@ -329,24 +302,177 @@ read_kgr <- function(path){
   return(df)  
 };read_kgr(file_kgr_bind[1])
 
+# Aplicando função para leitura e construindo novo DataFrame
 data_set_kgr_bind <- map_df(file_kgr_bind,read_kgr)
+
+# Reorganizando DataFrame criado
 data_set_kgr_bind2 <- data_set_kgr_bind |> 
-  filter(year >= 2015,
+  filter(year %in% 2015:2023, # período de análise
          state %in% my_states) |> 
   group_by(year, state, city_ref, variable) |> 
   summarise(
     value_mean = mean(value, na.rm=TRUE),
     .groups = "drop") |>
-  pivot_wider(names_from = variable, values_from = value_mean)
+  pivot_wider(names_from = variable, values_from = value_mean) # reduz linhas
+```
 
-# data_set_kgr_bind |> 
-#   group_by(year,state) |> 
-#   count()
-# 
-data_set_kgr_bind2 |>
-  select(variable, city_ref) |>
-  pull(city_ref) |> unique() |> sort()
+### Função para atribuir a mediana em um município, a partir da observação média da mediana de municípios vizinhos
 
-# sum(is.na(data_set_kgr_bind2))
-# sum(is.na(data_set_kgr2))
+``` r
+# Função para imputar NAs pela mediana dos até n vizinhos mais próximos
+impute_NAs_vizinhos <- function( # determinando parâmetros da função
+  df,
+  coords = NULL,                # data.frame com colunas city_col, lat_col, lon_col
+  vars = NULL,                  # vetores de colunas a imputar; se NULL, usa todas exceto agrupadoras
+  n_neighbors = 3,
+  year_col = "year",
+  state_col = "state",
+  city_col = "city_ref",
+  lat_col = "lat",
+  lon_col = "lon",
+  same_state = TRUE,
+  verbose = TRUE
+){
+  # checagens iniciais
+  if (!is.null(coords) && !all(c(city_col, lat_col, lon_col) %in% names(coords))) {
+    stop("Se usar 'coords', ela deve conter colunas: ", paste(c(city_col, lat_col, lon_col), collapse = ", "))
+  }
+  if (!is.null(coords) && !requireNamespace("geosphere", quietly = TRUE)) {
+    stop("Instale o pacote 'geosphere' para usar coordenadas: install.packages('geosphere')")
+  }
+
+  df <- as.data.frame(df)
+  if (is.null(vars)) {
+    vars <- setdiff(names(df), c(year_col, state_col, city_col))
+  }
+
+  # normaliza coords (se houver)
+  if (!is.null(coords)) {
+    coords <- as.data.frame(coords)
+    coords_map <- coords[!duplicated(coords[[city_col]]), c(city_col, lat_col, lon_col)]
+  }
+
+  out_df <- df
+  imputed_list <- list()
+
+  years <- unique(df[[year_col]])
+  for (y in years) {
+    sub <- df[df[[year_col]] == y, , drop = FALSE]
+
+    for (var in vars) {
+      nas_idx <- which(is.na(sub[[var]]))
+      if (length(nas_idx) == 0) next
+
+      for (i in nas_idx) {
+        city <- sub[[city_col]][i]
+        city_state <- sub[[state_col]][i]
+
+        # --- obter lista de candidatos vizinhos disponíveis (não-NA) ---
+        neighs_used <- character(0)
+        
+        if (!is.null(coords)) {
+          # usar coords + distância geodésica
+          # busca coords do alvo
+          tgt_row <- coords_map[coords_map[[city_col]] == city, , drop = FALSE]
+          if (nrow(tgt_row) == 0) {
+            if (verbose) message("Sem coords para ", city, " (ano ", y, "). Pulando.")
+            next
+          }
+          tgt_lon <- as.numeric(tgt_row[[lon_col]][1])
+          tgt_lat <- as.numeric(tgt_row[[lat_col]][1])
+
+          # candidatos: mesmos ano, (opcionalmente) mesmo estado, valor não-NA, != self
+          candidates <- sub[!is.na(sub[[var]]), , drop = FALSE]
+          if (same_state) candidates <- candidates[candidates[[state_col]] == city_state, , drop = FALSE]
+          candidates <- candidates[candidates[[city_col]] != city, , drop = FALSE]
+          if (nrow(candidates) == 0) {
+            if (verbose) message("Nenhum candidato não-NA para ", city, " / ", var, " em ", y)
+            next
+          }
+
+          # obter coords dos candidatos
+          cand_idx <- match(candidates[[city_col]], coords_map[[city_col]])
+          valid_cand <- !is.na(cand_idx) & !is.na(coords_map[[lon_col]][cand_idx]) & !is.na(coords_map[[lat_col]][cand_idx])
+          if (!any(valid_cand)) next
+
+          cand_cities <- candidates[[city_col]][valid_cand]
+          cand_coords_mat <- cbind(
+            as.numeric(coords_map[[lon_col]][cand_idx[valid_cand]]),
+            as.numeric(coords_map[[lat_col]][cand_idx[valid_cand]])
+          )
+
+          # distâncias e ordenação
+          dists <- geosphere::distHaversine(matrix(c(tgt_lon, tgt_lat), nrow = 1),
+                                            cand_coords_mat)
+          ord <- order(dists, na.last = NA)
+          neighs_used <- cand_cities[ord][1:min(length(ord), n_neighbors)]
+        }
+
+        # se conseguimos vizinhos, imputar mediana
+        if (length(neighs_used) == 0) next
+        neighbor_vals <- sub[[var]][match(neighs_used, sub[[city_col]])]
+        new_value <- median(neighbor_vals, na.rm = TRUE)
+
+        # atribuir ao data.frame de saída
+        idx_out <- which(out_df[[year_col]] == y & out_df[[city_col]] == city)
+        if (length(idx_out) >= 1) {
+          out_df[idx_out, var] <- new_value
+        }
+
+        # registrar
+        imputed_list[[length(imputed_list) + 1]] <-
+          tibble::tibble(
+            year = y,
+            city_ref = city,
+            state = city_state,
+            variable = var,
+            n_neighbors = length(neighs_used),
+            neighbors = paste0(neighs_used, collapse = "|"),
+            imputed_value = new_value
+          )
+      } # end each NA row
+    } # end each var
+  } # end each year
+
+  imputation_log <- if (length(imputed_list) > 0) dplyr::bind_rows(imputed_list) else tibble::tibble()
+  return(list(data = out_df, log = imputation_log))
+}
+```
+
+``` r
+# supondo que você tenha:
+# data_set_kgr_bind2  (wide, com year, state, city_ref, e variáveis a imputar)
+# muni_coords         (colunas: city_ref, latitude, longitude)
+
+muni_coords <- data_set_kgr_bind |>
+  filter(
+    state %in% my_states
+  ) |>
+  select(city_ref, lat, lon) |>
+  distinct()
+
+vars_to_impute <- c("precipitacao","temperatura","radiacao","vento","umidade","xco2","xch4","sif_757","pressao")
+
+result <- impute_NAs_vizinhos(
+  df = data_set_kgr_bind2,
+  coords = muni_coords,
+  vars = vars_to_impute,
+  n_neighbors = 3, # n° de municípios vizinhos
+  year_col = "year",
+  state_col = "state",
+  city_col = "city_ref",
+  lat_col = "lat",
+  lon_col = "lon",
+  same_state = TRUE
+)
+
+df_kgr_preenchido <- result$data       # dataframe com NAs preenchidos quando possível
+imputation_log <- result$log  # log com quais municípios/variáveis foram imputados
+
+df_kgr_preenchido
+
+# Contagem de NAs
+# sum(is.na(filled_df)) # NAs reduziram drasticamente
+
+# Nenhum candidato não-NA para xch4 a partir de 2022 pois só contém até o ano de 2021
 ```
