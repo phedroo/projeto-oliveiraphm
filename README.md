@@ -440,10 +440,10 @@ impute_NAs_vizinhos <- function( # determinando parâmetros da função
 ```
 
 ``` r
-# supondo que você tenha:
-# data_set_kgr_bind2  (wide, com year, state, city_ref, e variáveis a imputar)
-# muni_coords         (colunas: city_ref, latitude, longitude)
+# data_set_kgr_bind2  (Com: year, state, city_ref, e variáveis a imputar)
+# muni_coords         (Colunas: city_ref, latitude, longitude)
 
+# Pegando os municípios e suas coordenadas
 muni_coords <- data_set_kgr_bind |>
   filter(
     state %in% my_states
@@ -451,8 +451,10 @@ muni_coords <- data_set_kgr_bind |>
   select(city_ref, lat, lon) |>
   distinct()
 
+# Variáveis a imputar/completar 
 vars_to_impute <- c("precipitacao","temperatura","radiacao","vento","umidade","xco2","xch4","sif_757","pressao")
 
+# Resultado 
 result <- impute_NAs_vizinhos(
   df = data_set_kgr_bind2,
   coords = muni_coords,
@@ -466,13 +468,15 @@ result <- impute_NAs_vizinhos(
   same_state = TRUE
 )
 
-df_kgr_preenchido <- result$data       # dataframe com NAs preenchidos quando possível
-imputation_log <- result$log  # log com quais municípios/variáveis foram imputados
-
+# Banco de dados com NAs preenchidos (quando possível)
+df_kgr_preenchido <- result$data       
 df_kgr_preenchido
 
+# Analisar quais municípios/variáveis foram imputados
+# imputation_log <- result$log 
+
 # Contagem de NAs
-# sum(is.na(filled_df)) # NAs reduziram drasticamente
+# sum(is.na(filled_df)) # reduziram drasticamente
 
 # Nenhum candidato não-NA para xch4 a partir de 2022 pois só contém até o ano de 2021
 ```
