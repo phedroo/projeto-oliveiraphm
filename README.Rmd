@@ -484,9 +484,6 @@ df_kgr_preenchido |>
 
 ### Plotar mapa
 ```{r,eval=FALSE}
-df_kgr_preenchido |> 
-  ggplot
-
 
 ```
 

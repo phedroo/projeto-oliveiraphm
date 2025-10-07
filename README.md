@@ -535,8 +535,3 @@ df_kgr_preenchido |>
 ```
 
 ### Plotar mapa
-
-``` r
-df_kgr_preenchido |> 
-  ggplot
-```
