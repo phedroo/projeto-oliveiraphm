@@ -29,7 +29,7 @@ library(vegan)
 library(sf)
 library(dplyr)
 library(lwgeom) # para st_make_valid
-source("R/my-function.R")
+source("../R/my-function.R")
 ```
 #### Definindo estados
 ```{r, eval=FALSE}
@@ -46,7 +46,7 @@ glimpse(emissions_sources)
 
 ### 💨 Entrada com a Base: `nasa-xco2.rds`
 ```{r, eval=FALSE}
-nasa_xco2 <- read_rds("data/nasa-xco2.rds") |> 
+nasa_xco2 <- read_rds("../data/nasa-xco2.rds") |> 
   filter(state %in% my_states)
 glimpse(nasa_xco2)
 ```
@@ -189,7 +189,7 @@ modelo_1 <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
 modelo_2 <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
 modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
 plot_my_models(modelo_1,modelo_2,modelo_3)
-modelo <- modelo_1 ## sempre modificar
+modelo <- modelo_2 ## sempre modificar
 ```
 
 ```{r, eval=FALSE}
@@ -319,7 +319,7 @@ nasa_xco2_kgr <- map_df(2015:2023,~{
   patamar=1.4
   alcance=0.2
   epepita=0.5
-  modelo <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
+  modelo <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
   ko_variavel <- krige(formula=form, df_aux, grid_geral, model=modelo,
                        block=c(0.1,0.1),
                        nsim=0,
@@ -363,17 +363,22 @@ nasa_xco2_kgr <- map_df(2015:2023,~{
         mutate(year = .x)
   return(df_final)
 })
-# write_rds(nasa_xco2_kgr,"data-raw/nasa-xco2-kgr.rds")
+# write_rds(nasa_xco2_kgr,"../data-raw/nasa-xco2-kgr.rds")
 ```
 
 ```{r, eval=FALSE}
-nasa_xco2_kgr <- read_rds("data-raw/nasa-xco2-kgr.rds")
+nasa_xco2_kgr <- read_rds("../data-raw/nasa-xco2-kgr.rds")
 ```
 
 ```{r, eval=FALSE}
 nasa_xco2_bind <- nasa_xco2 |> 
   select(longitude,latitude,xco2,city_ref,state,year) |> 
   rbind(nasa_xco2_kgr)
+
+# Conferindo o municípios de GO que estavam faltando --> Agora estão certos (~230)
+# nasa_xco2_bind |> 
+#   filter(state == "GO") |> 
+#   pull(city_ref) |> unique()
 
 map(2015:2023,~{
   municipality |> 
@@ -412,12 +417,15 @@ map(2015:2023,~{
          y = 'Latitude',
          title = .x) +
     scale_fill_viridis_c()})
+
+# Salvar arquivo interpolado
+# write_rds(nasa_xco2_bind,"../data/nasa-xco2-bind.rds")
 ```
 
 
 ### 💨 Entrada com a Base: `gosat-xch4.rds`
 ```{r, eval=FALSE}
-gosat_xch4 <- read_rds("data/gosat_xch4.rds") |> 
+gosat_xch4 <- read_rds("../data/gosat_xch4.rds") |> 
   filter(state %in% my_states) |> 
   select(-flag_nordeste, -flag_br)
 
@@ -438,7 +446,7 @@ Já feito no arquivo da pasta docs
 
 #### Gerar mapa
 ```{r, eval=FALSE}
-gosat_xch4 <- read_rds("data/gosat_xch4.rds") # os arquivos com underline foram tratados, classificados por município e deverão ser repassados para a pasta data futuramente
+gosat_xch4 <- read_rds("../data/gosat_xch4.rds") # os arquivos com underline foram tratados, classificados por município e deverão ser repassados para a pasta data futuramente
 
 my_year = 2021
 municipality |> 
@@ -457,10 +465,10 @@ municipality |>
   ggplot()  +
   geom_sf(aes(fill=xch4), color="transparent",
           size=.05, show.legend = TRUE)  +
-  geom_point(data = gosat_xch4 |> 
-               filter(year==my_year), 
-               aes(longitude, latitude, #size = emission,
-                   color="red"))+
+  # geom_point(data = gosat_xch4 |> 
+  #              filter(year==my_year), 
+  #              aes(longitude, latitude, #size = emission,
+  #                  color="red"))+
   theme_bw() +
   theme(
     axis.text.x = element_text(size = rel(.9), color = "black"),
@@ -510,37 +518,31 @@ df_aux <- gosat_xch4 |>
   summarise(
     xch4 = mean(xch4,na.rm=TRUE), # média xch4
     .groups = "drop"
-  ) |> sample_n(2627) # tamanho máximo dos dados
+  ) 
 sp::coordinates(df_aux) = ~ longitude + latitude # Converter data frame para objeto espacial - atribuir as colunas longitude/latitude como coordenadas. Várias funções de geoestatística do pacote gstat (como variogram() e krige()) não aceitam um data frame, mas sim um objeto com coordenadas. Agora, a variável xch4 passa a ser o atributo associado a cada ponto espacial.
 
 form <- xch4 ~ 1 # "~ 1" modelo de média constante, mas desconhecida (somente intercepto - assume média global, sem covariáveis).
 
 vari_exp <- gstat::variogram(form, data = df_aux,
                       cressie = FALSE, #estimador clássico do semivar.
-                      cutoff = 0.01, # distância  
-                      width = 0.0007) # distancia entre pontos
+                      cutoff = 32, # distância  
+                      width = 2) # distancia entre pontos
 vari_exp  |>
   ggplot(aes(x=dist, y=gamma)) +
   geom_point() +
   labs(x="lag (º)",
        y=expression(paste(gamma,"(h)")))
-
-# Melhor teste até o momento:
-# vari_exp <- gstat::variogram(form, data = df_aux,
-#                       cressie = FALSE, #estimador clássico do semivar.
-#                       cutoff = 0.01, # distância  
-#                       width = 0.0007) # distancia entre pontos
 ```
 
 ```{r, eval=FALSE}
-patamar=275
-alcance=0.004
-epepita=190
+patamar=1250
+alcance=33
+epepita=197
 modelo_1 <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
 modelo_2 <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
 modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
 plot_my_models(modelo_1,modelo_2,modelo_3)
-modelo <- modelo_1 ## sempre modificar
+modelo <- modelo_2 ## sempre modificar
 ```
 
 ```{r, eval=FALSE}
@@ -660,17 +662,17 @@ gosat_xch4_kgr <- map_df(2015:2021,~{
   form <- xch4 ~ 1
   vari_exp <- gstat::variogram(form, data = df_aux,
                                cressie = FALSE,
-                               cutoff = 0.01, # distância máxima 
-                               width = 0.0007) # distancia entre pontos
+                               cutoff = 32, # distância máxima 
+                               width = 2) # distancia entre pontos
   vari_exp  |>
     ggplot(aes(x=dist, y=gamma)) +
     geom_point() +
     labs(x="lag (º)",
          y=expression(paste(gamma,"(h)")))
-  patamar=275
-  alcance=0.004
-  epepita=190
-  modelo <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
+  patamar=1250
+  alcance=33
+  epepita=197
+  modelo <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
   ko_variavel <- krige(formula=form, df_aux, grid_geral, model=modelo,
                        block=c(0.1,0.1),
                        nsim=0,
@@ -718,7 +720,7 @@ gosat_xch4_kgr <- map_df(2015:2021,~{
 ```
 
 ```{r, eval=FALSE}
-xch4_kgr <- read_rds("data-raw/gosat-xch4-kgr.rds")
+xch4_kgr <- read_rds("../data-raw/gosat-xch4-kgr.rds")
 ```
 
 ```{r, eval=FALSE}
@@ -763,11 +765,14 @@ map(2015:2021,~{
          y = 'Latitude',
          title = .x) +
     scale_fill_viridis_c()})
+
+# Salvar arquivo interpolado
+# write_rds(gosat_xch4_bind,"../data/gosat_xch4_bind.rds")
 ```
 
 ### 🍃 Entrada com a Base: `oco2-sif.rds`
 ```{r, eval=FALSE} 
-oco2_sif <- read_rds("data/oco2-sif.rds") |> 
+oco2_sif <- read_rds("../data/oco2-sif.rds") |> 
   rename(SIF_757 = daily_sif757)
 
 glimpse(oco2_sif)
@@ -801,10 +806,10 @@ municipality |>
   ggplot()  +
   geom_sf(aes(fill=SIF_757), color="transparent",
           size=.05, show.legend = TRUE)  +
-  geom_point(data = oco2_sif |> 
-               filter(year==my_year), 
-               aes(longitude, latitude, #size = emission,
-                   color="red"))+
+  # geom_point(data = oco2_sif |> 
+  #              filter(year==my_year), 
+  #              aes(longitude, latitude, #size = emission,
+  #                  color="red"))+
   theme_bw() +
   theme(
     axis.text.x = element_text(size = rel(.9), color = "black"),
@@ -819,6 +824,7 @@ municipality |>
        y = 'Latitude') +
   scale_fill_viridis_c()
 ```
+
 #### Criando o grid (malha de pontos) para valores não amostrados - oco2-sif
 ```{r, eval=FALSE}
 # vetores para coordenadas x e y selecionadas da base do IBGE1
@@ -1059,11 +1065,11 @@ oco2_sif_kgr <- map_df(2015:2023,~{
         mutate(year = .x)
   return(df_final)
 })
-write_rds(oco2_sif_kgr,"data-raw/oco2-sif-kgr.rds")
+# write_rds(oco2_sif_kgr,"../data-raw/oco2-sif-kgr.rds")
 ```
 
 ```{r, eval=FALSE}
-sif_kgr <- read_rds("data-raw/oco2-sif-kgr.rds")
+sif_kgr <- read_rds("../data-raw/oco2-sif-kgr.rds")
 ```
 
 ```{r, eval=FALSE}
@@ -1108,6 +1114,8 @@ map(2015:2023,~{
          y = 'Latitude',
          title = .x) +
     scale_fill_viridis_c()})
+
+# write_rds(oco2_sif_bind,"../data/oco2-sif-bind.rds")
 ```
 
 ### 🍃 Entrada com a Base: `appeears-modis.rds`
@@ -1212,7 +1220,7 @@ Não foi feita a interpolação para dados do appeears, pois todos os município
 ```{r, eval=FALSE} 
 # original archive "nasa-power.rds" = 174,6mb
 
-nasa_power <- read_rds("data/nasa_power.rds") |> 
+nasa_power <- read_rds("../data/nasa_power.rds") |> 
   rename(
     Radiacao = allsky_sfc_sw_dwn,
     Temperatura = t2m,
@@ -1251,7 +1259,7 @@ my_year <- 2022
   # Pressao
 
 # Definir variável
-variavel <- "Radiacao" #mudar
+variavel <- "Pressao" #mudar
 
 # Estabelecer anos
 anos <- 2015:2023
@@ -1291,117 +1299,9 @@ n <- municipality |>
 
   print(n)
   
-  ggsave(filename = paste0("img/mapa_nasapower", variavel, "_", my_year, ".png"),
-         plot = n)
+  # ggsave(filename = paste0("img/mapa_nasapower", variavel, "_", my_year, ".png"),
+  #        plot = n)
 }
-```
-
-#### Interpolação IDW (Inverse Distance Weighting). - em andamento 02/10/2025 - ainda não finalizado
-
-```{r, eval=FALSE}
-# Carregando pacotes
-library(sp)
-library(raster)
-library(tidyverse)
-library(gstat)
-
-nasa_power <- read_rds("data/nasa_power.rds") |> 
-  rename(
-    Radiacao = allsky_sfc_sw_dwn,
-    Temperatura = t2m,
-    Precipitacao = prectotcorr,
-    Umidade = rh2m,
-    Vento = ws2m,
-    Pressao = ps
-  )
-
-nasa_interpol_var <- nasa_power |> select(lon,lat, all_of(variavel)) |> as.data.frame()
-nasa_interpol_var
-# all_of ou any_of(variavel) ao invés de ".data[[variavel]]"
-
-coordinates(nasa_interpol_var) <- c('lon','lat')
-
-idw_for_cv <- gstat(
-  formula = all_of(variavel)~1,
-  data=nasa_interpol_var,
-  nmax=5,  # Número máximo de pontos vizinhos considerados na interpolação.
-  set=list(idp=5) # idp baixo (~2)→ interpolação mais suave (distantes ainda influenciam);                     idp alto (>2) → interpolação mais localizada (só os mais próximos contam).
-)
-
-cv <- gstat.cv(idw_for_cv)
-
-# cv |> as_tibble() |> 
-#   ggplot(aes(x=observed,y=var1.pred))+
-#   geom_point()+
-#   geom_smooth(method='lm')+
-#   ggpubr::stat_cor()
-
-dist <- 0.5
-grid_br <- expand.grid(lon=seq(-74,
-                               -27,dist),
-                       lat=seq(-34,
-                               6,
-                               dist))
-plot(grid_br)
-
-br <- geobr::read_country(showProgress = FALSE)
-region <- geobr::read_region(showProgress = FALSE)
-
-pol_br <- br$geom |> purrr::pluck(1) |> as.matrix()
-pol_north <- region$geom |> purrr::pluck(1) |> as.matrix()
-pol_northeast <- region$geom |> purrr::pluck(2) |> as.matrix()
-pol_southeast <- region$geom |> purrr::pluck(3) |> as.matrix()
-pol_south <- region$geom |> purrr::pluck(4) |> as.matrix()
-pol_midwest<- region$geom |> purrr::pluck(5) |> as.matrix()
-
-# correcting poligions
-
-pol_br <- pol_br[pol_br[,1]<=-34,]
-pol_br <- pol_br[!((pol_br[,1]>=-38.8 & pol_br[,1]<=-38.6) &
-                     (pol_br[,2]>= -19 & pol_br[,2]<= -16)),]
-
-pol_northeast <- pol_northeast[pol_northeast[,1]<=-34,]
-pol_northeast <- pol_northeast[!((pol_northeast[,1]>=-38.7 &
-                                    pol_northeast[,1]<=-38.6) &
-                                   pol_northeast[,2]<= -15),]
-
-pol_southeast <- pol_southeast[pol_southeast[,1]<=-30,]
-
-
-### filtering expanded grid to the brazil boundries
-
-grid_br_cut <- grid_br |>
-  dplyr::mutate(
-    flag_br = def_pol(lon,lat,pol_br),
-    flag_north = def_pol(lon,lat,pol_north),
-    flag_northeast = def_pol(lon,lat,pol_northeast),
-    flag_midwest= def_pol(lon,lat,pol_midwest),
-    flag_southeast = def_pol(lon,lat,pol_southeast),
-    flag_south = def_pol(lon,lat,pol_south)
-  ) |>
-  tidyr::pivot_longer(
-    tidyr::starts_with('flag'),
-    names_to = 'region',
-    values_to = 'flag'
-  ) |>
-  dplyr::filter(flag) |>
-  dplyr::select(lon,lat) |>
-  dplyr::group_by(lon,lat) |>
-  dplyr::summarise(
-    n_obs = dplyr::n()
-  )
-
-plot(grid_br_cut$lon,grid_br_cut$lat)
-
-grid_br_cut <- grid_br_cut |> select(lon,lat)
-coordinates(grid_br_cut) <- c('lon','lat')
-
-idw_fco2 <- idw(
-  all_of(variavel)~1,
-  nasa_interpol_var,
-  newdata=grid_br_cut,
-  idp=5,
-  nmax=5)
 ```
 
 
@@ -1492,8 +1392,8 @@ form <- as.formula(paste(variavel, "~ 1"))
 
 vari_exp <- gstat::variogram(form, data = df_aux,
                       cressie = FALSE, #estimador clássico do semivar.
-                      cutoff = 12.5, # distância  
-                      width = 0.5) # distancia entre pontos
+                      cutoff = 7, # distância  
+                      width = 0.35) # distancia entre pontos
 vari_exp  |>
   ggplot(aes(x=dist, y=gamma)) +
   geom_point() +
@@ -1502,14 +1402,14 @@ vari_exp  |>
 ```
 
 ```{r, eval=FALSE}
-patamar=1.4
-alcance=11.25
-epepita=.1
+patamar=4.2
+alcance=5
+epepita=.4
 modelo_1 <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
 modelo_2 <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
 modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
 plot_my_models(modelo_1,modelo_2,modelo_3)
-modelo <- modelo_3 ## sempre modificar
+modelo <- modelo_1 ## sempre modificar
 ```
 
 ```{r, eval=FALSE}
@@ -1630,17 +1530,17 @@ nome_variavel <- map_df(2015:2023,~{
   form <- as.formula(paste(variavel, "~ 1")) 
   vari_exp <- gstat::variogram(form, data = df_aux,
                                cressie = FALSE,
-                               cutoff = 12.5, # !! mudar
-                               width = 0.5) # !! mudar
+                               cutoff = 7, # !! mudar
+                               width = 0.35) # !! mudar
   vari_exp  |>
     ggplot(aes(x=dist, y=gamma)) +
     geom_point() +
     labs(x="lag (º)",
          y=expression(paste(gamma,"(h)")))
-  patamar=1.4 # !! mudar
-  alcance=11.25 # !! mudar
-  epepita=.1 # !! mudar
-  modelo <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))  # !! mudar
+    patamar=4.2 #!! mudar
+    alcance=5 #!! mudar
+    epepita=.4 #!! mudar
+  modelo <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))  # !! mudar
   ko_variavel <- krige(formula=form, df_aux, grid_geral, model=modelo,
                        block=c(0.1,0.1),
                        nsim=0,
@@ -1684,12 +1584,12 @@ nome_variavel <- map_df(2015:2023,~{
         mutate(year = .x)
   return(df_final)
 })
-write_rds(nome_variavel,paste0("data-raw/nasa-power-",variavel,"-kgr.rds"))
+write_rds(nome_variavel,paste0("../data-raw/nasa-power-",variavel,"-kgr.rds"))
 ```
 
 ```{r, eval=FALSE}
 # Rodar somente quando necessário!!!!
-nasa_power_kgr <- read_rds(paste0("data-raw/nasa-power-",variavel,"-kgr.rds"))
+nasa_power_kgr <- read_rds(paste0("../data-raw/nasa-power-",variavel,"-kgr.rds"))
 ```
 
 ```{r, eval=FALSE}
@@ -1734,6 +1634,8 @@ map(2015:2023,~{
          y = 'Latitude',
          title = .x) +
     scale_fill_viridis_c()})
+
+write_rds(nasa_power_bind,paste0("../data/nasa-power-",variavel,"-bind.rds"))
 ```
 
 -->
