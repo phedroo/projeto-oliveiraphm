@@ -57,7 +57,7 @@ lista <- list.files("../data-raw/prodes-bad-alloc/",
            full.names=TRUE)
 prodes <- purrr::map_df(lista,readr::read_rds)
 glimpse(prodes)
-write_rds(prodes,"../data/prodes-deforestation.rds")
+# write_rds(prodes,"../data/prodes_deforestation.rds")
 ```
 
 
