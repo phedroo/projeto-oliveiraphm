@@ -571,6 +571,32 @@ br |&gt;
                       shape=3,
                       col=&quot;red&quot;,
                       alpha=0.2)</code></pre>
+<div id="classificando-cada-ponto-em-município" class="section level4">
+<h4>Classificando cada ponto em município</h4>
+<pre class="r"><code># resul &lt;- vector()
+# estado &lt;- nasa_xco2$state
+# for(i in 1:nrow(nasa_xco2)){
+#   if(estado[i]!=&quot;Other&quot;){
+#     my_citys_obj &lt;- municipality %&gt;%
+#       filter(abbrev_state == estado[i])
+#     n_citys &lt;- nrow(my_citys_obj)
+#     my_citys_names &lt;- my_citys_obj %&gt;% pull(name_muni)
+#     resul[i] &lt;- &quot;Other&quot;
+#     for(j in 1:n_citys){
+#       pol_city &lt;- my_citys_obj$geom  %&gt;%
+#         purrr::pluck(j) %&gt;%
+#         as.matrix()
+#       if(def_pol(nasa_xco2$longitude[i],
+#                  nasa_xco2$latitude[i],
+#                  pol_city)){
+#         resul[i] &lt;- my_citys_names[j]
+#       }
+#     }
+#   }
+# }
+# nasa_xco2$city_ref &lt;- resul
+# write_rds(nasa_xco2,&quot;data/nasa-xco2.rds&quot;)</code></pre>
+</div>
 </div>
 
 
