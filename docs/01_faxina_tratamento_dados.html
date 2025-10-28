@@ -1064,53 +1064,204 @@ readr::write_rds(df_final |&gt;
 <h2>Faxina dos dados de desmatamento do prodes</h2>
 <div id="carregando-bibliotecas" class="section level3">
 <h3>Carregando bibliotecas</h3>
-<pre class="r"><code>library(tidyverse)
-library(terra)
-library(geobr)
-library(dplyr)
-library(sf)
-library(tmap)  # ou ggplot2</code></pre>
+<pre class="r"><code># library(tidyverse)
+# library(terra)
+# library(geobr)
+# library(dplyr)
+# library(sf)
+# library(tmap)  # ou ggplot2</code></pre>
 <div id="carregando-raster-.tiff" class="section level4">
 <h4>Carregando raster (.tiff)</h4>
-<pre class="r"><code>raster &lt;- rast(&quot;../data-raw/desmat-prodes/prodes_brasil_2023.tif&quot;)
-str(raster)
-estados_estudados &lt;- c(&quot;MT&quot;,&quot;MS&quot;,&quot;GO&quot;,&quot;DF&quot;)
-municipality &lt;- read_municipality(showProgress = FALSE)
-raster::plot(raster)</code></pre>
-<pre class="r"><code>categotia &lt;- 15:22
-cod_muni &lt;- 1:nrow(estado_x_mun_y)
-comb &lt;- expand.grid(categotia,cod_muni, sep = &quot; &quot;)
-codigo &lt;- paste(comb$Var1, comb$Var2)
-get_my_coord &lt;- function(x){
-  x_cat &lt;- str_split(x,&quot; &quot;,simplify = TRUE)[1,1] |&gt; as.numeric()
-  y_muni &lt;- str_split(x,&quot; &quot;,simplify = TRUE)[1,2] |&gt; as.numeric()
-  estado_x_mun_y &lt;- municipality |&gt; 
-    filter(abbrev_state %in% estados_estudados) |&gt; 
-    slice(y_muni)
-  muni_y &lt;- st_transform(estado_x_mun_y, crs(raster))
-  raster_muni_y &lt;- crop(raster, muni_y, mask = TRUE)
-  raster_2020 &lt;- raster_muni_y == x_cat
-  raster_2020[raster_2020 == 1] &lt;- x_cat # ENTENDER O QUE OCORRE
-  idx &lt;- which(raster_muni_y[] == x_cat)
-  coords &lt;- xyFromCell(raster_muni_y, idx)  
-  df &lt;- as.data.frame(coords) |&gt;
-    add_column(categorie = x_cat,
-               muni = muni_y$name_muni,
-               state = muni_y$abbrev_state) 
-    write_rds(df, paste0(&quot;../data-raw/prodes-bad-alloc/&quot;,
-                   muni_y$name_muni,&quot;-&quot;,
-                   muni_y$abbrev_state,&quot;-&quot;,
-                   x,&quot;.rds&quot;
-                   ))
-    }
+<pre class="r"><code># raster &lt;- rast(&quot;../data-raw/desmat-prodes/prodes_brasil_2023.tif&quot;)
+# str(raster)
+# estados_estudados &lt;- c(&quot;MT&quot;,&quot;MS&quot;,&quot;GO&quot;,&quot;DF&quot;)
+# municipality &lt;- read_municipality(showProgress = FALSE)
+# raster::plot(raster)</code></pre>
+<pre class="r"><code># categotia &lt;- 15:22
+# cod_muni &lt;- 1:nrow(estado_x_mun_y)
+# comb &lt;- expand.grid(categotia,cod_muni, sep = &quot; &quot;)
+# codigo &lt;- paste(comb$Var1, comb$Var2)
+# get_my_coord &lt;- function(x){
+#   x_cat &lt;- str_split(x,&quot; &quot;,simplify = TRUE)[1,1] |&gt; as.numeric()
+#   y_muni &lt;- str_split(x,&quot; &quot;,simplify = TRUE)[1,2] |&gt; as.numeric()
+#   estado_x_mun_y &lt;- municipality |&gt; 
+#     filter(abbrev_state %in% estados_estudados) |&gt; 
+#     slice(y_muni)
+#   muni_y &lt;- st_transform(estado_x_mun_y, crs(raster))
+#   raster_muni_y &lt;- crop(raster, muni_y, mask = TRUE)
+#   raster_2020 &lt;- raster_muni_y == x_cat
+#   raster_2020[raster_2020 == 1] &lt;- x_cat # ENTENDER O QUE OCORRE
+#   idx &lt;- which(raster_muni_y[] == x_cat)
+#   coords &lt;- xyFromCell(raster_muni_y, idx)  
+#   df &lt;- as.data.frame(coords) |&gt;
+#     add_column(categorie = x_cat,
+#                muni = muni_y$name_muni,
+#                state = muni_y$abbrev_state) 
+#     write_rds(df, paste0(&quot;../data-raw/prodes-bad-alloc/&quot;,
+#                    muni_y$name_muni,&quot;-&quot;,
+#                    muni_y$abbrev_state,&quot;-&quot;,
+#                    x,&quot;.rds&quot;
+#                    ))
+#     }
 # invisible(map(codigo,get_my_coord))</code></pre>
-<pre class="r"><code>lista &lt;- list.files(&quot;../data-raw/prodes-bad-alloc/&quot;,
-           full.names=TRUE)
-prodes &lt;- purrr::map_df(lista,readr::read_rds)
-glimpse(prodes)
-write_rds(prodes,&quot;../data/prodes-deforestation.rds&quot;)</code></pre>
+<pre class="r"><code># lista &lt;- list.files(&quot;../data-raw/prodes-bad-alloc/&quot;,
+#            full.names=TRUE)
+# prodes &lt;- purrr::map_df(lista,readr::read_rds)
+# glimpse(prodes)
+# write_rds(prodes,&quot;../data/prodes-deforestation.rds&quot;)</code></pre>
 </div>
 </div>
+</div>
+<div id="deter---queimadas-e-desmatamento" class="section level2">
+<h2>Deter - Queimadas e desmatamento</h2>
+<pre class="r"><code>library(tidyverse)
+library(sf) # ler shapefile</code></pre>
+<pre class="r"><code># Exemplo com os três shapefiles que você mostrou
+amz &lt;- st_read(&quot;../data-raw/deter/deter-amz-deter-public.shp&quot;) # ALB (completo, desde 2016)
+
+cerrado &lt;- st_read(&quot;../data-raw/deter/deter-cerrado-nb-deter-public.shp&quot;) # Somente desmatamento
+
+pantanal &lt;- st_read(&quot;../data-raw/deter/deter-pantanal-deter-public.shp&quot;) # Dados de cicatriz de queimada Somente a partir de 2023</code></pre>
+<pre class="r"><code># EXEMPLIFICANDO COM AMAZONIA
+# Ver estrutura
+# str(amz)
+# 
+# # Visualizar os primeiros registros
+# head(amz) 
+#   # ou
+#   glimpse(amz)
+# 
+# # Visualizar nomes das colunas
+# names(amz) #Coluna de interesse (&quot;CLASSNAME&quot;)
+# 
+# # Visualizar nomes das linhas da coluna &quot;CLASSNAME&quot;
+# amz$CLASSNAME
+# 
+# # Quantificar observações
+# table(amz$CLASSNAME)
+# 
+#   # Verificar valores únicos de classe e estado
+#   unique(amz$CLASSNAME) # Linha de interesse (&quot;CICATRIZ_DE_QUEIMADA&quot;)
+#   unique(amz$UF) # Somente MT
+#   
+
+
+# Filtrar para linha de interesse
+amz &lt;- amz |&gt;
+    # select(CLASSNAME, VIEW_DATE, UF, geometry, MUNICIPALI)
+    mutate(
+      bioma = &quot;Amazônia&quot;
+    ) |&gt; 
+    filter(CLASSNAME == &quot;CICATRIZ_DE_QUEIMADA&quot;,
+           UF == &quot;MT&quot;)
+
+
+# Plot simples
+# plot(st_geometry(amz))
+
+
+ggplot(amz) +
+  geom_sf() +  # Preenchimento por bioma, sem contorno
+  # scale_fill_manual(values = c(&quot;Amazônia&quot; = &quot;#1b9e77&quot;, 
+  #                              &quot;Cerrado&quot; = &quot;#d95f02&quot;, 
+  #                              &quot;Pantanal&quot; = &quot;#7570b3&quot;)) +
+  theme_minimal() +
+  labs(title = &quot;Queimada Amazônia Legal brasileira (DETER)&quot;) +
+  theme(legend.position = &quot;bottom&quot;)</code></pre>
+<pre class="r"><code># str(cerrado)
+glimpse(cerrado)
+unique(cerrado$UF)
+
+cerrado &lt;- cerrado |&gt; 
+  mutate(
+    bioma = &quot;Cerrado&quot;
+  ) |&gt; 
+  filter(CLASSNAME == &quot;DESMATAMENTO_CR&quot;, # Só desmat
+                     UF == c(&quot;MT&quot;, &quot;MS&quot;, &quot;GO&quot;, &quot;DF&quot;))
+
+ggplot(cerrado) +
+  geom_sf() +  # Preenchimento por bioma, sem contorno
+  # scale_fill_manual(values = c(&quot;Amazônia&quot; = &quot;#1b9e77&quot;, 
+  #                              &quot;Cerrado&quot; = &quot;#d95f02&quot;, 
+  #                              &quot;Pantanal&quot; = &quot;#7570b3&quot;)) +
+  theme_minimal() +
+  labs(title = &quot;Desmatamento Cerrado (DETER)&quot;) +
+  theme(legend.position = &quot;bottom&quot;)</code></pre>
+<pre class="r"><code># str(pantanal)
+glimpse(pantanal)
+unique(pantanal$CLASS_NAME)
+
+pantanal &lt;- pantanal |&gt; 
+  mutate(CLASSNAME = CLASS_NAME,
+         bioma = &quot;Pantanal&quot;) |&gt; # padronizar nome da coluna
+  filter(CLASSNAME == &quot;cicatriz de queimada&quot;)
+
+ggplot(pantanal) +
+  geom_sf() +  # Preenchimento por bioma, sem contorno
+  # scale_fill_manual(values = c(&quot;Amazônia&quot; = &quot;#1b9e77&quot;, 
+  #                              &quot;Cerrado&quot; = &quot;#d95f02&quot;, 
+  #                              &quot;Pantanal&quot; = &quot;#7570b3&quot;)) +
+  theme_minimal() +
+  labs(title = &quot;Queimada Pantanal (DETER)&quot;) +
+  theme(legend.position = &quot;bottom&quot;)</code></pre>
+<pre class="r"><code># Unindo shapefiles em um único
+deter_all &lt;- bind_rows(amz, cerrado, pantanal)
+
+# Gerando plot dos biomas 
+ggplot(deter_all) +
+  geom_sf(aes(fill = bioma), color = NA) +
+  scale_fill_manual(values = c(
+    &quot;Amazônia&quot; = &quot;#1b9e77&quot;,
+    &quot;Cerrado&quot; = &quot;#d95f02&quot;,
+    &quot;Pantanal&quot; = &quot;#7570b3&quot;
+  )) +
+  theme_minimal() +
+  labs(title = &quot;Áreas com Cicatriz de Queimada e Desmatamento (DETER)&quot;,
+       fill = &quot;Bioma&quot;) +
+  theme(legend.position = &quot;bottom&quot;)
+
+# Baixando arquivo shapefile unido
+# write_rds(deter_all, &quot;areas-queimada-biomas&quot;)
+deter_all$geometry[[1]] |&gt; plot()
+deter_all |&gt; 
+  mutate(ANO = year(VIEW_DATE)) |&gt; 
+  filter(ANO == 2021) |&gt; 
+  ggplot() +
+  geom_sf(aes(fill = bioma), color = NA) +
+  scale_fill_manual(values = c(
+    &quot;Amazônia&quot; = &quot;#1b9e77&quot;,
+    &quot;Cerrado&quot; = &quot;#d95f02&quot;,
+    &quot;Pantanal&quot; = &quot;#7570b3&quot;
+  )) +
+  theme_minimal() +
+  labs(title = &quot;Áreas com Cicatriz de Queimada e Desmatamento (DETER)&quot;,
+       fill = &quot;Bioma&quot;) +
+  theme(legend.position = &quot;bottom&quot;) </code></pre>
+<pre class="r"><code># Averiguação do Cálculo da Área
+# pantanal |&gt; slice(1) |&gt; pull(geometry) |&gt; plot()# 0.1000308
+# coords &lt;- pantanal$geometry[[1]] |&gt; as.matrix()
+# geosphere::areaPolygon(coords) / 1000000
+
+func_ret_x &lt;-function(geometria){
+  ob &lt;- geometria[[1]] |&gt; as.matrix()
+  mean(ob[,1])
+}
+
+func_ret_y &lt;-function(geometria){
+  ob &lt;- geometria[[1]] |&gt; as.matrix()
+  mean(ob[,2])
+}
+
+df &lt;- deter_all |&gt;  
+  group_by(geometry) |&gt; 
+  mutate(
+  ANO = year(VIEW_DATE),
+  x = func_ret_x(geometry),
+  y = func_ret_y(geometry)
+) 
+df |&gt; 
+  as_tibble() |&gt; 
+  # write_rds(&quot;../data-raw/deter_queimadas.rds&quot;)</code></pre>
 </div>
 
 
