@@ -401,32 +401,6 @@ pol_go &lt;- states |&gt; filter(abbrev_state == &quot;GO&quot;) |&gt;
 pol_df &lt;- states |&gt; filter(abbrev_state == &quot;DF&quot;) |&gt; 
   pull(geom) |&gt; pluck(1) |&gt; as.matrix()</code></pre>
 </div>
-<div id="classificando-cada-ponto-em-município" class="section level4">
-<h4>Classificando cada ponto em município</h4>
-<pre class="r"><code># resul &lt;- vector()
-# estado &lt;- nasa_xco2$state
-# for(i in 1:nrow(nasa_xco2)){
-#   if(estado[i]!=&quot;Other&quot;){
-#     my_citys_obj &lt;- municipality %&gt;%
-#       filter(abbrev_state == estado[i])
-#     n_citys &lt;- nrow(my_citys_obj)
-#     my_citys_names &lt;- my_citys_obj %&gt;% pull(name_muni)
-#     resul[i] &lt;- &quot;Other&quot;
-#     for(j in 1:n_citys){
-#       pol_city &lt;- my_citys_obj$geom  %&gt;%
-#         purrr::pluck(j) %&gt;%
-#         as.matrix()
-#       if(def_pol(nasa_xco2$longitude[i],
-#                  nasa_xco2$latitude[i],
-#                  pol_city)){
-#         resul[i] &lt;- my_citys_names[j]
-#       }
-#     }
-#   }
-# }
-# nasa_xco2$city_ref &lt;- resul
-# write_rds(nasa_xco2,&quot;data/nasa-xco2.rds&quot;)</code></pre>
-</div>
 <div id="gerar-mapa" class="section level4">
 <h4>Gerar mapa</h4>
 <pre class="r"><code>my_year = 2020
@@ -738,7 +712,7 @@ glimpse(gosat_xch4)</code></pre>
   filter(year == 2021) |&gt; 
   ggplot(aes(x=longitude,y=latitude)) +
   geom_point()</code></pre>
-<div id="classificando-cada-ponto-em-município-1" class="section level4">
+<div id="classificando-cada-ponto-em-município" class="section level4">
 <h4>Classificando cada ponto em município</h4>
 <p>Já feito no arquivo da pasta docs</p>
 </div>
@@ -1483,7 +1457,7 @@ glimpse(nasa_power)
   ggplot(aes(x=lon,y=lat)) +
   geom_point()</code></pre>
 </div>
-<div id="classificando-cada-ponto-em-município-2" class="section level4">
+<div id="classificando-cada-ponto-em-município-1" class="section level4">
 <h4>Classificando cada ponto em município</h4>
 <p>Já feito no script de faxina “nasa-power.Rmd”</p>
 </div>

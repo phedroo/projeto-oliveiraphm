@@ -66,33 +66,6 @@ pol_df <- states |> filter(abbrev_state == "DF") |>
 ```
 
 
-#### Classificando cada ponto em município
-```{r, eval=FALSE}
-# resul <- vector()
-# estado <- nasa_xco2$state
-# for(i in 1:nrow(nasa_xco2)){
-#   if(estado[i]!="Other"){
-#     my_citys_obj <- municipality %>%
-#       filter(abbrev_state == estado[i])
-#     n_citys <- nrow(my_citys_obj)
-#     my_citys_names <- my_citys_obj %>% pull(name_muni)
-#     resul[i] <- "Other"
-#     for(j in 1:n_citys){
-#       pol_city <- my_citys_obj$geom  %>%
-#         purrr::pluck(j) %>%
-#         as.matrix()
-#       if(def_pol(nasa_xco2$longitude[i],
-#                  nasa_xco2$latitude[i],
-#                  pol_city)){
-#         resul[i] <- my_citys_names[j]
-#       }
-#     }
-#   }
-# }
-# nasa_xco2$city_ref <- resul
-# write_rds(nasa_xco2,"data/nasa-xco2.rds")
-```
-
 #### Gerar mapa
 ```{r, eval=FALSE}
 my_year = 2020
