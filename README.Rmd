@@ -543,6 +543,35 @@ glimpse(base_completa)
 # write_rds(base_completa, "data/base_completa.rds")
 ```
 
+### Entrada com todas as bases `base_completa.rds`
+```{r}
+base_completa <- read_rds('data/base_completa.rds')
+```
+
+### 📊 Estatística descritiva
+```{r,eval=FALSE}
+variavel <- "vento" # mudar
+
+# names(base_completa) # ver colunas
+
+df <- base_completa |>
+  group_by(year,state) |>
+  summarise(
+    N = length(.data[[variavel]]), # n° de observações
+    MIN = min(.data[[variavel]]), # valor mínimo
+    MEAN = mean(.data[[variavel]]), # média
+    MEDIAN = median(.data[[variavel]]), # mediana
+    MAX = max(.data[[variavel]]), # valor máximo
+    VARIANCIA  = var(.data[[variavel]]), 
+    STD_DV = sd(.data[[variavel]]), # desvio padrão
+    CV = 100*STD_DV/MEAN, # coeficiete de variação
+    SKW = agricolae::skewness(.data[[variavel]]), #
+    KRT = agricolae::kurtosis(.data[[variavel]]), #
+  )
+# Salvar
+  # rodar sempre que alterar a variavel:
+# writexl::write_xlsx(df, paste0("output/estat-descritiva-",variavel,"_.xlsx")) 
+```
 
 
 ### Plotar mapa
