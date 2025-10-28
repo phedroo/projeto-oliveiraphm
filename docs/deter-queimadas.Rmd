@@ -7,12 +7,12 @@ library(sf) # ler shapefile
 ```
 
 ```{r, eval=FALSE}
-# Exemplo com os três shapefiles que você mostrou
-amz <- st_read("../data-raw/deter/deter-amz-deter-public.shp") # ALB (completo, desde 2016)
+# Exemplo com os três shapefiles
+amz <- st_read("../data-raw/dados_brutos/deter_queimadas/deter-amz-deter-public.shp") # ALB (completo, desde 2016)
 
-cerrado <- st_read("../data-raw/deter/deter-cerrado-nb-deter-public.shp") # Somente desmatamento
+# cerrado <- st_read("../data-raw/dados_brutos/deter_queimadas/deter-cerrado-nb-deter-public.shp") # Somente desmatamento
 
-pantanal <- st_read("../data-raw/deter/deter-pantanal-deter-public.shp") # Dados de cicatriz de queimada Somente a partir de 2023
+pantanal <- st_read("../data-raw/dados_brutos/deter_queimadas/deter-pantanal-deter-public.shp") # Dados de cicatriz de queimada Somente a partir de 2023
 ```
 
 
@@ -67,24 +67,24 @@ ggplot(amz) +
 
 ```{r, eval=FALSE}
 # str(cerrado)
-glimpse(cerrado)
-unique(cerrado$UF)
-
-cerrado <- cerrado |> 
-  mutate(
-    bioma = "Cerrado"
-  ) |> 
-  filter(CLASSNAME == "DESMATAMENTO_CR", # Só desmat
-                     UF == c("MT", "MS", "GO", "DF"))
-
-ggplot(cerrado) +
-  geom_sf() +  # Preenchimento por bioma, sem contorno
-  # scale_fill_manual(values = c("Amazônia" = "#1b9e77", 
-  #                              "Cerrado" = "#d95f02", 
-  #                              "Pantanal" = "#7570b3")) +
-  theme_minimal() +
-  labs(title = "Desmatamento Cerrado (DETER)") +
-  theme(legend.position = "bottom")
+# glimpse(cerrado)
+# unique(cerrado$UF)
+# 
+# cerrado <- cerrado |> 
+#   mutate(
+#     bioma = "Cerrado"
+#   ) |> 
+#   filter(CLASSNAME == "DESMATAMENTO_CR", # Só desmat
+#                      UF == c("MT", "MS", "GO", "DF"))
+# 
+# ggplot(cerrado) +
+#   geom_sf() +  # Preenchimento por bioma, sem contorno
+#   # scale_fill_manual(values = c("Amazônia" = "#1b9e77", 
+#   #                              "Cerrado" = "#d95f02", 
+#   #                              "Pantanal" = "#7570b3")) +
+#   theme_minimal() +
+#   labs(title = "Desmatamento Cerrado (DETER)") +
+#   theme(legend.position = "bottom")
 ```
 
 ```{r, eval = FALSE}
@@ -175,7 +175,7 @@ df |>
 ```{r, eval=FALSE} 
 # original archive "deter-queimadas.rds" = 122,1mb
 
-deter_queimadas <- read_rds("data-raw/deter-queimadas.rds") |> 
+deter_queimadas <- read_rds("../data-raw/deter-queimadas.rds") |> 
   rename(
     longitude = x,
     latitude = y
@@ -217,7 +217,7 @@ deter_queimadas <- as.data.frame(deter_queimadas_sf)
 glimpse(deter_queimadas)
 
 # Salvar
-write_rds(deter_queimadas, "data-raw/deter_queimadas.rds")
+# write_rds(deter_queimadas, "data-raw/deter_queimadas.rds")
 ```
 
 #### Classificando cada ponto em estado
@@ -249,7 +249,8 @@ tail(deter_queimadas)
 
 # Padronizar colunas
 deter_queimadas <- deter_queimadas |> 
-  mutate(CLASSNAME = case_when(
+  mutate(CLASSNAME = as.character(CLASSNAME),
+    CLASSNAME = case_when(
     CLASSNAME == "cicatriz de queimada" ~ "CICATRIZ_DE_QUEIMADA",
     TRUE ~ CLASSNAME
   ))
@@ -261,18 +262,18 @@ deter_queimadas <- as_data_frame(deter_queimadas)
 # write_rds(deter_queimadas, "../data/deter_queimadas.rds")
 ```
 
-### Focos de queimadas - TErrabrasilis 
+### Focos de queimadas - Terrabrasilis 
 
-Esta base não contém dados de queimada por município, somente estados
+Esta base não contém dados de queimada por município, somente os focos por estados
 
 Arquivo deter-fogo-28-09-2025-20_46_38.csv (baixado em: https://terrabrasilis.dpi.inpe.br/app/dashboard/fires/biomes/aggregated/#)
 
 ```{r, eval=FALSE}
-focos_queimadas <- read.csv("../data-raw/deter-fogo-28-09-2025-20_46_38.csv",
+focos_queimadas <- read.csv("../data-raw/dados_brutos/deter_queimadas/all_dashboard-fires-month-25-10-2025-09_15_56.csv",
          sep = ";")
 
 # Considerando todo tipo de foco de incêndio
-focos_queimadas |> 
+focos_queimadas <- focos_queimadas |> 
   mutate(
     uf = case_when(
       uf == "GOIÁS" ~ "GO",
@@ -291,10 +292,10 @@ focos_queimadas |>
   group_by(uf, ano) |> 
   summarise(
     focos = sum(focuses, na.rm = TRUE)
-  )
+  ) 
 
 # Salvar
-write_rds(focos_queimadas, "../data/focos_queimadas.rds")
+# write_rds(focos_queimadas, "../data/focos_queimadas.rds")
 ```
 
 
