@@ -46,13 +46,15 @@ Os scripts abaixo foram desenvolvidos em RMarkdown e estão disponíveis em form
     -   [OCO-2](https://disc.gsfc.nasa.gov): Dados de concentração de XCO~2~ (https://disc.gsfc.nasa.gov/datasets/OCO2_L2_Lite_FP_11.2r/summary?keywords=OCO2) e SIF (https://disc.gsfc.nasa.gov/datasets/OCO2_L2_Lite_SIF_11r/summary?keywords=OCO2\
     -   [Climate TRACE](https://climatetrace.org/): Dados de emissões de GEE de 2015 a 2022\
     -   [AppEEARS](https://appeears.earthdatacloud.nasa.gov/task/point): Variáveis climáticas e vegetativas\
+    -   [nasapower](https://power.larc.nasa.gov/): Variáveis climáticas (Temperatura; precipitação; radiação solar; umidade relativa; velocidade do vento e pressão) de 2015 a 2024\
+    -   [DETER](https://terrabrasilis.dpi.inpe.br/downloads/): Dados  de focos de fogo (cicatriz de queimadas)\
+    -   [Desmatamento - INPE - PRODES - Plataforma   Terrabrasilis](https://terrabrasilis.dpi.inpe.br/geonetwork/srv/eng/catalog.search#/metadata/fe02f2bf-2cc0-49d5-ab72-a3954f997408): Dados sobre desmatamento de 31/07/2000 a 30/07/2023\
+  
+  - **Dados adicionais adquiridos (não utilizados no trabalho)**
     -   [NASA](https://climate.nasa.gov/): Dados climáticos\
     -   [NASA-FIRMS](https://firms.modaps.eosdis.nasa.gov): Dados de focos de incêndio de 2015 a 2025\
     -   [BDQUEIMADAS](https://terrabrasilis.dpi.inpe.br/queimadas/bdqueimadas/#exportar-dados): Dados de focos de incêndio de 2015 a 2025\
-    -   [DETER](https://terrabrasilis.dpi.inpe.br/downloads/): Dados  de focos de fogo (cicatriz de queimadas)\
     -   [Programa Queimadas - INPE - Plataforma Terrabrasilis](https://terrabrasilis.dpi.inpe.br/queimadas/portal/): Dados de focos de queimadas x Supressão da vegetação nativa de 08/2018 a 01/2025 & Dados de focos de fogo ativo de 1998 a 21/01/2025\
-    -   [Desmatamento - INPE - PRODES - Plataforma   Terrabrasilis](https://terrabrasilis.dpi.inpe.br/geonetwork/srv/eng/catalog.search#/metadata/fe02f2bf-2cc0-49d5-ab72-a3954f997408): Dados sobre desmatamento de 31/07/2000 a 30/07/2023\
-    -   [nasapower](https://power.larc.nasa.gov/): Variáveis climáticas (Temperatura; precipitação; radiação solar; umidade relativa; velocidade do vento e pressão) de 2015 a 2024\
 
 ## 🧹 Faxina e Tratamento [script_geral](https://arpanosso.github.io//projeto-oliveiraphm//01_faxina_tratamento_dados.html) 
 
@@ -102,7 +104,7 @@ my_states <- c("MS","MT","GO","DF")
 
 ### 💨 Entrada com a Base: `emissions-sources.rds`
 ```{r, eval=FALSE}
-emissions_sources <- read_rds("../data/emissions-sources.rds")|> 
+emissions_sources <- read_rds("data/emissions_sources.rds")|> 
   filter(sigla_uf %in% my_states)
 glimpse(emissions_sources)
 ```
@@ -121,95 +123,7 @@ pol_df <- states |> filter(abbrev_state == "DF") |>
   pull(geom) |> pluck(1) |> as.matrix()
 ```
 
-### Carregando as bases
-
-```{r, eval=FALSE}
-file_kgr <- list.files("data-raw/",
-                      full.names = TRUE,pattern = "kgr") 
-new_names = c(lat = "latitude", lon = "longitude")
-
-read_kgr <- function(path){
-  df <- readr::read_rds(path) |> 
-    janitor::clean_names() |> 
-    dplyr::rename(dplyr::any_of(new_names))
-  
-  nome <- df[3] |> names()    
-  new_name <- c(value = nome)
-  df <- df |> ¹
-    mutate(
-      variable = nome
-    ) |> 
-    dplyr::rename(dplyr::any_of(new_name))
-  return(df)  
-};read_kgr(file_kgr[1])
-
-data_set_kgr <- map_df(file_kgr,read_kgr)
-data_set_kgr2 <- data_set_kgr |> 
-  group_by(year, state, city_ref, variable) |> 
-  summarise(
-    value_mean = mean(value, na.rm=TRUE),
-    .groups = "drop") |>
-  pivot_wider(names_from = variable, values_from = value_mean)
-
-# data_set_kgr |>
-#   group_by(year,state) |>
-#   count()
-```
-
-### Criar os mapas por variáveis por ano para verifcar os municípios não plotados 
-
-Vamos verificar onde estão os NA
-
-```{r, eval=FALSE}
-my_year <- 2015 # definindo ano
-variavel <- "xch4" # definindo a variável
-anos <- if (variavel == "xch4") 2015:2021 else 2015:2023 #definindo anos, caso a variável seja xch4, anos até 2021, que é até onde contém os dados da variável
-
-# Plotando mapas variável/ano
-mapas <- map(anos, function(my_year) { #map -> Aplicando função para cada elemento de vetor
-  municipality |> 
-    filter(abbrev_state %in% my_states) |> 
-    left_join( 
-      data_set_kgr_bind2 |>
-        filter(variavel == all_of(variavel),
-               state %in% my_states) |> 
-        group_by(year, city_ref) |> 
-        rename(name_muni = city_ref),
-      by = c("name_muni")
-    ) |> 
-    filter(year == my_year) |> 
-    ungroup() |> 
-    ggplot()  +
-    geom_sf(aes(fill = variavel), color="transparent",
-            size=.05, show.legend = TRUE) +
-    labs(title = paste("Ano:", my_year, "-", variavel))
-  
-})
-
-mapas[[1]]
-
-# municipality |>
-#   filter(abbrev_state %in% my_states) |> 
-#   ggplot() +
-#   geom_sf() +
-#   geom_point(data = data_set_kgr,
-#              aes(x = lon, y = lat, color = "red"))
-```
-
-Foram verificados: 
-1. Classificação por estado e municípios das bases
-2. Adição da base
-3. Krigagem
-
-Desde a varificação 1, observa-se somente cerca de 90 observações para os municípios do estado de GO, estando ausentes mais de 150 municípios. Não foram verificados problemas em nenhuma destas verificações.
-
-O problema esta que, a krigagem é feita, mas não adicionam os valores observados, apenas é possível visualizá-los no plot, ou seja, o arquivo kgr.rds gerado não contém tais dados, ficando como "NA".
-
-Para resolver, deve-se agregar a krigagem à geometria municipal para que todos os municípios sejam preenchidos.   
-  Isto ja havia sido feito em "nasa_xco2_bind", no entanto, não foi este o arquivo kgr salvo na pasta data-raw, logo gerando os NAs mesmo após a krigagem.
-    Sendo assim, basta salvar fazer o bind e salvar os arquivos de cada variável
-    
-    
+<!--
 ### ⛓️ Carregando as novas bases
 
 ```{r, eval=FALSE}
@@ -249,6 +163,59 @@ data_set_kgr_bind2 <- data_set_kgr_bind |>
     .groups = "drop") |>
   pivot_wider(names_from = variable, values_from = value_mean) # reduz linhas
 ```
+
+### Criar os mapas por variáveis por ano para verifcar os municípios não plotados 
+
+Vamos verificar onde estão os NA
+
+```{r, eval=FALSE}
+# my_year <- 2015 # definindo ano
+# variavel <- "xch4" # definindo a variável
+# anos <- if (variavel == "xch4") 2015:2021 else 2015:2023 #definindo anos, caso a variável seja xch4, anos até 2021, que é até onde contém os dados da variável
+# 
+# # Plotando mapas variável/ano
+# mapas <- map(anos, function(my_year) { #map -> Aplicando função para cada elemento de vetor
+#   municipality |> 
+#     filter(abbrev_state %in% my_states) |> 
+#     left_join( 
+#       data_set_kgr_bind2 |>
+#         filter(variavel == all_of(variavel),
+#                state %in% my_states) |> 
+#         group_by(year, city_ref) |> 
+#         rename(name_muni = city_ref),
+#       by = c("name_muni")
+#     ) |> 
+#     filter(year == my_year) |> 
+#     ungroup() |> 
+#     ggplot()  +
+#     geom_sf(aes(fill = variavel), color="transparent",
+#             size=.05, show.legend = TRUE) +
+#     labs(title = paste("Ano:", my_year, "-", variavel))
+#   
+# })
+# 
+# mapas[[1]]
+
+# municipality |>
+#   filter(abbrev_state %in% my_states) |> 
+#   ggplot() +
+#   geom_sf() +
+#   geom_point(data = data_set_kgr,
+#              aes(x = lon, y = lat, color = "red"))
+```
+
+Foram verificados: 
+1. Classificação por estado e municípios das bases
+2. Adição da base
+3. Krigagem
+
+Desde a varificação 1, observa-se somente cerca de 90 observações para os municípios do estado de GO, estando ausentes mais de 150 municípios. Não foram verificados problemas em nenhuma destas verificações.
+
+O problema esta que, a krigagem é feita, mas não adicionam os valores observados, apenas é possível visualizá-los no plot, ou seja, o arquivo kgr.rds gerado não contém tais dados, ficando como "NA".
+
+Para resolver, deve-se agregar a krigagem à geometria municipal para que todos os municípios sejam preenchidos.   
+  Isto ja havia sido feito em "nasa_xco2_bind", no entanto, não foi este o arquivo kgr salvo na pasta data-raw, logo gerando os NAs mesmo após a krigagem.
+    Sendo assim, basta salvar fazer o bind e salvar os arquivos de cada variável
 
 ### Função para atribuir a mediana em um município, a partir da observação média da mediana de municípios vizinhos 
 
@@ -462,24 +429,118 @@ df_kgr_preenchido
 # Contagem de NAs
 # sum(is.na(filled_df)) # reduziram drasticamente
 
+# Observação:
 # Nenhum candidato não-NA para xch4 a partir de 2022 pois só contém até o ano de 2021
+
+# Carregar base atual para posterior incorporação com as restantes
+# write_rds(df_kgr_preenchido, "data/parcial_base.rds")
 ```
+
 ### Verificação dos valores NA preenchidos (grande maioria para municiípios de GO)
 ```{r, eval=FALSE}
-data_set_kgr_bind2 |> 
-  filter(
-    state == 'GO'
-  )
-
-data_set_kgr_bind2 |> 
-  filter(state == 'MS')
-
-df_kgr_preenchido |> 
-  filter(state == 'GO')
-
-df_kgr_preenchido |> 
-  filter(state == 'MS')
+# data_set_kgr_bind2 |> 
+#   filter(
+#     state == 'GO'
+#   )
+# 
+# data_set_kgr_bind2 |> 
+#   filter(state == 'MS')
+# 
+# df_kgr_preenchido |> 
+#   filter(state == 'GO')
+# 
+# df_kgr_preenchido |> 
+#   filter(state == 'MS')
 ```
+-->
+
+## 💨 Entrada com a base parcial `parcial_base.rds`
+
+**É a mesma que a "df_kgr_preenchido"**
+
+Essa base apresenta os dados do nasapower, oco2 e gosat. Portanto, faltam incorporar as bases do modis, deter, prodes e a climate trace.
+
+```{r,eval = FALSE}
+base_parcial <- read_rds("data/parcial_base.rds")
+```
+
+### 🔋 Carregando e tratando as bases faltantes
+
+```{r,eval=FALSE}
+# Carregando bases
+deter <- read_rds("data/deter_queimadas.rds")
+prodes <- read_rds("data/prodes_deforestation.rds")
+modis <- read_rds("data/appeears_modis.rds")
+climate_trace <- read_rds("data/emissions_sources.rds")
+
+# DETER --------------------------------------------
+# Tratando base deter
+deter_trat <- deter |> 
+  rename(state = UF,
+         year = ANO,
+         city_ref = MUNICIPALI,
+         area_queimada = AREAMUNKM) |> 
+  select(state, city_ref, year, area_queimada) |> 
+  filter(state %in% my_states,
+         year == 2015:2023) |> 
+  group_by(state, city_ref, year, area_queimada)
+
+# PRODES --------------------------------------------
+# Tratando base prodes
+prodes_trat <- prodes |> 
+  filter(categorie %in% 15:22) |> 
+  rename(year = categorie,
+         city_ref = muni) |> 
+  mutate(
+    year = 2000 + as.numeric(year)
+    ) |>
+  group_by(state, city_ref, year) |> 
+  count() |> 
+  group_by(year) |> 
+  mutate(
+    percent = n/sum(n)*100
+  ) |> 
+  rename(desmatamento = percent) # destamento proporcional ao número de ocorrências em relação ao total de registros daquele ano.
+
+# MODIS --------------------------------------------
+# Tratando base modis
+modis_trat <- modis |>
+  filter(media_fpar < 250, media_lai < 250)
+
+# Climate TRACE ------------------------------------
+# Tratando base Climate TRACE
+climate_trace_trat <- climate_trace |>
+  filter(year %in% 2015:2023,
+         sigla_uf %in% my_states,
+         gas == "co2e_100yr",
+         sector_name == "agriculture") |> 
+  select(city_ref, sigla_uf, emissions_quantity, year) |>
+  rename(state = sigla_uf)
+```
+
+
+### ⛓️ Incorporando as bases faltantes
+
+```{r,eval=FALSE}
+base_completa <- base_parcial |> 
+  left_join(deter_trat,
+  by = c("year", "state", "city_ref"),
+  relationship = "many-to-many") |> 
+  left_join(prodes_trat |> 
+    select(state, city_ref, year, desmatamento),
+  by = c("year", "state", "city_ref"),
+  relationship = "many-to-many") |> 
+  left_join(modis_trat |> select(
+    year, state, city_ref, media_fpar, media_lai, media_ndvi, media_et),
+  by = c("year", "state", "city_ref"),
+  relationship = "many-to-many") |>
+  left_join(climate_trace_trat,
+  by = c("year", "state", "city_ref"),
+  relationship = "many-to-many")
+
+glimpse(base_completa)
+```
+
 
 
 ### Plotar mapa
