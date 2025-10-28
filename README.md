@@ -541,6 +541,8 @@ base_completa <- base_parcial |>
   relationship = "many-to-many")
 
 glimpse(base_completa)
+
+# write_rds(base_completa, "data/base_completa.rds")
 ```
 
 ### Plotar mapa
