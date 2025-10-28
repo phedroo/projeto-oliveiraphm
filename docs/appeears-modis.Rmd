@@ -166,7 +166,7 @@ glimpse(appeears_modis_incorporado)
 # tail(appeears_modis_incorporado)
 
 # Salvar
-# write_rds(appeears_modis_incorporado, "../data-raw/appeears_modis.rds")
+# write_rds(appeears_modis_incorporado, "../data/appeears_modis.rds")
 ```
 
 
