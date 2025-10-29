@@ -379,9 +379,10 @@ Radiation) - <strong>LAI</strong> (Leaf Area Index)</p>
 <pre class="r"><code># Carregar bibliotecas
 library(tidyverse)
 library(dplyr)
+library(geobr)
 
 # Lista de arquivos
-csv_files_list &lt;- list.files(&quot;../data-raw/AppEEARS/&quot;, 
+csv_files_list &lt;- list.files(&quot;../data-raw/AppEEARS/&quot;, # arquivos excluídos 
                        pattern = &quot;.csv&quot;, 
                        full.names = TRUE)
 
@@ -445,7 +446,9 @@ appeears |&gt;
 # readr::write_rds(appeears, &#39;../data-raw/appeears-modis.rds&#39;)</code></pre>
 <div id="classificando-cada-ponto-em-município" class="section level4">
 <h4>Classificando cada ponto em município</h4>
-<pre class="r"><code>appeears_modis &lt;- read_rds(&quot;../data-raw/appeears-modis.rds&quot;)
+<pre class="r"><code>library(sf) # para st_make_valid
+
+appeears_modis &lt;- read_rds(&quot;../data-raw/appeears-modis.rds&quot;)
 
 # 1. Garantir que shapefile de municípios está no mesmo CRS e válido
 municipality_sf &lt;- municipality %&gt;%
@@ -480,10 +483,7 @@ glimpse(appeears_modis)</code></pre>
 </div>
 <div id="classificando-cada-ponto-em-estado-método-mais-rápido" class="section level4">
 <h4>Classificando cada ponto em estado (Método mais rápido)</h4>
-<pre class="r"><code>library(sf)
-library(geobr)
-
-# Transformar em objeto sf (coordenadas lon/lat, CRS WGS84), 
+<pre class="r"><code># Transformar em objeto sf (coordenadas lon/lat, CRS WGS84), 
 # Nesse caso os pontos já estão em lon/lat, EPSG:4326
 appeears_modis_sf &lt;- st_as_sf(appeears_modis, 
                     coords = c(&quot;lon&quot;, &quot;lat&quot;), 
