@@ -370,6 +370,7 @@ library(gstat)
 library(vegan)
 library(sf)
 library(dplyr)
+library(stringi)
 source(&quot;../R/my-function.R&quot;)</code></pre>
 <div id="definindo-estados" class="section level4">
 <h4>Definindo estados</h4>
@@ -396,7 +397,9 @@ emissions_sources &lt;- emissions_sources |&gt;
   mutate(
     city_ref = stri_trans_general(tolower(city_ref), &quot;Latin-ASCII&quot;),
     city_ref = trimws(city_ref)
-  )
+  ) |&gt; 
+  group_by(year, city_ref, state) |&gt; 
+  summarise(emissions_quantity = mean(emissions_quantity, na.rm = TRUE))
 
 # Filtrado somente para o setor de agricultura
 # write_rds(emissions_sources, &quot;../data/emissions_sources_final.rds&quot;)</code></pre>
@@ -1355,14 +1358,7 @@ map(2015:2023,~{
 <pre class="r"><code># original archive &quot;appeears-modis.rds&quot; = 8,7mb
 # appeears data requisited by API (project fapesp)
 
-appeears_modis &lt;- read_rds(&quot;../data-raw/appeears-modis.rds&quot;) |&gt; 
-  rename(
-    FPAR = media_fpar,
-    LAI = media_lai,
-    NDVI = media_ndvi,
-    EVI = media_evi,
-    ET = media_et
-  )
+appeears_modis &lt;- read_rds(&quot;../data/appeears_modis.rds&quot;)
 
 glimpse(appeears_modis)</code></pre>
 <pre class="r"><code>appeears_modis |&gt; 
@@ -1374,15 +1370,15 @@ glimpse(appeears_modis)</code></pre>
 <pre class="r"><code># my_year = 2021
 
 # Definir a variável
-variavel &lt;- &quot;FPAR&quot; # &lt;-- mudar
+variavel &lt;- &quot;media_lai&quot; # &lt;-- mudar
 
 # Definir os limites esperados para cada variável - padronizar visualização
 limits_map &lt;- list(
-  NDVI = c(-1, 1),
-  EVI  = c(-1, 1),
-  FPAR = c(0, 1),
-  LAI  = c(0, 7), # máximo valor = 6,85 (após remoção de outliers)
-  ET   = NULL     # sem limite fixo
+  media_ndvi = c(-1, 1),
+  media_evi  = c(-1, 1),
+  media_fpar = c(0, 1),
+  media_lai  = c(0, 7), # máximo valor = 6,85 (após remoção de outliers)
+  media_et   = NULL     # sem limite fixo
 )
 
 # Limite para a variável atual
@@ -1391,31 +1387,31 @@ limites &lt;- limits_map[[variavel]]
 # .data[[variavel]] # Para reconhecer o objeto &quot;variavel&quot; como nome de coluna, e não como string
 
 # Definir os anos
-anos &lt;- if (variavel == &quot;ET&quot;) 2021:2023 else 2015:2023
+anos &lt;- if (variavel == &quot;media_et&quot;) 2021:2023 else 2015:2023
 
 # Aplicando função para geração dos mapas de cada ano
 # for (my_year in anos) {
-
-  # Gerando mapas
-# p &lt;- municipality |&gt; 
-#   filter(abbrev_state %in% my_states) |&gt; 
+# 
+#   # Gerando mapas
+# p &lt;- municipality |&gt;
+#   filter(abbrev_state %in% my_states) |&gt;
 #   left_join(
-#     appeears_modis |&gt; 
-#       group_by(year, city_ref) |&gt; 
+#     appeears_modis |&gt;
+#       group_by(year, city_ref) |&gt;
 #       reframe( #retornar somente coluna da variavel
 #         !!variavel := .data[[variavel]],na.rm=TRUE, # VERIFICAR - municipios em cinza ao cacular a media
 #         .groups = &quot;drop&quot;
-#       ) |&gt;  
+#       ) |&gt;
 #       filter(.data[[variavel]] &lt;= 200) |&gt; # Filtrar outliers absurdos
 #       rename(name_muni = city_ref),
 #     by = c(&quot;name_muni&quot;)
-#   ) |&gt; 
-#   filter(year == my_year) |&gt; 
+#   ) |&gt;
+#   filter(year == my_year) |&gt;
 #   ggplot()  +
 #   geom_sf(aes(fill=.data[[variavel]]), color=&quot;transparent&quot;,
 #           size=.05, show.legend = TRUE)  +
-#   # geom_point(data = appeears_modis |&gt; 
-#   #              filter(year==my_year), 
+#   # geom_point(data = appeears_modis |&gt;
+#   #              filter(year==my_year),
 #   #              aes(lon, lat, #size = emission,
 #   #                  color=&quot;red&quot;))+
 #   theme_bw() +
@@ -1431,25 +1427,12 @@ anos &lt;- if (variavel == &quot;ET&quot;) 2021:2023 else 2015:2023
 #        x = &#39;Longitude&#39;,
 #        y = &#39;Latitude&#39;) +
 #   scale_fill_viridis_c(limits = limites)
-#   
+# 
 #   print(p)
-#   
-#     ggsave(filename = paste0(&quot;img/mapa_&quot;, variavel, &quot;_&quot;, my_year, &quot;.png&quot;),
+# 
+#     ggsave(filename = paste0(&quot;../img/mapa_&quot;, variavel, &quot;_&quot;, my_year, &quot;.png&quot;),
 #          plot = p)
-# } 
-
-# Salvar base sem outliers
-appeears_modis &lt;- municipality |&gt;
-  filter(abbrev_state %in% my_states) |&gt; 
-  left_join(
-    appeears_modis |&gt; 
-      group_by(year) |&gt;  
-    filter(FPAR &lt;= 250, LAI &lt;= 250),
-    by = &quot;name_muni&quot;
-  ) |&gt;
-  filter(year == my_year)
-  
-# write_rds(appeears_modis, &quot;../data/appeears_modis.rds&quot;)</code></pre>
+# } # arquivos gerados excluídos devido memória cheia</code></pre>
 <p>Finalizar tratamento para posterior incorporação</p>
 <pre class="r"><code># último tratamento da base prodes
 # normalizando nomes dos municipios e padronizando nomes de colunas
@@ -1460,6 +1443,14 @@ modis_final &lt;- modis_final |&gt;
   mutate(
     city_ref = stri_trans_general(tolower(city_ref), &quot;Latin-ASCII&quot;),
     city_ref = trimws(city_ref)
+  ) |&gt; 
+  group_by(year, state, city_ref) |&gt; 
+  summarise(
+    media_fpar = mean(media_fpar, na.rm = TRUE),
+    media_lai = mean(media_lai, na.rm = TRUE),
+    media_evi = mean(media_evi, na.rm = TRUE),
+    media_ndvi = mean(media_ndvi, na.rm = TRUE),
+    media_et = mean(media_et, na.rm = TRUE)
   )
 
 # write_rds(modis_final, &quot;../data/appeears_modis_final.rds&quot;)</code></pre>
@@ -1824,7 +1815,7 @@ map(2015:2023,~{
          title = .x) +
     scale_fill_viridis_c()})
 
-write_rds(nasa_power_bind,paste0(&quot;../data/nasa-power-&quot;,variavel,&quot;-bind.rds&quot;))</code></pre>
+# write_rds(nasa_power_bind,paste0(&quot;../data/nasa-power-&quot;,variavel,&quot;-bind.rds&quot;))</code></pre>
 <p>–&gt;</p>
 </div>
 </div>
@@ -1919,8 +1910,10 @@ prodes_final &lt;- prodes_final |&gt;
   mutate(
     city_ref = stri_trans_general(tolower(city_ref), &quot;Latin-ASCII&quot;),
     city_ref = trimws(city_ref)
-  )
-
+  ) |&gt; 
+  group_by(year, city_ref, state) |&gt; 
+  summarise(desmatamento = mean(desmatamento, na.rm = TRUE))
+  
 # write_rds(prodes_final, &quot;../data/prodes_final.rds&quot;)</code></pre>
 </div>
 </div>
@@ -2006,7 +1999,9 @@ deter_final &lt;- deter_final |&gt;
   mutate(
     city_ref = stri_trans_general(tolower(city_ref), &quot;Latin-ASCII&quot;),
     city_ref = trimws(city_ref)
-  )
+  ) |&gt; 
+  group_by(year, city_ref, state) |&gt; 
+  summarise(area_queimada = mean(area_queimada, na.rm = TRUE))
 
 # write_rds(deter_final, &quot;../data/deter_final.rds&quot;)</code></pre>
 <div id="gerar-mapa---deter" class="section level4">

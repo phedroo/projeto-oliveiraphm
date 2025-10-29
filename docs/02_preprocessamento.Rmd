@@ -28,6 +28,7 @@ library(gstat)
 library(vegan)
 library(sf)
 library(dplyr)
+library(stringi)
 source("../R/my-function.R")
 ```
 #### Definindo estados
@@ -59,7 +60,9 @@ emissions_sources <- emissions_sources |>
   mutate(
     city_ref = stri_trans_general(tolower(city_ref), "Latin-ASCII"),
     city_ref = trimws(city_ref)
-  )
+  ) |> 
+  group_by(year, city_ref, state) |> 
+  summarise(emissions_quantity = mean(emissions_quantity, na.rm = TRUE))
 
 # Filtrado somente para o setor de agricultura
 # write_rds(emissions_sources, "../data/emissions_sources_final.rds")
@@ -1119,14 +1122,7 @@ map(2015:2023,~{
 # original archive "appeears-modis.rds" = 8,7mb
 # appeears data requisited by API (project fapesp)
 
-appeears_modis <- read_rds("../data-raw/appeears-modis.rds") |> 
-  rename(
-    FPAR = media_fpar,
-    LAI = media_lai,
-    NDVI = media_ndvi,
-    EVI = media_evi,
-    ET = media_et
-  )
+appeears_modis <- read_rds("../data/appeears_modis.rds")
 
 glimpse(appeears_modis)
 ```
@@ -1143,15 +1139,15 @@ appeears_modis |>
 # my_year = 2021
 
 # Definir a variável
-variavel <- "FPAR" # <-- mudar
+variavel <- "media_lai" # <-- mudar
 
 # Definir os limites esperados para cada variável - padronizar visualização
 limits_map <- list(
-  NDVI = c(-1, 1),
-  EVI  = c(-1, 1),
-  FPAR = c(0, 1),
-  LAI  = c(0, 7), # máximo valor = 6,85 (após remoção de outliers)
-  ET   = NULL     # sem limite fixo
+  media_ndvi = c(-1, 1),
+  media_evi  = c(-1, 1),
+  media_fpar = c(0, 1),
+  media_lai  = c(0, 7), # máximo valor = 6,85 (após remoção de outliers)
+  media_et   = NULL     # sem limite fixo
 )
 
 # Limite para a variável atual
@@ -1160,31 +1156,31 @@ limites <- limits_map[[variavel]]
 # .data[[variavel]] # Para reconhecer o objeto "variavel" como nome de coluna, e não como string
 
 # Definir os anos
-anos <- if (variavel == "ET") 2021:2023 else 2015:2023
+anos <- if (variavel == "media_et") 2021:2023 else 2015:2023
 
 # Aplicando função para geração dos mapas de cada ano
 # for (my_year in anos) {
-
-  # Gerando mapas
-# p <- municipality |> 
-#   filter(abbrev_state %in% my_states) |> 
+# 
+#   # Gerando mapas
+# p <- municipality |>
+#   filter(abbrev_state %in% my_states) |>
 #   left_join(
-#     appeears_modis |> 
-#       group_by(year, city_ref) |> 
+#     appeears_modis |>
+#       group_by(year, city_ref) |>
 #       reframe( #retornar somente coluna da variavel
 #         !!variavel := .data[[variavel]],na.rm=TRUE, # VERIFICAR - municipios em cinza ao cacular a media
 #         .groups = "drop"
-#       ) |>  
+#       ) |>
 #       filter(.data[[variavel]] <= 200) |> # Filtrar outliers absurdos
 #       rename(name_muni = city_ref),
 #     by = c("name_muni")
-#   ) |> 
-#   filter(year == my_year) |> 
+#   ) |>
+#   filter(year == my_year) |>
 #   ggplot()  +
 #   geom_sf(aes(fill=.data[[variavel]]), color="transparent",
 #           size=.05, show.legend = TRUE)  +
-#   # geom_point(data = appeears_modis |> 
-#   #              filter(year==my_year), 
+#   # geom_point(data = appeears_modis |>
+#   #              filter(year==my_year),
 #   #              aes(lon, lat, #size = emission,
 #   #                  color="red"))+
 #   theme_bw() +
@@ -1200,25 +1196,12 @@ anos <- if (variavel == "ET") 2021:2023 else 2015:2023
 #        x = 'Longitude',
 #        y = 'Latitude') +
 #   scale_fill_viridis_c(limits = limites)
-#   
+# 
 #   print(p)
-#   
-#     ggsave(filename = paste0("img/mapa_", variavel, "_", my_year, ".png"),
+# 
+#     ggsave(filename = paste0("../img/mapa_", variavel, "_", my_year, ".png"),
 #          plot = p)
-# } 
-
-# Salvar base sem outliers
-appeears_modis <- municipality |>
-  filter(abbrev_state %in% my_states) |> 
-  left_join(
-    appeears_modis |> 
-      group_by(year) |>  
-    filter(FPAR <= 250, LAI <= 250),
-    by = "name_muni"
-  ) |>
-  filter(year == my_year)
-  
-# write_rds(appeears_modis, "../data/appeears_modis.rds")
+# } # arquivos gerados excluídos devido memória cheia
 ```
 
 Finalizar tratamento para posterior incorporação
@@ -1233,6 +1216,14 @@ modis_final <- modis_final |>
   mutate(
     city_ref = stri_trans_general(tolower(city_ref), "Latin-ASCII"),
     city_ref = trimws(city_ref)
+  ) |> 
+  group_by(year, state, city_ref) |> 
+  summarise(
+    media_fpar = mean(media_fpar, na.rm = TRUE),
+    media_lai = mean(media_lai, na.rm = TRUE),
+    media_evi = mean(media_evi, na.rm = TRUE),
+    media_ndvi = mean(media_ndvi, na.rm = TRUE),
+    media_et = mean(media_et, na.rm = TRUE)
   )
 
 # write_rds(modis_final, "../data/appeears_modis_final.rds")
@@ -1660,7 +1651,7 @@ map(2015:2023,~{
          title = .x) +
     scale_fill_viridis_c()})
 
-write_rds(nasa_power_bind,paste0("../data/nasa-power-",variavel,"-bind.rds"))
+# write_rds(nasa_power_bind,paste0("../data/nasa-power-",variavel,"-bind.rds"))
 ```
 
 -->
@@ -1767,8 +1758,10 @@ prodes_final <- prodes_final |>
   mutate(
     city_ref = stri_trans_general(tolower(city_ref), "Latin-ASCII"),
     city_ref = trimws(city_ref)
-  )
-
+  ) |> 
+  group_by(year, city_ref, state) |> 
+  summarise(desmatamento = mean(desmatamento, na.rm = TRUE))
+  
 # write_rds(prodes_final, "../data/prodes_final.rds")
 ```
 
@@ -1862,7 +1855,9 @@ deter_final <- deter_final |>
   mutate(
     city_ref = stri_trans_general(tolower(city_ref), "Latin-ASCII"),
     city_ref = trimws(city_ref)
-  )
+  ) |> 
+  group_by(year, city_ref, state) |> 
+  summarise(area_queimada = mean(area_queimada, na.rm = TRUE))
 
 # write_rds(deter_final, "../data/deter_final.rds")
 ```
