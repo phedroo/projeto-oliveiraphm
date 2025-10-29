@@ -750,7 +750,9 @@ climate_trace &lt;- read_rds(&quot;../data/emissions_sources_final.rds&quot;)</c
 </div>
 <div id="incorporando-as-bases-faltantes-e-criando-a-base-completa" class="section level3">
 <h3>⛓️ Incorporando as bases faltantes e Criando a base completa</h3>
-<p>Essa base contém todas as variáveis em estudo</p>
+<p>Essa base contém todas as variáveis em estudo <em>Lembrando:
+Variáveis como xch4 (até 2021), et (apartir de 2021) e emissions
+quantity (até 2023) não estao presente para todos os anos</em></p>
 <pre class="r"><code>base_completa &lt;- base_parcial |&gt; 
   left_join(deter,
   by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;))|&gt; 
@@ -764,7 +766,6 @@ climate_trace &lt;- read_rds(&quot;../data/emissions_sources_final.rds&quot;)</c
   by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;))
 
 glimpse(base_completa)
-
 # write_rds(base_completa, &quot;../data/base_completa.rds&quot;)</code></pre>
 </div>
 </div>

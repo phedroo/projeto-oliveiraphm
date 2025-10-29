@@ -418,6 +418,7 @@ climate_trace <- read_rds("../data/emissions_sources_final.rds")
 ### ⛓️ Incorporando as bases faltantes e Criando a base completa
 
   Essa base contém todas as variáveis em estudo
+    *Lembrando: Variáveis como xch4 (até 2021), et (apartir de 2021) e emissions quantity (até 2023) não estao presente para todos os anos*
 
 ```{r,eval=FALSE}
 base_completa <- base_parcial |> 
@@ -433,6 +434,5 @@ base_completa <- base_parcial |>
   by = c("year", "state", "city_ref"))
 
 glimpse(base_completa)
-
 # write_rds(base_completa, "../data/base_completa.rds")
 ```
