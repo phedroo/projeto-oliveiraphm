@@ -43,6 +43,29 @@ emissions_sources <- read_rds("../data/emissions_sources.rds")|>
 glimpse(emissions_sources)
 ```
 
+Finalizar tratamento para posterior incorporação
+
+```{r,eval=FALSE}
+# último tratamento da base prodes
+# normalizando nomes dos municipios e padronizando nomes de colunas
+emissions_sources <- read_rds("../data/emissions_sources.rds")
+
+emissions_sources <- emissions_sources |>
+  filter(year %in% 2015:2023,
+         sigla_uf %in% my_states,
+         gas == "co2e_100yr",
+         sector_name == "agriculture") |> 
+  select(city_ref, sigla_uf, emissions_quantity, year) |>
+  rename(state = sigla_uf) |> 
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), "Latin-ASCII"),
+    city_ref = trimws(city_ref)
+  )
+
+# Filtrado somente para o setor de agricultura
+# write_rds(emissions_sources, "../data/emissions_sources_final.rds")
+```
+
 
 ### 💨 Entrada com a Base: `nasa-xco2.rds`
 ```{r, eval=FALSE}
@@ -1199,6 +1222,23 @@ appeears_modis <- municipality |>
 # write_rds(appeears_modis, "../data/appeears_modis.rds")
 ```
 
+Finalizar tratamento para posterior incorporação
+
+```{r,eval=FALSE}
+# último tratamento da base prodes
+# normalizando nomes dos municipios e padronizando nomes de colunas
+modis_final <- read_rds("../data/appeears_modis.rds")
+
+modis_final <- modis_final |>
+  filter(media_fpar < 250, media_lai < 250) |> 
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), "Latin-ASCII"),
+    city_ref = trimws(city_ref)
+  )
+
+# write_rds(modis_final, "../data/appeears_modis_final.rds")
+```
+
 Não foi feita a interpolação para dados do appeears, pois todos os municípios estão presentes. Os dados foram agrupados por média.
 
 
@@ -1630,7 +1670,7 @@ write_rds(nasa_power_bind,paste0("../data/nasa-power-",variavel,"-bind.rds"))
 ```{r, eval=FALSE} 
 # original archive "prodes-deforestation.rds" = 2.2gb
 
-prodes_deforestation <- read_rds("../data/prodes-deforestation.rds")
+prodes_deforestation <- read_rds("../data/prodes_deforestation.rds")
   # sample_n(1000000)
   # "state" column previously filtred 
 
@@ -1704,7 +1744,34 @@ municipality |>
  #      by = c("name_muni")
  #    ) 
 ```
--->
+
+Finalizar tratamento para posterior incorporação
+
+```{r,eval=FALSE}
+# último tratamento da base prodes
+# normalizando nomes dos municipios e padronizando nomes de colunas
+prodes_final <- read_rds("../data/prodes_deforestation.rds")
+prodes_final <- prodes_final |> 
+  filter(categorie %in% 15:22) |> 
+  rename(year = categorie,
+         city_ref = muni) |> 
+  mutate(
+    year = 2000 + as.numeric(year)
+    ) |>
+  group_by(state, city_ref, year) |> 
+  count() |> 
+  group_by(year) |> 
+  mutate(
+    percent = n/sum(n)*100
+  ) |> 
+  rename(desmatamento = percent) |> # destamento proporcional ao número de ocorrências em relação ao total de registros daquele ano.
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), "Latin-ASCII"),
+    city_ref = trimws(city_ref)
+  )
+
+# write_rds(prodes_final, "../data/prodes_final.rds")
+```
 
 ### 🔥 Entrada com a Base: `deter_queimadas.rds`
 
@@ -1719,19 +1786,11 @@ Disponibilidade de dados de cicatriz de queimada para biomas como Pantanal(só 2
 
 deter_queimadas <- read_rds("../data/deter_queimadas.rds")
 
-# glimpse(deter_queimadas)
-
-# Visualizar as categorias das classes
-# deter_queimadas |>
-#   pull(CLASSNAME) |> unique()
-
 # Somente MT apresenta dados de queimadas
-deter_queimadas |>
-  filter(UF == "MT") |> # alternar estados
-  pull(CLASSNAME) |> unique() |>
-  glimpse()
-
-
+# deter_queimadas |>
+#   filter(UF == "MT") |> # alternar estados
+#   pull(CLASSNAME) |> unique() |>
+#   glimpse()
 ```
 
 ```{r, eval=FALSE}
@@ -1754,7 +1813,7 @@ library(stringi)  # para normalização de strings
 df_deter <- deter_queimadas |> 
   filter(UF %in% my_states) |> 
   rename(name_muni = MUNICIPALI) |> 
-  select(name_muni, ANO, AREAMUNKM,) |> 
+  select(name_muni, ANO, AREAMUNKM) |> 
   arrange(name_muni) |> 
   group_by(ANO, name_muni) |> 
   summarise(
@@ -1780,8 +1839,33 @@ munic_geobr <- municipality |>
     #trimws() → remove espaços extras.
     name_muni = trimws(name_muni)
   )
+# munic_geobr <- as.data.frame(munic_geobr)
+# glimpse(munic_geobr)
 
-glimpse(munic_geobr)
+
+```
+
+Finalizar tratamento para posterior incorporação
+
+```{r,eval=FALSE}
+# último tratamento da base deter
+# normlizando nomes dos municipios e padronizando nomes de colunas
+deter_final <- read_rds("../data/deter_queimadas.rds")
+deter_final <- deter_final |> 
+  rename(state = UF,
+         year = ANO,
+         city_ref = MUNICIPALI,
+         area_queimada = AREAMUNKM) |> 
+  select(state, city_ref, year, area_queimada) |> 
+  filter(state %in% my_states,
+         year %in% 2015:2023) |> 
+  group_by(state, city_ref, year, area_queimada) |> 
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), "Latin-ASCII"),
+    city_ref = trimws(city_ref)
+  )
+
+# write_rds(deter_final, "../data/deter_final.rds")
 ```
 
 

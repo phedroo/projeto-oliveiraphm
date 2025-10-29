@@ -382,6 +382,25 @@ source(&quot;../R/my-function.R&quot;)</code></pre>
 <pre class="r"><code>emissions_sources &lt;- read_rds(&quot;../data/emissions_sources.rds&quot;)|&gt; 
   filter(sigla_uf %in% my_states)
 glimpse(emissions_sources)</code></pre>
+<p>Finalizar tratamento para posterior incorporação</p>
+<pre class="r"><code># último tratamento da base prodes
+# normalizando nomes dos municipios e padronizando nomes de colunas
+emissions_sources &lt;- read_rds(&quot;../data/emissions_sources.rds&quot;)
+
+emissions_sources &lt;- emissions_sources |&gt;
+  filter(year %in% 2015:2023,
+         sigla_uf %in% my_states,
+         gas == &quot;co2e_100yr&quot;,
+         sector_name == &quot;agriculture&quot;) |&gt; 
+  select(city_ref, sigla_uf, emissions_quantity, year) |&gt;
+  rename(state = sigla_uf) |&gt; 
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), &quot;Latin-ASCII&quot;),
+    city_ref = trimws(city_ref)
+  )
+
+# Filtrado somente para o setor de agricultura
+# write_rds(emissions_sources, &quot;../data/emissions_sources_final.rds&quot;)</code></pre>
 </div>
 <div id="entrada-com-a-base-nasa-xco2.rds" class="section level3">
 <h3>💨 Entrada com a Base: <code>nasa-xco2.rds</code></h3>
@@ -1432,6 +1451,19 @@ appeears_modis &lt;- municipality |&gt;
   filter(year == my_year)
   
 # write_rds(appeears_modis, &quot;../data/appeears_modis.rds&quot;)</code></pre>
+<p>Finalizar tratamento para posterior incorporação</p>
+<pre class="r"><code># último tratamento da base prodes
+# normalizando nomes dos municipios e padronizando nomes de colunas
+modis_final &lt;- read_rds(&quot;../data/appeears_modis.rds&quot;)
+
+modis_final &lt;- modis_final |&gt;
+  filter(media_fpar &lt; 250, media_lai &lt; 250) |&gt; 
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), &quot;Latin-ASCII&quot;),
+    city_ref = trimws(city_ref)
+  )
+
+# write_rds(modis_final, &quot;../data/appeears_modis_final.rds&quot;)</code></pre>
 <p>Não foi feita a interpolação para dados do appeears, pois todos os
 municípios estão presentes. Os dados foram agrupados por média.</p>
 </div>
@@ -1801,7 +1833,7 @@ write_rds(nasa_power_bind,paste0(&quot;../data/nasa-power-&quot;,variavel,&quot;
 <h3>🪓 Entrada com a Base: <code>prodes-deforestation.rds</code></h3>
 <pre class="r"><code># original archive &quot;prodes-deforestation.rds&quot; = 2.2gb
 
-prodes_deforestation &lt;- read_rds(&quot;../data/prodes-deforestation.rds&quot;)
+prodes_deforestation &lt;- read_rds(&quot;../data/prodes_deforestation.rds&quot;)
   # sample_n(1000000)
   # &quot;state&quot; column previously filtred 
 
@@ -1867,7 +1899,30 @@ municipality |&gt;
  #        rename(name_muni = muni),
  #      by = c(&quot;name_muni&quot;)
  #    ) </code></pre>
-<p>–&gt;</p>
+<p>Finalizar tratamento para posterior incorporação</p>
+<pre class="r"><code># último tratamento da base prodes
+# normalizando nomes dos municipios e padronizando nomes de colunas
+prodes_final &lt;- read_rds(&quot;../data/prodes_deforestation.rds&quot;)
+prodes_final &lt;- prodes_final |&gt; 
+  filter(categorie %in% 15:22) |&gt; 
+  rename(year = categorie,
+         city_ref = muni) |&gt; 
+  mutate(
+    year = 2000 + as.numeric(year)
+    ) |&gt;
+  group_by(state, city_ref, year) |&gt; 
+  count() |&gt; 
+  group_by(year) |&gt; 
+  mutate(
+    percent = n/sum(n)*100
+  ) |&gt; 
+  rename(desmatamento = percent) |&gt; # destamento proporcional ao número de ocorrências em relação ao total de registros daquele ano.
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), &quot;Latin-ASCII&quot;),
+    city_ref = trimws(city_ref)
+  )
+
+# write_rds(prodes_final, &quot;../data/prodes_final.rds&quot;)</code></pre>
 </div>
 </div>
 <div id="entrada-com-a-base-deter_queimadas.rds" class="section level3">
@@ -1883,18 +1938,11 @@ Pantanal(só 2023) e Amazônia (<a href="https://terrabrasilis.dpi.inpe.br/downl
 
 deter_queimadas &lt;- read_rds(&quot;../data/deter_queimadas.rds&quot;)
 
-# glimpse(deter_queimadas)
-
-# Visualizar as categorias das classes
-# deter_queimadas |&gt;
-#   pull(CLASSNAME) |&gt; unique()
-
 # Somente MT apresenta dados de queimadas
-deter_queimadas |&gt;
-  filter(UF == &quot;MT&quot;) |&gt; # alternar estados
-  pull(CLASSNAME) |&gt; unique() |&gt;
-  glimpse()
-</code></pre>
+# deter_queimadas |&gt;
+#   filter(UF == &quot;MT&quot;) |&gt; # alternar estados
+#   pull(CLASSNAME) |&gt; unique() |&gt;
+#   glimpse()</code></pre>
 <pre class="r"><code>deter_queimadas |&gt; 
   # pull(ANO) |&gt; unique()
   filter(ANO == 2020,
@@ -1914,7 +1962,7 @@ mapas</p>
 df_deter &lt;- deter_queimadas |&gt; 
   filter(UF %in% my_states) |&gt; 
   rename(name_muni = MUNICIPALI) |&gt; 
-  select(name_muni, ANO, AREAMUNKM,) |&gt; 
+  select(name_muni, ANO, AREAMUNKM) |&gt; 
   arrange(name_muni) |&gt; 
   group_by(ANO, name_muni) |&gt; 
   summarise(
@@ -1940,8 +1988,28 @@ munic_geobr &lt;- municipality |&gt;
     #trimws() → remove espaços extras.
     name_muni = trimws(name_muni)
   )
+# munic_geobr &lt;- as.data.frame(munic_geobr)
+# glimpse(munic_geobr)
+</code></pre>
+<p>Finalizar tratamento para posterior incorporação</p>
+<pre class="r"><code># último tratamento da base deter
+# normlizando nomes dos municipios e padronizando nomes de colunas
+deter_final &lt;- read_rds(&quot;../data/deter_queimadas.rds&quot;)
+deter_final &lt;- deter_final |&gt; 
+  rename(state = UF,
+         year = ANO,
+         city_ref = MUNICIPALI,
+         area_queimada = AREAMUNKM) |&gt; 
+  select(state, city_ref, year, area_queimada) |&gt; 
+  filter(state %in% my_states,
+         year %in% 2015:2023) |&gt; 
+  group_by(state, city_ref, year, area_queimada) |&gt; 
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), &quot;Latin-ASCII&quot;),
+    city_ref = trimws(city_ref)
+  )
 
-glimpse(munic_geobr)</code></pre>
+# write_rds(deter_final, &quot;../data/deter_final.rds&quot;)</code></pre>
 <div id="gerar-mapa---deter" class="section level4">
 <h4>Gerar mapa - deter</h4>
 <pre class="r"><code>my_year = 2020 # mudar anos (detalhe: alguns anos, como 2016, só tem para 1 estado)
