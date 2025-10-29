@@ -760,7 +760,7 @@ quantity (até 2023) não estao presente para todos os anos</em></p>
     select(state, city_ref, year, desmatamento),
   by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;))|&gt; 
   left_join(modis |&gt; select(
-    year, state, city_ref, media_fpar, media_lai, media_ndvi, media_et),
+    year, state, city_ref, media_fpar, media_lai, media_evi, media_ndvi, media_et),
   by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;))|&gt;
   left_join(climate_trace,
   by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;))

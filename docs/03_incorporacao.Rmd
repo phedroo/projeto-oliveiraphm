@@ -428,7 +428,7 @@ base_completa <- base_parcial |>
     select(state, city_ref, year, desmatamento),
   by = c("year", "state", "city_ref"))|> 
   left_join(modis |> select(
-    year, state, city_ref, media_fpar, media_lai, media_ndvi, media_et),
+    year, state, city_ref, media_fpar, media_lai, media_evi, media_ndvi, media_et),
   by = c("year", "state", "city_ref"))|>
   left_join(climate_trace,
   by = c("year", "state", "city_ref"))
