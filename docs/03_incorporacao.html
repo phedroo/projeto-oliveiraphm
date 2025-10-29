@@ -369,7 +369,7 @@ library(sf)
 library(dplyr)
 library(purrr) # criar funções
 library(tibble)
-source(&quot;R/my-function.R&quot;) </code></pre>
+source(&quot;../R/my-function.R&quot;) </code></pre>
 <div id="definindo-estados" class="section level4">
 <h4>Definindo estados</h4>
 <pre class="r"><code>my_states &lt;- c(&quot;MS&quot;,&quot;MT&quot;,&quot;GO&quot;,&quot;DF&quot;)</code></pre>
@@ -377,7 +377,7 @@ source(&quot;R/my-function.R&quot;) </code></pre>
 </div>
 <div id="entrada-com-a-base-emissions-sources.rds" class="section level3">
 <h3>💨 Entrada com a Base: <code>emissions-sources.rds</code></h3>
-<pre class="r"><code>emissions_sources &lt;- read_rds(&quot;data/emissions_sources.rds&quot;)|&gt; 
+<pre class="r"><code>emissions_sources &lt;- read_rds(&quot;../data/emissions_sources_final.rds&quot;)|&gt; 
   filter(sigla_uf %in% my_states)
 glimpse(emissions_sources)</code></pre>
 <div id="filtrando-os-polígonos-do-municípios" class="section level4">
@@ -486,7 +486,7 @@ O problema esta que, a krigagem é feita, mas não adicionam os valores observad
 
 Para resolver, deve-se agregar a krigagem à geometria municipal para que todos os municípios sejam preenchidos.   
   Isto ja havia sido feito em "nasa_xco2_bind", no entanto, não foi este o arquivo kgr salvo na pasta data-raw, logo gerando os NAs mesmo após a krigagem.
-    Sendo assim, basta salvar fazer o bind e salvar os arquivos de cada variável
+    Sendo assim, basta fazer o bind e salvar os arquivos de cada variável (FEITO)
 
 ### Função para atribuir a mediana em um município, a partir da observação média da mediana de municípios vizinhos 
 
@@ -709,7 +709,7 @@ df_kgr_preenchido
 # write_rds(df_kgr_preenchido, "data/parcial_base.rds")
 ```
 
-### Verificação dos valores NA preenchidos (grande maioria para municiípios de GO)
+### Verificação dos valores NA preenchidos (grande maioria para municípios de GO)
 
 ``` r
 # data_set_kgr_bind2 |> 
@@ -735,84 +735,37 @@ df_kgr_preenchido
 <p>Essa base apresenta os dados do nasapower, oco2 e gosat. Portanto,
 faltam incorporar as bases do modis, deter, prodes e a climate
 trace.</p>
-<pre class="r"><code>base_parcial &lt;- read_rds(&quot;data/parcial_base.rds&quot;)</code></pre>
-<div id="carregando-e-tratando-as-bases-faltantes" class="section level3">
-<h3>🔋 Carregando e tratando as bases faltantes</h3>
+<pre class="r"><code>base_parcial &lt;- read_rds(&quot;../data/parcial_base.rds&quot;) |&gt; 
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), &quot;Latin-ASCII&quot;),
+    city_ref = trimws(city_ref)
+  )</code></pre>
+<div id="carregando-as-bases-faltantes" class="section level3">
+<h3>🔋 Carregando as bases faltantes</h3>
 <pre class="r"><code># Carregando bases
-deter &lt;- read_rds(&quot;data/deter_queimadas.rds&quot;)
-prodes &lt;- read_rds(&quot;data/prodes_deforestation.rds&quot;)
-modis &lt;- read_rds(&quot;data/appeears_modis.rds&quot;)
-climate_trace &lt;- read_rds(&quot;data/emissions_sources.rds&quot;)
-
-# DETER --------------------------------------------
-# Tratando base deter
-deter_trat &lt;- deter |&gt; 
-  rename(state = UF,
-         year = ANO,
-         city_ref = MUNICIPALI,
-         area_queimada = AREAMUNKM) |&gt; 
-  select(state, city_ref, year, area_queimada) |&gt; 
-  filter(state %in% my_states,
-         year == 2015:2023) |&gt; 
-  group_by(state, city_ref, year, area_queimada)
-
-# PRODES --------------------------------------------
-# Tratando base prodes
-prodes_trat &lt;- prodes |&gt; 
-  filter(categorie %in% 15:22) |&gt; 
-  rename(year = categorie,
-         city_ref = muni) |&gt; 
-  mutate(
-    year = 2000 + as.numeric(year)
-    ) |&gt;
-  group_by(state, city_ref, year) |&gt; 
-  count() |&gt; 
-  group_by(year) |&gt; 
-  mutate(
-    percent = n/sum(n)*100
-  ) |&gt; 
-  rename(desmatamento = percent) # destamento proporcional ao número de ocorrências em relação ao total de registros daquele ano.
-
-# MODIS --------------------------------------------
-# Tratando base modis
-modis_trat &lt;- modis |&gt;
-  filter(media_fpar &lt; 250, media_lai &lt; 250)
-
-# Climate TRACE ------------------------------------
-# Tratando base Climate TRACE
-climate_trace_trat &lt;- climate_trace |&gt;
-  filter(year %in% 2015:2023,
-         sigla_uf %in% my_states,
-         gas == &quot;co2e_100yr&quot;,
-         sector_name == &quot;agriculture&quot;) |&gt; 
-  select(city_ref, sigla_uf, emissions_quantity, year) |&gt;
-  rename(state = sigla_uf)</code></pre>
+deter &lt;- read_rds(&quot;../data/deter_final.rds&quot;)
+prodes &lt;- read_rds(&quot;../data/prodes_final.rds&quot;)
+modis &lt;- read_rds(&quot;../data/appeears_modis_final.rds&quot;)
+climate_trace &lt;- read_rds(&quot;../data/emissions_sources_final.rds&quot;)</code></pre>
 </div>
-<div id="incorporando-as-bases-faltantes" class="section level3">
-<h3>⛓️ Incorporando as bases faltantes</h3>
-<div id="criando-a-base-completa" class="section level4">
-<h4>Criando a base completa</h4>
+<div id="incorporando-as-bases-faltantes-e-criando-a-base-completa" class="section level3">
+<h3>⛓️ Incorporando as bases faltantes e Criando a base completa</h3>
 <p>Essa base contém todas as variáveis em estudo</p>
 <pre class="r"><code>base_completa &lt;- base_parcial |&gt; 
-  left_join(deter_trat,
-  by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;),
-  relationship = &quot;many-to-many&quot;) |&gt; 
-  left_join(prodes_trat |&gt; 
+  left_join(deter,
+  by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;))|&gt; 
+  left_join(prodes |&gt; 
     select(state, city_ref, year, desmatamento),
-  by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;),
-  relationship = &quot;many-to-many&quot;) |&gt; 
-  left_join(modis_trat |&gt; select(
+  by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;))|&gt; 
+  left_join(modis |&gt; select(
     year, state, city_ref, media_fpar, media_lai, media_ndvi, media_et),
-  by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;),
-  relationship = &quot;many-to-many&quot;) |&gt;
-  left_join(climate_trace_trat,
-  by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;),
-  relationship = &quot;many-to-many&quot;)
+  by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;))|&gt;
+  left_join(climate_trace,
+  by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;))
 
 glimpse(base_completa)
 
-# write_rds(base_completa, &quot;data/base_completa.rds&quot;)</code></pre>
-</div>
+# write_rds(base_completa, &quot;../data/base_completa.rds&quot;)</code></pre>
 </div>
 </div>
 
