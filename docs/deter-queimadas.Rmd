@@ -262,6 +262,8 @@ deter_queimadas <- as_data_frame(deter_queimadas)
 # write_rds(deter_queimadas, "../data/deter_queimadas.rds")
 ```
 
+
+
 ### Focos de queimadas - Terrabrasilis 
 
 Esta base não contém dados de queimada por município, somente os focos por estados

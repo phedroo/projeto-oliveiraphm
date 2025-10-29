@@ -357,11 +357,11 @@ display: none;
 <pre class="r"><code>library(tidyverse)
 library(sf) # ler shapefile</code></pre>
 <pre class="r"><code># Exemplo com os três shapefiles
-amz &lt;- st_read(&quot;../data-raw/deter/deter-amz-deter-public.shp&quot;) # ALB (completo, desde 2016)
+amz &lt;- st_read(&quot;../data-raw/dados_brutos/deter_queimadas/deter-amz-deter-public.shp&quot;) # ALB (completo, desde 2016)
 
-cerrado &lt;- st_read(&quot;../data-raw/deter/deter-cerrado-nb-deter-public.shp&quot;) # Somente desmatamento
+# cerrado &lt;- st_read(&quot;../data-raw/dados_brutos/deter_queimadas/deter-cerrado-nb-deter-public.shp&quot;) # Somente desmatamento
 
-pantanal &lt;- st_read(&quot;../data-raw/deter/deter-pantanal-deter-public.shp&quot;) # Dados de cicatriz de queimada Somente a partir de 2023</code></pre>
+pantanal &lt;- st_read(&quot;../data-raw/dados_brutos/deter_queimadas/deter-pantanal-deter-public.shp&quot;) # Dados de cicatriz de queimada Somente a partir de 2023</code></pre>
 <pre class="r"><code># EXEMPLIFICANDO COM AMAZONIA
 # Ver estrutura
 # str(amz)
@@ -409,24 +409,24 @@ ggplot(amz) +
   labs(title = &quot;Queimada Amazônia Legal brasileira (DETER)&quot;) +
   theme(legend.position = &quot;bottom&quot;)</code></pre>
 <pre class="r"><code># str(cerrado)
-glimpse(cerrado)
-unique(cerrado$UF)
-
-cerrado &lt;- cerrado |&gt; 
-  mutate(
-    bioma = &quot;Cerrado&quot;
-  ) |&gt; 
-  filter(CLASSNAME == &quot;DESMATAMENTO_CR&quot;, # Só desmat
-                     UF == c(&quot;MT&quot;, &quot;MS&quot;, &quot;GO&quot;, &quot;DF&quot;))
-
-ggplot(cerrado) +
-  geom_sf() +  # Preenchimento por bioma, sem contorno
-  # scale_fill_manual(values = c(&quot;Amazônia&quot; = &quot;#1b9e77&quot;, 
-  #                              &quot;Cerrado&quot; = &quot;#d95f02&quot;, 
-  #                              &quot;Pantanal&quot; = &quot;#7570b3&quot;)) +
-  theme_minimal() +
-  labs(title = &quot;Desmatamento Cerrado (DETER)&quot;) +
-  theme(legend.position = &quot;bottom&quot;)</code></pre>
+# glimpse(cerrado)
+# unique(cerrado$UF)
+# 
+# cerrado &lt;- cerrado |&gt; 
+#   mutate(
+#     bioma = &quot;Cerrado&quot;
+#   ) |&gt; 
+#   filter(CLASSNAME == &quot;DESMATAMENTO_CR&quot;, # Só desmat
+#                      UF == c(&quot;MT&quot;, &quot;MS&quot;, &quot;GO&quot;, &quot;DF&quot;))
+# 
+# ggplot(cerrado) +
+#   geom_sf() +  # Preenchimento por bioma, sem contorno
+#   # scale_fill_manual(values = c(&quot;Amazônia&quot; = &quot;#1b9e77&quot;, 
+#   #                              &quot;Cerrado&quot; = &quot;#d95f02&quot;, 
+#   #                              &quot;Pantanal&quot; = &quot;#7570b3&quot;)) +
+#   theme_minimal() +
+#   labs(title = &quot;Desmatamento Cerrado (DETER)&quot;) +
+#   theme(legend.position = &quot;bottom&quot;)</code></pre>
 <pre class="r"><code># str(pantanal)
 glimpse(pantanal)
 unique(pantanal$CLASS_NAME)
@@ -506,7 +506,7 @@ df |&gt;
 <h3>💨 Entrada com a Base: <code>deter-queimadas.rds</code></h3>
 <pre class="r"><code># original archive &quot;deter-queimadas.rds&quot; = 122,1mb
 
-deter_queimadas &lt;- read_rds(&quot;data-raw/deter-queimadas.rds&quot;) |&gt; 
+deter_queimadas &lt;- read_rds(&quot;../data-raw/deter-queimadas.rds&quot;) |&gt; 
   rename(
     longitude = x,
     latitude = y
@@ -545,7 +545,7 @@ deter_queimadas &lt;- as.data.frame(deter_queimadas_sf)
 glimpse(deter_queimadas)
 
 # Salvar
-write_rds(deter_queimadas, &quot;data-raw/deter_queimadas.rds&quot;)</code></pre>
+# write_rds(deter_queimadas, &quot;data-raw/deter_queimadas.rds&quot;)</code></pre>
 </div>
 <div id="classificando-cada-ponto-em-estado" class="section level4">
 <h4>Classificando cada ponto em estado</h4>
@@ -576,7 +576,8 @@ tail(deter_queimadas)
 
 # Padronizar colunas
 deter_queimadas &lt;- deter_queimadas |&gt; 
-  mutate(CLASSNAME = case_when(
+  mutate(CLASSNAME = as.character(CLASSNAME),
+    CLASSNAME = case_when(
     CLASSNAME == &quot;cicatriz de queimada&quot; ~ &quot;CICATRIZ_DE_QUEIMADA&quot;,
     TRUE ~ CLASSNAME
   ))
@@ -589,15 +590,15 @@ deter_queimadas &lt;- as_data_frame(deter_queimadas)
 </div>
 </div>
 <div id="focos-de-queimadas---terrabrasilis" class="section level3">
-<h3>Focos de queimadas - TErrabrasilis</h3>
-<p>Esta base não contém dados de queimada por município, somente
-estados</p>
+<h3>Focos de queimadas - Terrabrasilis</h3>
+<p>Esta base não contém dados de queimada por município, somente os
+focos por estados</p>
 <p>Arquivo deter-fogo-28-09-2025-20_46_38.csv (baixado em: <a href="https://terrabrasilis.dpi.inpe.br/app/dashboard/fires/biomes/aggregated/#" class="uri">https://terrabrasilis.dpi.inpe.br/app/dashboard/fires/biomes/aggregated/#</a>)</p>
-<pre class="r"><code>focos_queimadas &lt;- read.csv(&quot;../data-raw/deter-fogo-28-09-2025-20_46_38.csv&quot;,
+<pre class="r"><code>focos_queimadas &lt;- read.csv(&quot;../data-raw/dados_brutos/deter_queimadas/all_dashboard-fires-month-25-10-2025-09_15_56.csv&quot;,
          sep = &quot;;&quot;)
 
 # Considerando todo tipo de foco de incêndio
-focos_queimadas |&gt; 
+focos_queimadas &lt;- focos_queimadas |&gt; 
   mutate(
     uf = case_when(
       uf == &quot;GOIÁS&quot; ~ &quot;GO&quot;,
@@ -616,10 +617,10 @@ focos_queimadas |&gt;
   group_by(uf, ano) |&gt; 
   summarise(
     focos = sum(focuses, na.rm = TRUE)
-  )
+  ) 
 
 # Salvar
-write_rds(focos_queimadas, &quot;../data/focos_queimadas.rds&quot;)</code></pre>
+# write_rds(focos_queimadas, &quot;../data/focos_queimadas.rds&quot;)</code></pre>
 </div>
 </div>
 
