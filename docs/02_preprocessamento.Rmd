@@ -28,7 +28,6 @@ library(gstat)
 library(vegan)
 library(sf)
 library(dplyr)
-library(lwgeom) # para st_make_valid
 source("../R/my-function.R")
 ```
 #### Definindo estados
