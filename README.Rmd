@@ -347,7 +347,7 @@ corrplot(mc,method = "color",
 
 ### Análise de correlação - ANO 
 
-```{r, eval=FALSE}
+```{r}
 ngrp <- rep(3,8) # c(3,3,3,4,4,5,3,4)
 for( i in 2015:2022){
   # Análise de correlação
