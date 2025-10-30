@@ -134,6 +134,9 @@ library(tidyverse)
 library(dplyr)
 library(purrr) # criar funções
 library(tibble)
+library(corrplot)
+library(vegan)
+library(stringi)
 source("R/my-function.R") 
 #> List of polygons loaded [list_pol]
 ```
@@ -168,25 +171,25 @@ variaveis <- base_completa |>
 for (variavel in variaveis) {
   cat("Processando:", variavel, "\n")  # feedback
 
-df <- base_completa |>
-  group_by(year,state) |>
-  summarise(
-    N = sum(!is.na(.data[[variavel]]), na.rm = TRUE), # observações
-    MIN = min(.data[[variavel]], na.rm = TRUE), # valor mínimo
-    MEAN = mean(.data[[variavel]], na.rm = TRUE), # média
-    MEDIAN = median(.data[[variavel]], na.rm = TRUE), # mediana
-    MAX = max(.data[[variavel]], na.rm = TRUE), # valor máximo
-    VARIANCIA  = var(.data[[variavel]], na.rm = TRUE), 
-    STD_DV = sd(.data[[variavel]], na.rm = TRUE), # desvio padrão
-    CV = 100*STD_DV/MEAN, # coeficiete de variação
-    SKW = agricolae::skewness(.data[[variavel]]), #
-    KRT = agricolae::kurtosis(.data[[variavel]]), #
-  )
-
-# Salvar
-writexl::write_xlsx(df, paste0("output/estat-descritiva-",variavel,"_.xlsx"))
-
-}
+# df <- base_completa |>
+#   group_by(year,state) |>
+#   summarise(
+#     N = sum(!is.na(.data[[variavel]]), na.rm = TRUE), # observações
+#     MIN = min(.data[[variavel]], na.rm = TRUE), # valor mínimo
+#     MEAN = mean(.data[[variavel]], na.rm = TRUE), # média
+#     MEDIAN = median(.data[[variavel]], na.rm = TRUE), # mediana
+#     MAX = max(.data[[variavel]], na.rm = TRUE), # valor máximo
+#     VARIANCIA  = var(.data[[variavel]], na.rm = TRUE), 
+#     STD_DV = sd(.data[[variavel]], na.rm = TRUE), # desvio padrão
+#     CV = 100*STD_DV/MEAN, # coeficiete de variação
+#     SKW = agricolae::skewness(.data[[variavel]]), #
+#     KRT = agricolae::kurtosis(.data[[variavel]]), #
+#   )
+# 
+# # Salvar
+# writexl::write_xlsx(df, paste0("output/estat-descritiva-",variavel,"_.xlsx"))
+# 
+# }
 ```
 
 ### 📊 Histogramas
@@ -242,12 +245,12 @@ base_completa |>
 oco2_sif <- read_rds("data/oco2-sif.rds")
 
 # base original
-oco2_sif |>
-  ggplot(aes(x=SIF_757)) +
-  geom_histogram(color="black",fill="gray",
-                 bins = 30) +
-  facet_wrap(~year, scales = "free") +
-  theme_bw()
+# oco2_sif |>
+#   ggplot(aes(x=SIF_757)) +
+#   geom_histogram(color="black",fill="gray",
+#                  bins = 30) +
+#   facet_wrap(~year, scales = "free") +
+#   theme_bw()
 
 # base resumida
 base_completa |>
@@ -294,15 +297,15 @@ base_completa |>
 
 
 # desmatamento - arrumar
-prodes_deforestation <- read_rds("data/prodes_deforestation.rds")
+# prodes_deforestation <- read_rds("data/prodes_deforestation.rds")
 
 # base original
-prodes_deforestation |>
-  ggplot(aes(x=categorie)) +
-  geom_histogram(color="black",fill="gray",
-                 bins = 30) +
-  facet_wrap(~categorie, scales = "free") +
-  theme_bw()
+# prodes_deforestation |>
+#   ggplot(aes(x=categorie)) +
+#   geom_histogram(color="black",fill="gray",
+#                  bins = 30) +
+#   facet_wrap(~categorie, scales = "free") +
+#   theme_bw()
 
 # base resumida
 base_completa |>
@@ -352,39 +355,191 @@ base_completa |>
   labs(fill="")
 ```
 
-### Análise de correlação
+### Atualização da Base - Cáculo da Anomalia
 
 ``` r
-# my_corrplot <- function(.estado){
-#   pl<- city_kgr_beta_emission |>
-#     as_data_frame() |>
-#     filter(abbrev_state == .estado) |>
-#     select(beta_sif:emissions_quantity) |>
-#     relocate(emissions_quantity) |>
-#     drop_na() |>
-#     cor(method = "spearman") |>
-#     corrplot::corrplot(method = "ellipse",type = "upper" )
-#   print(pl)
-# }
-# map(estados[-6],my_corrplot)
+base_completa <- base_completa |> 
+  group_by(year) |> 
+  mutate(anomalia_xco2 = xco2 - median(xco2,na.rm=TRUE),
+         .after = xco2) |> 
+  dplyr::ungroup() |> 
+  relocate(year:city_ref, emissions_quantity, xco2, xch4, sif_757,
+           anomalia_xco2, temperatura, umidade, precipitacao, pressao, radiacao, vento,media_fpar:media_ndvi, desmatamento,area_queimada) |> 
+    select(-media_et) |> 
+  rename(ano = year, estado = state, municipio = city_ref,
+         emissao = emissions_quantity,queimada = area_queimada,
+         fpar = media_fpar,
+         lai = media_lai,
+         evi = media_evi,
+         ndvi = media_ndvi)
 ```
 
+### Análise de correlação - total
+
 ``` r
-mf <- matrix(ncol = 6)
-for(i in seq_along(estados[-6])){
-  df <- city_kgr_beta_emission |>
-    as_data_frame() |>
-    filter(abbrev_state == estados[i]) |>
-    select(beta_sif:emissions_quantity) |>
-    relocate(emissions_quantity) |>
-    drop_na()
-  m_aux <-cor(df[1],df[2:7],method = "spearman")
-  rownames(m_aux) <- paste0(estados[i],"-",rownames(m_aux))
-  if(i==1) {
-    mf<-m_aux
-  }else{
-    mf<-rbind(mf,m_aux)
+mc <- cor(base_completa |> 
+            select(emissao:queimada), use = "complete.obs")
+corrplot(mc,method = "color",
+         outline = TRUE,
+         addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
+         tl.cex = 1, cl.cex = 1,  bg="azure2",
+         # diag = FALSE,
+         # addCoef.col = "black",
+         cl.ratio = 0.2,
+         cl.length = 5,
+         number.cex = 0.8
+) 
+```
+
+![](README_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+
+### Análise de correlação - ANO
+
+``` r
+ngrp <- rep(3,8) # c(3,3,3,4,4,5,3,4)
+for( i in 2015:2022){
+  # Análise de correlação
+  base_aux <- base_completa |>
+    filter(ano ==i) |> 
+    select(emissao:queimada, -vento, -ndvi, -xco2, -queimada, - evi) 
+  
+  municipios <-base_completa |>
+    filter(ano ==i) |> 
+    pull(municipio)
+  
+  mc <- cor(base_aux,use = "pairwise.complete.obs")
+  fc <- !is.na(mc[1,])
+  fl <- !is.na(mc[,1])
+  mc <- mc[fc,fl]
+  mc <- mc[1:5,-(1:5)]
+  corrplot(mc,method = "color",
+           outline = TRUE,
+           addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
+           tl.cex = 1, cl.cex = 1,  bg="azure2",
+           # diag = FALSE,
+           addCoef.col = "black",
+           cl.ratio = 0.2,
+           cl.length = 5,
+           number.cex = 0.8) 
+  
+  # Análise de agrupamento
+  da_pad <- decostand(base_aux[,fc] |> 
+                        mutate(across(everything(), ~replace_na(., 0))),  
+                      method = "standardize",
+                      na.rm=TRUE)
+  da_pad_euc <- vegdist(da_pad,"euclidean") 
+  da_pad_euc_ward<-hclust(da_pad_euc, method="ward.D")
+  da_pad_euc_ward$labels <- municipios
+  grupo<-cutree(da_pad_euc_ward,ngrp[i-2014]) #### numero de agrupamentos
+  d <- da_pad_euc_ward$height
+  d_corte <- d[which(d |> diff() == max(diff(d)))]
+  plot(da_pad_euc_ward, 
+       ylab="Distância Euclidiana",
+       xlab="Acessos", hang=-1,
+       col="blue", las=1,
+       cex=.6,lwd=1.5);box();abline(h=d_corte*1.15)
+  
+  # Mapaeamento dos Grupos
+  plot_map_group <- municipality |> 
+    mutate(
+      name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
+      name_muni = trimws(name_muni)
+    )  |> 
+    filter(abbrev_state %in% my_states) |> 
+    left_join(
+      data.frame(
+        name_muni = names(grupo),
+        grupo = as_factor(grupo)
+      ),by = "name_muni", relationship = "many-to-many"
+    ) |> drop_na() |>      
+    ggplot() +
+    geom_sf(aes(fill=grupo), color="transparent",
+            size=.05, show.legend = TRUE)  +
+    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(size = rel(.9), color = "black"),
+      axis.title.x = element_text(size = rel(1.1), color = "black"),
+      axis.text.y = element_text(size = rel(.9), color = "black"),
+      axis.title.y = element_text(size = rel(1.1), color = "black"),
+      legend.text = element_text(size = rel(1), color = "black"),
+      legend.title = element_text(face = 'bold', size = rel(1.2))
+    ) +
+    labs(fill = 'Agrupamento',
+         x = 'Longitude',
+         y = 'Latitude') +
+    scale_fill_viridis_d()
+  print(plot_map_group)
+  
+  pca <-  prcomp(da_pad,scale.=TRUE)
+  # Autovalores
+  eig<-pca$sdev^2
+  print("==== Autovalores ====")
+  print(round(eig,3))
+  print("==== % da variância explicada ====")
+  ve<-eig/sum(eig)
+  print(round(ve,4))
+  print("==== % da variância explicada acumulada ====")
+  print(round(cumsum(ve),4)*100)
+  print("==== Poder Discriminante ====")
+  mcor<-cor(da_pad,pca$x)
+  corrplot(mcor)
+  
+  pc1V<-cor(da_pad,pca$x)[,1]/sd(cor(da_pad,pca$x)[,1])
+  pc2V<-cor(da_pad,pca$x)[,2]/sd(cor(da_pad,pca$x)[,2])
+  pc3V<-cor(da_pad,pca$x)[,3]/sd(cor(da_pad,pca$x)[,3])
+  pc1c<-pca$x[,1]/sd(pca$x[,1])
+  pc2c<-pca$x[,2]/sd(pca$x[,2])
+  pc3c<-pca$x[,3]/sd(pca$x[,3])
+  nv<-ncol(mcor) # número de variáveis utilizadas na análise
+      
+  # gráfico biplot
+  bip<-data.frame(pc1c,pc2c,pc3c,grupo)
+  texto <- data.frame(
+    x = pc1V,
+    y = pc2V,
+    z = pc3V,
+    label = rownames(mcor)
+  )
+  for(k in 1:ngrp[i-2014]){
+    cat(paste0("[Grupo ",k,"]:\n"), paste(municipios[grupo==k],collapse = "; "))
+    cat("\n\n")
   }
+  
+  bi_plot <- bip |> 
+    ggplot(aes(x=pc1c,y=pc2c,colour = as_factor(grupo))) +
+    geom_point(size = 3) +
+    theme_minimal() +
+    # scale_shape_manual(values=16:18)+
+    # scale_color_manual(values=c("#009E73", "#D55E00")) + #"#999999",
+    # annotate(geom="text", x=pc1c, y=pc2c, label=cultivar,
+    #             color="black",size=.25)+
+    geom_vline(aes(xintercept=0),
+               color="black", size=1)+
+    geom_hline(aes(yintercept=0),
+               color="black", size=1)+
+    annotate(geom="segment",
+             x=rep(0,nv),
+             xend=texto$x,
+             y=rep(0,nv),
+             yend=texto$y,color="black",lwd=.5)+
+    geom_label(data=texto,aes(x=x,y=y,label=label),
+               color="black",angle=0,fontface="bold",size=3,fill="white")+
+    labs(x=paste("CP1 (",round(100*ve[1],2),"%)",sep=""),
+         y=paste("CP2 (",round(100*ve[2],2),"%)",sep=""),
+         color="",shape="")+
+    theme(legend.position = "top")+
+    scale_color_viridis_d() #+
+    # xlim(min(pc1c)*1.5,max(pc1c)*1.5) 
+  print(bi_plot)
+  
+  print("==== Tabela da correlação dos atributos com cada PC ====")
+      ck<-sum(pca$sdev^2>=0.98)
+      tabelapca<-vector()
+      for( l in 1:ck) tabelapca<-cbind(tabelapca,mcor[,l])
+      colnames(tabelapca)<-paste(rep(c("PC"),ck),1:ck,sep="")
+      pcat<-round(tabelapca,3)
+      tabelapca<-tabelapca[order(abs(tabelapca[,1])),]
+      print(tabelapca)
 }
-corrplot::corrplot(mf, method = "ellipse")
 ```
