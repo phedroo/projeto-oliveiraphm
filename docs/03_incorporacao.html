@@ -9,9 +9,11 @@
 <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
+<meta name="author" content="Oliveira, P.H.M." />
 
+<meta name="date" content="2025-10-28" />
 
-<title>deter-queimadas.knit</title>
+<title>03_incorporacao</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -348,279 +350,423 @@ display: none;
 
 
 
+<h1 class="title toc-ignore">03_incorporacao</h1>
+<h4 class="author">Oliveira, P.H.M.</h4>
+<h4 class="date">2025-10-28</h4>
 
 </div>
 
 
-<div id="deter---queimadas-e-desmatamento" class="section level2">
-<h2>Deter - Queimadas e desmatamento</h2>
+<div id="pré-processameto-script" class="section level3">
+<h3>🛠️ Pré-processameto <a href="https://arpanosso.github.io//projeto-oliveiraphm//02_preprocessamento.html">script</a></h3>
+</div>
+<div id="preparação-dos-dados-para-análise." class="section level3">
+<h3>🛠 Preparação dos dados para análise.</h3>
 <pre class="r"><code>library(tidyverse)
-library(sf) # ler shapefile</code></pre>
-<pre class="r"><code># Exemplo com os três shapefiles
-amz &lt;- st_read(&quot;../data-raw/dados_brutos/deter_queimadas/deter-amz-deter-public.shp&quot;) # ALB (completo, desde 2016)
-
-# cerrado &lt;- st_read(&quot;../data-raw/dados_brutos/deter_queimadas/deter-cerrado-nb-deter-public.shp&quot;) # Somente desmatamento
-
-pantanal &lt;- st_read(&quot;../data-raw/dados_brutos/deter_queimadas/deter-pantanal-deter-public.shp&quot;) # Dados de cicatriz de queimada Somente a partir de 2023</code></pre>
-<pre class="r"><code># EXEMPLIFICANDO COM AMAZONIA
-# Ver estrutura
-# str(amz)
-# 
-# # Visualizar os primeiros registros
-# head(amz) 
-#   # ou
-#   glimpse(amz)
-# 
-# # Visualizar nomes das colunas
-# names(amz) #Coluna de interesse (&quot;CLASSNAME&quot;)
-# 
-# # Visualizar nomes das linhas da coluna &quot;CLASSNAME&quot;
-# amz$CLASSNAME
-# 
-# # Quantificar observações
-# table(amz$CLASSNAME)
-# 
-#   # Verificar valores únicos de classe e estado
-#   unique(amz$CLASSNAME) # Linha de interesse (&quot;CICATRIZ_DE_QUEIMADA&quot;)
-#   unique(amz$UF) # Somente MT
-#   
-
-
-# Filtrar para linha de interesse
-amz &lt;- amz |&gt;
-    # select(CLASSNAME, VIEW_DATE, UF, geometry, MUNICIPALI)
-    mutate(
-      bioma = &quot;Amazônia&quot;
-    ) |&gt; 
-    filter(CLASSNAME == &quot;CICATRIZ_DE_QUEIMADA&quot;,
-           UF == &quot;MT&quot;)
-
-
-# Plot simples
-# plot(st_geometry(amz))
-
-
-ggplot(amz) +
-  geom_sf() +  # Preenchimento por bioma, sem contorno
-  # scale_fill_manual(values = c(&quot;Amazônia&quot; = &quot;#1b9e77&quot;, 
-  #                              &quot;Cerrado&quot; = &quot;#d95f02&quot;, 
-  #                              &quot;Pantanal&quot; = &quot;#7570b3&quot;)) +
-  theme_minimal() +
-  labs(title = &quot;Queimada Amazônia Legal brasileira (DETER)&quot;) +
-  theme(legend.position = &quot;bottom&quot;)</code></pre>
-<pre class="r"><code># str(cerrado)
-# glimpse(cerrado)
-# unique(cerrado$UF)
-# 
-# cerrado &lt;- cerrado |&gt; 
-#   mutate(
-#     bioma = &quot;Cerrado&quot;
-#   ) |&gt; 
-#   filter(CLASSNAME == &quot;DESMATAMENTO_CR&quot;, # Só desmat
-#                      UF == c(&quot;MT&quot;, &quot;MS&quot;, &quot;GO&quot;, &quot;DF&quot;))
-# 
-# ggplot(cerrado) +
-#   geom_sf() +  # Preenchimento por bioma, sem contorno
-#   # scale_fill_manual(values = c(&quot;Amazônia&quot; = &quot;#1b9e77&quot;, 
-#   #                              &quot;Cerrado&quot; = &quot;#d95f02&quot;, 
-#   #                              &quot;Pantanal&quot; = &quot;#7570b3&quot;)) +
-#   theme_minimal() +
-#   labs(title = &quot;Desmatamento Cerrado (DETER)&quot;) +
-#   theme(legend.position = &quot;bottom&quot;)</code></pre>
-<pre class="r"><code># str(pantanal)
-glimpse(pantanal)
-unique(pantanal$CLASS_NAME)
-
-pantanal &lt;- pantanal |&gt; 
-  mutate(CLASSNAME = CLASS_NAME,
-         bioma = &quot;Pantanal&quot;) |&gt; # padronizar nome da coluna
-  filter(CLASSNAME == &quot;cicatriz de queimada&quot;)
-
-ggplot(pantanal) +
-  geom_sf() +  # Preenchimento por bioma, sem contorno
-  # scale_fill_manual(values = c(&quot;Amazônia&quot; = &quot;#1b9e77&quot;, 
-  #                              &quot;Cerrado&quot; = &quot;#d95f02&quot;, 
-  #                              &quot;Pantanal&quot; = &quot;#7570b3&quot;)) +
-  theme_minimal() +
-  labs(title = &quot;Queimada Pantanal (DETER)&quot;) +
-  theme(legend.position = &quot;bottom&quot;)</code></pre>
-<pre class="r"><code># Unindo shapefiles em um único
-deter_all &lt;- bind_rows(amz, cerrado, pantanal)
-
-# Gerando plot dos biomas 
-ggplot(deter_all) +
-  geom_sf(aes(fill = bioma), color = NA) +
-  scale_fill_manual(values = c(
-    &quot;Amazônia&quot; = &quot;#1b9e77&quot;,
-    &quot;Cerrado&quot; = &quot;#d95f02&quot;,
-    &quot;Pantanal&quot; = &quot;#7570b3&quot;
-  )) +
-  theme_minimal() +
-  labs(title = &quot;Áreas com Cicatriz de Queimada e Desmatamento (DETER)&quot;,
-       fill = &quot;Bioma&quot;) +
-  theme(legend.position = &quot;bottom&quot;)
-
-# Baixando arquivo shapefile unido
-# write_rds(deter_all, &quot;areas-queimada-biomas&quot;)
-deter_all$geometry[[1]] |&gt; plot()
-deter_all |&gt; 
-  mutate(ANO = year(VIEW_DATE)) |&gt; 
-  filter(ANO == 2021) |&gt; 
-  ggplot() +
-  geom_sf(aes(fill = bioma), color = NA) +
-  scale_fill_manual(values = c(
-    &quot;Amazônia&quot; = &quot;#1b9e77&quot;,
-    &quot;Cerrado&quot; = &quot;#d95f02&quot;,
-    &quot;Pantanal&quot; = &quot;#7570b3&quot;
-  )) +
-  theme_minimal() +
-  labs(title = &quot;Áreas com Cicatriz de Queimada e Desmatamento (DETER)&quot;,
-       fill = &quot;Bioma&quot;) +
-  theme(legend.position = &quot;bottom&quot;) </code></pre>
-<pre class="r"><code># Averiguação do Cálculo da Área
-# pantanal |&gt; slice(1) |&gt; pull(geometry) |&gt; plot()# 0.1000308
-# coords &lt;- pantanal$geometry[[1]] |&gt; as.matrix()
-# geosphere::areaPolygon(coords) / 1000000
-
-func_ret_x &lt;-function(geometria){
-  ob &lt;- geometria[[1]] |&gt; as.matrix()
-  mean(ob[,1])
-}
-
-func_ret_y &lt;-function(geometria){
-  ob &lt;- geometria[[1]] |&gt; as.matrix()
-  mean(ob[,2])
-}
-
-df &lt;- deter_all |&gt;  
-  group_by(geometry) |&gt; 
-  mutate(
-  ANO = year(VIEW_DATE),
-  x = func_ret_x(geometry),
-  y = func_ret_y(geometry)
-) 
-df |&gt; 
-  as_tibble() |&gt; 
-  # write_rds(&quot;../data-raw/deter-queimadas.rds&quot;)</code></pre>
-<div id="entrada-com-a-base-deter-queimadas.rds" class="section level3">
-<h3>💨 Entrada com a Base: <code>deter-queimadas.rds</code></h3>
-<pre class="r"><code># original archive &quot;deter-queimadas.rds&quot; = 122,1mb
-
-deter_queimadas &lt;- read_rds(&quot;../data-raw/deter-queimadas.rds&quot;) |&gt; 
-  rename(
-    longitude = x,
-    latitude = y
-  )
-
-glimpse(deter_queimadas)</code></pre>
-<div id="classificando-cada-ponto-em-município" class="section level4">
-<h4>Classificando cada ponto em município</h4>
-<pre class="r"><code>library(sf)
-library(dplyr)
-library(lwgeom) # para st_make_valid
-
-municipality_sf &lt;- municipality %&gt;%
-  st_transform(crs = 4326) %&gt;%
-  st_make_valid()
-
-deter_queimadas_sf &lt;- st_as_sf(
-  deter_queimadas,
-  coords = c(&quot;longitude&quot;, &quot;latitude&quot;),
-  crs = 4326,
-  remove = FALSE # mantém as colunas originais lon/lat
-)
-
-deter_queimadas_sf &lt;- st_join(
-  deter_queimadas_sf,
-  municipality_sf %&gt;% select(name_muni),
-  join = st_within
-)
-
-deter_queimadas_sf &lt;- deter_queimadas_sf %&gt;%
-  mutate(city_ref = ifelse(is.na(name_muni), &quot;Other&quot;, name_muni)) %&gt;%
-  select(-name_muni) # remove coluna original para evitra duplicada
-
-deter_queimadas &lt;- as.data.frame(deter_queimadas_sf)
-
-glimpse(deter_queimadas)
-
-# Salvar
-# write_rds(deter_queimadas, &quot;data-raw/deter_queimadas.rds&quot;)</code></pre>
-</div>
-<div id="classificando-cada-ponto-em-estado" class="section level4">
-<h4>Classificando cada ponto em estado</h4>
-<pre class="r"><code>library(sf)
 library(geobr)
-
-# Transformar em objeto sf (coordenadas lon/lat, CRS WGS84), 
-# Nesse caso os pontos já estão em lon/lat, EPSG:4326
-deter_queimadas_sf &lt;- st_as_sf(deter_queimadas, 
-                    coords = c(&quot;longitude&quot;, &quot;latitude&quot;), 
-                    crs = 4326,
-                    remove = FALSE)
-
-# Estados do geobr (CRS do pacote é o SIRGAS 4674)
-estados &lt;- geobr::read_state(year = 2020) |&gt; 
-  st_transform(crs = 4326)   # transforma para mesmo sistema de referência de coord (WGS84)
-
-# Join espacial
-deter_queimadas &lt;- st_join(deter_queimadas_sf, estados[&quot;abbrev_state&quot;])
-
-# Converter para data frame e renomear coluna 
-deter_queimadas &lt;- as_data_frame(deter_queimadas |&gt; 
-                               rename(&quot;state&quot; = abbrev_state))
-
-# Visualizar resumo
-glimpse(deter_queimadas)
-tail(deter_queimadas)
-
-# Padronizar colunas
-deter_queimadas &lt;- deter_queimadas |&gt; 
-  mutate(CLASSNAME = as.character(CLASSNAME),
-    CLASSNAME = case_when(
-    CLASSNAME == &quot;cicatriz de queimada&quot; ~ &quot;CICATRIZ_DE_QUEIMADA&quot;,
-    TRUE ~ CLASSNAME
-  ))
-
-# Converter para data frame novamente 
-deter_queimadas &lt;- as_data_frame(deter_queimadas)
-
-# Salvar
-# write_rds(deter_queimadas, &quot;../data/deter_queimadas.rds&quot;)</code></pre>
+library(gstat)
+library(sf)
+library(dplyr)
+library(purrr) # criar funções
+library(tibble)
+source(&quot;../R/my-function.R&quot;) </code></pre>
+<div id="definindo-estados" class="section level4">
+<h4>Definindo estados</h4>
+<pre class="r"><code>my_states &lt;- c(&quot;MS&quot;,&quot;MT&quot;,&quot;GO&quot;,&quot;DF&quot;)</code></pre>
 </div>
 </div>
-<div id="focos-de-queimadas---terrabrasilis" class="section level3">
-<h3>Focos de queimadas - Terrabrasilis</h3>
-<p>Esta base não contém dados de queimada por município, somente os
-focos por estados</p>
-<p>Arquivo deter-fogo-28-09-2025-20_46_38.csv (baixado em: <a href="https://terrabrasilis.dpi.inpe.br/app/dashboard/fires/biomes/aggregated/#" class="uri">https://terrabrasilis.dpi.inpe.br/app/dashboard/fires/biomes/aggregated/#</a>)</p>
-<pre class="r"><code>focos_queimadas &lt;- read.csv(&quot;../data-raw/dados_brutos/deter_queimadas/all_dashboard-fires-month-25-10-2025-09_15_56.csv&quot;,
-         sep = &quot;;&quot;)
+<div id="entrada-com-a-base-emissions-sources.rds" class="section level3">
+<h3>💨 Entrada com a Base: <code>emissions-sources.rds</code></h3>
+<pre class="r"><code>emissions_sources &lt;- read_rds(&quot;../data/emissions_sources_final.rds&quot;)|&gt; 
+  filter(sigla_uf %in% my_states)
+glimpse(emissions_sources)</code></pre>
+<div id="filtrando-os-polígonos-do-municípios" class="section level4">
+<h4>Filtrando os polígonos do municípios</h4>
+<pre class="r"><code>munici_state &lt;- municipality |&gt; 
+  filter(abbrev_state %in% my_states)
+pol_ms &lt;- states |&gt; filter(abbrev_state == &quot;MS&quot;) |&gt; 
+  pull(geom) |&gt; pluck(1) |&gt; as.matrix()
+pol_mt &lt;- states |&gt; filter(abbrev_state == &quot;MT&quot;) |&gt; 
+  pull(geom) |&gt; pluck(1) |&gt; as.matrix()
+pol_go &lt;- states |&gt; filter(abbrev_state == &quot;GO&quot;) |&gt; 
+  pull(geom) |&gt; pluck(1) |&gt; as.matrix()
+pol_df &lt;- states |&gt; filter(abbrev_state == &quot;DF&quot;) |&gt; 
+  pull(geom) |&gt; pluck(1) |&gt; as.matrix()</code></pre>
+<!--
+### ⛓️ Carregando as novas bases
 
-# Considerando todo tipo de foco de incêndio
-focos_queimadas &lt;- focos_queimadas |&gt; 
-  mutate(
-    uf = case_when(
-      uf == &quot;GOIÁS&quot; ~ &quot;GO&quot;,
-      uf == &quot;MATO GROSSO DO SUL&quot; ~ &quot;MS&quot;,
-      uf == &quot;MATO GROSSO&quot; ~ &quot;MT&quot;
-    )
-  ) |&gt; 
-  filter(
-  uf == c(&quot;GO&quot;, &quot;MS&quot;, &quot;MT&quot;)) |&gt;
-  separate(date, into = c(&quot;ano&quot;, &quot;mes&quot;), sep = &quot;/&quot;) |&gt; 
-  mutate(
-    ano = as.integer(ano),
-    mes = as.integer(mes)
-  ) |&gt; 
-  arrange(ano) |&gt; 
-  group_by(uf, ano) |&gt; 
+
+``` r
+# Empilhando lista de caminho de arquivos
+file_kgr_bind <- list.files("data/",
+                      full.names = TRUE,pattern = "bind")
+
+# Vetor para padronizar nomes para lat e lon
+new_names_b = c(lat = "latitude", lon = "longitude")
+
+# Função para leitura e padronização dos nomes das colunas/variáveis dos arquivos kgr
+read_kgr <- function(path){
+  df <- readr::read_rds(path) |> 
+    janitor::clean_names() |> # padronizar colunas
+    dplyr::rename(dplyr::any_of(new_names_b))
+  
+  nome <- df[3] |> names()    
+  new_name_b <- c(value = nome)
+  df <- df |> 
+    mutate(
+      variable = nome
+    ) |> 
+    dplyr::rename(dplyr::any_of(new_name_b))
+  return(df)  
+};read_kgr(file_kgr_bind[1])
+
+# Aplicando função para leitura e construindo novo DataFrame
+data_set_kgr_bind <- map_df(file_kgr_bind,read_kgr)
+
+# Reorganizando DataFrame criado
+data_set_kgr_bind2 <- data_set_kgr_bind |> 
+  filter(year %in% 2015:2023, # período de análise
+         state %in% my_states) |> 
+  group_by(year, state, city_ref, variable) |> 
   summarise(
-    focos = sum(focuses, na.rm = TRUE)
-  ) 
+    value_mean = mean(value, na.rm=TRUE),
+    .groups = "drop") |>
+  pivot_wider(names_from = variable, values_from = value_mean) # reduz linhas
+```
 
-# Salvar
-# write_rds(focos_queimadas, &quot;../data/focos_queimadas.rds&quot;)</code></pre>
+### Criar os mapas por variáveis por ano para verifcar os municípios não plotados 
+
+Vamos verificar onde estão os NA
+
+
+``` r
+# my_year <- 2015 # definindo ano
+# variavel <- "xch4" # definindo a variável
+# anos <- if (variavel == "xch4") 2015:2021 else 2015:2023 #definindo anos, caso a variável seja xch4, anos até 2021, que é até onde contém os dados da variável
+# 
+# # Plotando mapas variável/ano
+# mapas <- map(anos, function(my_year) { #map -> Aplicando função para cada elemento de vetor
+#   municipality |> 
+#     filter(abbrev_state %in% my_states) |> 
+#     left_join( 
+#       data_set_kgr_bind2 |>
+#         filter(variavel == all_of(variavel),
+#                state %in% my_states) |> 
+#         group_by(year, city_ref) |> 
+#         rename(name_muni = city_ref),
+#       by = c("name_muni")
+#     ) |> 
+#     filter(year == my_year) |> 
+#     ungroup() |> 
+#     ggplot()  +
+#     geom_sf(aes(fill = variavel), color="transparent",
+#             size=.05, show.legend = TRUE) +
+#     labs(title = paste("Ano:", my_year, "-", variavel))
+#   
+# })
+# 
+# mapas[[1]]
+
+# municipality |>
+#   filter(abbrev_state %in% my_states) |> 
+#   ggplot() +
+#   geom_sf() +
+#   geom_point(data = data_set_kgr,
+#              aes(x = lon, y = lat, color = "red"))
+```
+
+Foram verificados: 
+1. Classificação por estado e municípios das bases
+2. Adição da base
+3. Krigagem
+
+Desde a varificação 1, observa-se somente cerca de 90 observações para os municípios do estado de GO, estando ausentes mais de 150 municípios. Não foram verificados problemas em nenhuma destas verificações.
+
+O problema esta que, a krigagem é feita, mas não adicionam os valores observados, apenas é possível visualizá-los no plot, ou seja, o arquivo kgr.rds gerado não contém tais dados, ficando como "NA".
+
+Para resolver, deve-se agregar a krigagem à geometria municipal para que todos os municípios sejam preenchidos.   
+  Isto ja havia sido feito em "nasa_xco2_bind", no entanto, não foi este o arquivo kgr salvo na pasta data-raw, logo gerando os NAs mesmo após a krigagem.
+    Sendo assim, basta fazer o bind e salvar os arquivos de cada variável (FEITO)
+
+### Função para atribuir a mediana em um município, a partir da observação média da mediana de municípios vizinhos 
+
+
+``` r
+# Função para imputar NAs pela mediana dos até n vizinhos mais próximos
+impute_NAs_vizinhos <- function( 
+    # Determinando parâmetros e valores da função
+  df,
+  coords = NULL,  # data.frame com colunas city_col, lat_col, lon_col
+  vars = NULL,    # vetores de colunas a imputar; se NULL, usa todas exceto agrupadoras
+  n_neighbors = 3, # n° de vizinhos para calcular mediana
+  year_col = "year", # nome da coluna com o ano
+  state_col = "state", # nome da coluna com o estado
+  city_col = "city_ref", # nome da coluna com o município
+  lat_col = "lat", # nome da coluna com a latitude
+  lon_col = "lon", # nome da coluna coma longitude
+  same_state = TRUE, # só considera vizinhos do mesmo estado
+  verbose = TRUE # mostrar mensagens de aviso no console
+){
+  # Checagens iniciais:
+  
+    # Verificar se o data.frame tem as colunas city_col...
+  if (!is.null(coords) && !all(c(city_col, lat_col, lon_col) %in% names(coords)))
+    
+    # Verificar se o pacote geosphere (usado para calcular distâncias entre coordenadas geográficas) está instalado.
+  if (!is.null(coords) && !requireNamespace("geosphere", quietly = TRUE)) {
+    stop("Instale o pacote 'geosphere' para usar coordenadas: install.packages('geosphere')")
+  }
+
+  # Garantir que df esteja no formato data.frame
+  df <- as.data.frame(df)
+  
+  # Encontrar a diferença entre dois conjuntos pelo "setdiff", retornando elementos do primeiro conjunto "(names (df))", ou seja, retornam as colunas do df que não sejam as de identificação "year_col, state_col, city_col".
+  if (is.null(vars)) {
+    vars <- setdiff(names(df), c(year_col, state_col, city_col))
+  }
+
+  # Normalizar coords 
+  if (!is.null(coords)) {
+    coords <- as.data.frame(coords)
+    coords_map <- coords[!duplicated(coords[[city_col]]), c(city_col, lat_col, lon_col)] # remover duplicatas
+  }
+
+  # Objetos de saída
+  out_df <- df # cópia do ddf, onde os valores imputados serão salvos
+  imputed_list <- list() # guardará um registro com tudo o que foi imputado
+
+  # Loop pelos anos
+  years <- unique(df[[year_col]]) # extrai anos únicos
+  for (y in years) { # y contém o valor do ano atual na iteração
+    sub <- df[df[[year_col]] == y, , drop = FALSE] # cria subconjunto com os dados apenas do ano determinado e garante que seja um data.frame (drop = FALSE)
+    # 'sub' é o subconjunto do data.frame contendo apenas os dados de um único ano
+
+    # Loop pelas variáveis
+    for (var in vars) {
+      nas_idx <- which(is.na(sub[[var]])) # encontrar quais linhas tem NA
+      if (length(nas_idx) == 0) next # Se não encontra NA passa
+
+      # Loop por cada NA
+      for (i in nas_idx) {
+        city <- sub[[city_col]][i] # guarda cidade
+        city_state <- sub[[state_col]][i] # guarda estado
+
+        # Vetor vazio para depois armazenar os vizinhos usados para imputar o valor
+        neighs_used <- character(0)
+        
+        # Busca dos vizinhos mais próximos
+        if (!is.null(coords)) {
+          
+          # Busca coords da cidade atual
+          tgt_row <- coords_map[coords_map[[city_col]] == city, , drop = FALSE]
+          # Se não cncontrar mostra mensagem e pula
+          if (nrow(tgt_row) == 0) {
+            if (verbose) message("Sem coords para ", city, " (ano ", y, "). Pulando.")
+            next
+          }
+          tgt_lon <- as.numeric(tgt_row[[lon_col]][1])
+          tgt_lat <- as.numeric(tgt_row[[lat_col]][1])
+
+          # Seleção dos 'candidatos' a vizinhos
+            # Candidatos com mesmos ano, (opcionalmente) mesmo estado (se same_state = TRUE), valor não-NA, != self
+          candidates <- sub[!is.na(sub[[var]]), , drop = FALSE] # valor não-NA
+          # 'candidates' passa a ser um subconjunto do ano atual contendo apenas as cidades que têm valores válidos (não NA) para aquela variável
+          
+          # Filtro adicional opcional controlado pelo parâmetro 'same_state'
+          # Se same_state = TRUE, então:
+            # Filtra o data.frame de candidatos para manter apenas os municípios do mesmo estado (state_col) da cidade-alvo (city_state)
+          # Se same_state = FALSE, então:
+            # A linha é ignorada (nenhum filtro é aplicado)
+          if (same_state) candidates <- candidates[candidates[[state_col]] == city_state, , drop = FALSE]
+          
+          # Remover própria cidade da lista de candidatos
+          candidates <- candidates[candidates[[city_col]] != city, , drop = FALSE]
+          
+          # Verificar se sobrou algum candidato
+          if (nrow(candidates) == 0) { # contagem de cidades que restaram
+            if (verbose) message("Nenhum candidato não-NA para ", city, " / ", var, " em ", y) 
+            next
+          }
+
+          # Obter coords dos candidatos e verificar quais não são NA em lat/lon
+          cand_idx <- match(candidates[[city_col]], coords_map[[city_col]])
+          valid_cand <- !is.na(cand_idx) & !is.na(coords_map[[lon_col]][cand_idx]) & !is.na(coords_map[[lat_col]][cand_idx])
+          if (!any(valid_cand)) next
+
+          # Calcular distâncias e ordenar
+            # Este trecho:
+              # Cria uma matriz com as coordenadas dos candidatos válidos;
+              # Usa geosphere::distHaversine() para calcular a distância geográfica (em metros) entre a cidade-alvo e os candidatos;
+              # Ordena os municípios pela menor distância (ord);
+              # Seleciona apenas os n vizinhos mais próximos, definidos em n_neighbors (por padrão, 3).
+          cand_cities <- candidates[[city_col]][valid_cand]
+          cand_coords_mat <- cbind(
+            as.numeric(coords_map[[lon_col]][cand_idx[valid_cand]]),
+            as.numeric(coords_map[[lat_col]][cand_idx[valid_cand]])
+          )
+            # distâncias e ordenação
+          dists <- geosphere::distHaversine(matrix(c(tgt_lon, tgt_lat), nrow = 1),
+                                            cand_coords_mat)
+          ord <- order(dists, na.last = NA)
+          neighs_used <- cand_cities[ord][1:min(length(ord), n_neighbors)]
+        }
+
+        # Imputação do valor
+          # Se conseguimos vizinhos, imputar mediana
+            # Este trecho:
+             # Pega os valores da variável (var) nos vizinhos escolhidos.
+             # Calcula a mediana desses valores.
+             # Essa mediana será o novo valor imputado.
+        if (length(neighs_used) == 0) next
+        neighbor_vals <- sub[[var]][match(neighs_used, sub[[city_col]])]
+        new_value <- median(neighbor_vals, na.rm = TRUE)
+
+        # Atribuir ao data.frame de saída
+          # Este trecho:
+            # Encontra a linha correspondente no out_df (mesmo ano e cidade) e substitui o NA pelo valor imputado (new_value)
+        idx_out <- which(out_df[[year_col]] == y & out_df[[city_col]] == city)
+        if (length(idx_out) >= 1) {
+          out_df[idx_out, var] <- new_value
+        }
+
+        # Registrar no log os detalhes da imputação
+          # Este trecho:  
+            # Cria um registro com detalhes da imputação:
+            # ano, cidade, estado, variável imputada, número de vizinhos usados, quais foram, e o valor imputado.
+            # Cada registro é guardado como um tibble dentro de imputed_list.
+        imputed_list[[length(imputed_list) + 1]] <-
+          tibble::tibble(
+            year = y,
+            city_ref = city,
+            state = city_state,
+            variable = var,
+            n_neighbors = length(neighs_used),
+            neighbors = paste0(neighs_used, collapse = "|"),
+            imputed_value = new_value
+          )
+      } # end each NA row
+    } # end each var
+  } # end each year
+
+  # Finalização
+    # Este trecho:
+      # Junta todos os registros (imputed_list) em um único data frame chamado imputation_log.
+      # Retorna uma lista com dois elementos:
+      # data → o banco com NAs preenchidos (out_df)
+      # log → o histórico de imputações realizadas (imputation_log)
+  imputation_log <- if (length(imputed_list) > 0) dplyr::bind_rows(imputed_list) else tibble::tibble()
+  return(list(data = out_df, log = imputation_log))
+}
+```
+
+
+### Aplicando a função `impute_NAs_vizinhos`
+
+
+``` r
+# data_set_kgr_bind2  (Com: year, state, city_ref, e variáveis a imputar)
+# muni_coords         (Colunas: city_ref, latitude, longitude)
+
+# Criando uma tabela auxiliar contendo lat/lon de cada município
+muni_coords <- data_set_kgr_bind |>
+  filter(
+    state %in% my_states
+  ) |>
+  select(city_ref, lat, lon) |>
+  distinct()
+
+# Lista de variáveis a imputar/completar 
+vars_to_impute <- c("precipitacao","temperatura","radiacao","vento","umidade","xco2","xch4","sif_757","pressao")
+
+# Resultado (chamada da função de imputação)
+result <- impute_NAs_vizinhos(
+  df = data_set_kgr_bind2,
+  coords = muni_coords,
+  vars = vars_to_impute,
+  n_neighbors = 3, # n° de municípios vizinhos
+  year_col = "year",
+  state_col = "state",
+  city_col = "city_ref",
+  lat_col = "lat",
+  lon_col = "lon",
+  same_state = TRUE
+)
+
+# Banco de dados com NAs preenchidos
+df_kgr_preenchido <- result$data       
+df_kgr_preenchido
+
+# Analisar quais municípios/variáveis foram imputados
+# imputation_log <- result$log 
+
+# Contagem de NAs
+# sum(is.na(filled_df)) # reduziram drasticamente
+
+# Observação:
+# Nenhum candidato não-NA para xch4 a partir de 2022 pois só contém até o ano de 2021
+
+# Carregar base atual para posterior incorporação com as restantes
+# write_rds(df_kgr_preenchido, "data/parcial_base.rds")
+```
+
+### Verificação dos valores NA preenchidos (grande maioria para municípios de GO)
+
+``` r
+# data_set_kgr_bind2 |> 
+#   filter(
+#     state == 'GO'
+#   )
+# 
+# data_set_kgr_bind2 |> 
+#   filter(state == 'MS')
+# 
+# df_kgr_preenchido |> 
+#   filter(state == 'GO')
+# 
+# df_kgr_preenchido |> 
+#   filter(state == 'MS')
+```
+-->
+</div>
+</div>
+<div id="entrada-com-a-base-parcial-parcial_base.rds" class="section level2">
+<h2>💨 Entrada com a base parcial <code>parcial_base.rds</code></h2>
+<p><strong>É a mesma que a “df_kgr_preenchido”</strong></p>
+<p>Essa base apresenta os dados do nasapower, oco2 e gosat. Portanto,
+faltam incorporar as bases do modis, deter, prodes e a climate
+trace.</p>
+<pre class="r"><code>base_parcial &lt;- read_rds(&quot;../data/parcial_base.rds&quot;) |&gt; 
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), &quot;Latin-ASCII&quot;),
+    city_ref = trimws(city_ref)
+  )</code></pre>
+<div id="carregando-as-bases-faltantes" class="section level3">
+<h3>🔋 Carregando as bases faltantes</h3>
+<pre class="r"><code># Carregando bases
+deter &lt;- read_rds(&quot;../data/deter_final.rds&quot;)
+prodes &lt;- read_rds(&quot;../data/prodes_final.rds&quot;)
+modis &lt;- read_rds(&quot;../data/appeears_modis_final.rds&quot;)
+climate_trace &lt;- read_rds(&quot;../data/emissions_sources_final.rds&quot;)</code></pre>
+</div>
+<div id="incorporando-as-bases-faltantes-e-criando-a-base-completa" class="section level3">
+<h3>⛓️ Incorporando as bases faltantes e Criando a base completa</h3>
+<p>Essa base contém todas as variáveis em estudo <em>Lembrando:
+Variáveis como xch4 (até 2021), et (apartir de 2021) e emissions
+quantity (até 2023) não estao presente para todos os anos</em></p>
+<pre class="r"><code>base_completa &lt;- base_parcial |&gt; 
+  left_join(deter,
+  by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;))|&gt; 
+  left_join(prodes |&gt; 
+    select(state, city_ref, year, desmatamento),
+  by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;))|&gt; 
+  left_join(modis |&gt; select(
+    year, state, city_ref, media_fpar, media_lai, media_evi, media_ndvi, media_et),
+  by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;))|&gt;
+  left_join(climate_trace,
+  by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;))
+
+glimpse(base_completa)
+# write_rds(base_completa, &quot;../data/base_completa.rds&quot;)</code></pre>
 </div>
 </div>
 

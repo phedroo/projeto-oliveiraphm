@@ -31,9 +31,10 @@ Este pipeline processa dados ecológicos do **MODIS** extraídos via **APPEEARS*
 # Carregar bibliotecas
 library(tidyverse)
 library(dplyr)
+library(geobr)
 
 # Lista de arquivos
-csv_files_list <- list.files("../data-raw/AppEEARS/", 
+csv_files_list <- list.files("../data-raw/AppEEARS/", # arquivos excluídos 
                        pattern = ".csv", 
                        full.names = TRUE)
 
@@ -103,6 +104,8 @@ appeears |>
 #### Classificando cada ponto em município
 
 ```{r, eval=FALSE}
+library(sf) # para st_make_valid
+
 appeears_modis <- read_rds("../data-raw/appeears-modis.rds")
 
 # 1. Garantir que shapefile de municípios está no mesmo CRS e válido
@@ -140,9 +143,6 @@ glimpse(appeears_modis)
 #### Classificando cada ponto em estado (Método mais rápido)
 
 ```{r, eval=FALSE}
-library(sf)
-library(geobr)
-
 # Transformar em objeto sf (coordenadas lon/lat, CRS WGS84), 
 # Nesse caso os pontos já estão em lon/lat, EPSG:4326
 appeears_modis_sf <- st_as_sf(appeears_modis, 

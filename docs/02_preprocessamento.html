@@ -370,7 +370,7 @@ library(gstat)
 library(vegan)
 library(sf)
 library(dplyr)
-library(lwgeom) # para st_make_valid
+library(stringi)
 source(&quot;../R/my-function.R&quot;)</code></pre>
 <div id="definindo-estados" class="section level4">
 <h4>Definindo estados</h4>
@@ -379,9 +379,30 @@ source(&quot;../R/my-function.R&quot;)</code></pre>
 </div>
 <div id="entrada-com-a-base-emissions-sources.rds" class="section level3">
 <h3>💨 Entrada com a Base: <code>emissions-sources.rds</code></h3>
-<pre class="r"><code>emissions_sources &lt;- read_rds(&quot;data/emissions-sources.rds&quot;)|&gt; 
+<pre class="r"><code>emissions_sources &lt;- read_rds(&quot;../data/emissions_sources.rds&quot;)|&gt; 
   filter(sigla_uf %in% my_states)
 glimpse(emissions_sources)</code></pre>
+<p>Finalizar tratamento para posterior incorporação</p>
+<pre class="r"><code># último tratamento da base prodes
+# normalizando nomes dos municipios e padronizando nomes de colunas
+emissions_sources &lt;- read_rds(&quot;../data/emissions_sources.rds&quot;)
+
+emissions_sources &lt;- emissions_sources |&gt;
+  filter(year %in% 2015:2023,
+         sigla_uf %in% my_states,
+         gas == &quot;co2e_100yr&quot;,
+         sector_name == &quot;agriculture&quot;) |&gt; 
+  select(city_ref, sigla_uf, emissions_quantity, year) |&gt;
+  rename(state = sigla_uf) |&gt; 
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), &quot;Latin-ASCII&quot;),
+    city_ref = trimws(city_ref)
+  ) |&gt; 
+  group_by(year, city_ref, state) |&gt; 
+  summarise(emissions_quantity = mean(emissions_quantity, na.rm = TRUE))
+
+# Filtrado somente para o setor de agricultura
+# write_rds(emissions_sources, &quot;../data/emissions_sources_final.rds&quot;)</code></pre>
 </div>
 <div id="entrada-com-a-base-nasa-xco2.rds" class="section level3">
 <h3>💨 Entrada com a Base: <code>nasa-xco2.rds</code></h3>
@@ -401,35 +422,9 @@ pol_go &lt;- states |&gt; filter(abbrev_state == &quot;GO&quot;) |&gt;
 pol_df &lt;- states |&gt; filter(abbrev_state == &quot;DF&quot;) |&gt; 
   pull(geom) |&gt; pluck(1) |&gt; as.matrix()</code></pre>
 </div>
-<div id="classificando-cada-ponto-em-município" class="section level4">
-<h4>Classificando cada ponto em município</h4>
-<pre class="r"><code># resul &lt;- vector()
-# estado &lt;- nasa_xco2$state
-# for(i in 1:nrow(nasa_xco2)){
-#   if(estado[i]!=&quot;Other&quot;){
-#     my_citys_obj &lt;- municipality %&gt;%
-#       filter(abbrev_state == estado[i])
-#     n_citys &lt;- nrow(my_citys_obj)
-#     my_citys_names &lt;- my_citys_obj %&gt;% pull(name_muni)
-#     resul[i] &lt;- &quot;Other&quot;
-#     for(j in 1:n_citys){
-#       pol_city &lt;- my_citys_obj$geom  %&gt;%
-#         purrr::pluck(j) %&gt;%
-#         as.matrix()
-#       if(def_pol(nasa_xco2$longitude[i],
-#                  nasa_xco2$latitude[i],
-#                  pol_city)){
-#         resul[i] &lt;- my_citys_names[j]
-#       }
-#     }
-#   }
-# }
-# nasa_xco2$city_ref &lt;- resul
-# write_rds(nasa_xco2,&quot;data/nasa-xco2.rds&quot;)</code></pre>
-</div>
 <div id="gerar-mapa" class="section level4">
 <h4>Gerar mapa</h4>
-<pre class="r"><code>my_year = 2015
+<pre class="r"><code>my_year = 2020
 municipality |&gt; 
   filter(abbrev_state %in% my_states) |&gt; 
   left_join(
@@ -738,7 +733,7 @@ glimpse(gosat_xch4)</code></pre>
   filter(year == 2021) |&gt; 
   ggplot(aes(x=longitude,y=latitude)) +
   geom_point()</code></pre>
-<div id="classificando-cada-ponto-em-município-1" class="section level4">
+<div id="classificando-cada-ponto-em-município" class="section level4">
 <h4>Classificando cada ponto em município</h4>
 <p>Já feito no arquivo da pasta docs</p>
 </div>
@@ -995,7 +990,7 @@ gosat_xch4_kgr &lt;- map_df(2015:2021,~{
   return(df_final)
 })
 # write_rds(gosat_xch4_kgr,&quot;data-raw/gosat-xch4-kgr.rds&quot;)</code></pre>
-<pre class="r"><code>xch4_kgr &lt;- read_rds(&quot;../data-raw/gosat-xch4-kgr.rds&quot;)</code></pre>
+<pre class="r"><code>gosat_xch4_kgr &lt;- read_rds(&quot;../data-raw/gosat-xch4-kgr.rds&quot;)</code></pre>
 <pre class="r"><code>gosat_xch4_bind &lt;- gosat_xch4 |&gt; 
   select(longitude,latitude,xch4,city_ref,state,year) |&gt; 
   rbind(gosat_xch4_kgr)
@@ -1312,7 +1307,7 @@ df_kgr$city_ref &lt;- resul</code></pre>
   return(df_final)
 })
 # write_rds(oco2_sif_kgr,&quot;../data-raw/oco2-sif-kgr.rds&quot;)</code></pre>
-<pre class="r"><code>sif_kgr &lt;- read_rds(&quot;../data-raw/oco2-sif-kgr.rds&quot;)</code></pre>
+<pre class="r"><code>oco2_sif_kgr &lt;- read_rds(&quot;../data-raw/oco2-sif-kgr.rds&quot;)</code></pre>
 <pre class="r"><code>oco2_sif_bind &lt;- oco2_sif |&gt; 
   select(longitude,latitude,SIF_757,city_ref,state,year) |&gt; 
   rbind(oco2_sif_kgr)
@@ -1353,7 +1348,7 @@ map(2015:2023,~{
          x = &#39;Longitude&#39;,
          y = &#39;Latitude&#39;,
          title = .x) +
-    scale_fill_viridis_c()})
+    scale_fill_viridis_c(limits = c(0,.5))})
 
 # write_rds(oco2_sif_bind,&quot;../data/oco2-sif-bind.rds&quot;)</code></pre>
 </div>
@@ -1363,14 +1358,7 @@ map(2015:2023,~{
 <pre class="r"><code># original archive &quot;appeears-modis.rds&quot; = 8,7mb
 # appeears data requisited by API (project fapesp)
 
-appeears_modis &lt;- read_rds(&quot;data/appeears_modis.rds&quot;) |&gt; 
-  rename(
-    FPAR = media_fpar,
-    LAI = media_lai,
-    NDVI = media_ndvi,
-    EVI = media_evi,
-    ET = media_et
-  )
+appeears_modis &lt;- read_rds(&quot;../data/appeears_modis.rds&quot;)
 
 glimpse(appeears_modis)</code></pre>
 <pre class="r"><code>appeears_modis |&gt; 
@@ -1382,15 +1370,15 @@ glimpse(appeears_modis)</code></pre>
 <pre class="r"><code># my_year = 2021
 
 # Definir a variável
-variavel &lt;- &quot;FPAR&quot; # &lt;-- mudar
+variavel &lt;- &quot;media_lai&quot; # &lt;-- mudar
 
 # Definir os limites esperados para cada variável - padronizar visualização
 limits_map &lt;- list(
-  NDVI = c(-1, 1),
-  EVI  = c(-1, 1),
-  FPAR = c(0, 1),
-  LAI  = c(0, 7), # máximo valor = 6,85 (após remoção de outliers)
-  ET   = NULL     # sem limite fixo
+  media_ndvi = c(-1, 1),
+  media_evi  = c(-1, 1),
+  media_fpar = c(0, 1),
+  media_lai  = c(0, 7), # máximo valor = 6,85 (após remoção de outliers)
+  media_et   = NULL     # sem limite fixo
 )
 
 # Limite para a variável atual
@@ -1399,54 +1387,75 @@ limites &lt;- limits_map[[variavel]]
 # .data[[variavel]] # Para reconhecer o objeto &quot;variavel&quot; como nome de coluna, e não como string
 
 # Definir os anos
-anos &lt;- if (variavel == &quot;ET&quot;) 2021:2023 else 2015:2023
+anos &lt;- if (variavel == &quot;media_et&quot;) 2021:2023 else 2015:2023
 
 # Aplicando função para geração dos mapas de cada ano
-for (my_year in anos) {
+# for (my_year in anos) {
+# 
+#   # Gerando mapas
+# p &lt;- municipality |&gt;
+#   filter(abbrev_state %in% my_states) |&gt;
+#   left_join(
+#     appeears_modis |&gt;
+#       group_by(year, city_ref) |&gt;
+#       reframe( #retornar somente coluna da variavel
+#         !!variavel := .data[[variavel]],na.rm=TRUE, # VERIFICAR - municipios em cinza ao cacular a media
+#         .groups = &quot;drop&quot;
+#       ) |&gt;
+#       filter(.data[[variavel]] &lt;= 200) |&gt; # Filtrar outliers absurdos
+#       rename(name_muni = city_ref),
+#     by = c(&quot;name_muni&quot;)
+#   ) |&gt;
+#   filter(year == my_year) |&gt;
+#   ggplot()  +
+#   geom_sf(aes(fill=.data[[variavel]]), color=&quot;transparent&quot;,
+#           size=.05, show.legend = TRUE)  +
+#   # geom_point(data = appeears_modis |&gt;
+#   #              filter(year==my_year),
+#   #              aes(lon, lat, #size = emission,
+#   #                  color=&quot;red&quot;))+
+#   theme_bw() +
+#   theme(
+#     axis.text.x = element_text(size = rel(.9), color = &quot;black&quot;),
+#     axis.title.x = element_text(size = rel(1.1), color = &quot;black&quot;),
+#     axis.text.y = element_text(size = rel(.9), color = &quot;black&quot;),
+#     axis.title.y = element_text(size = rel(1.1), color = &quot;black&quot;),
+#     legend.text = element_text(size = rel(1), color = &quot;black&quot;),
+#     legend.title = element_text(face = &#39;bold&#39;, size = rel(1.2))
+#   ) +
+#   labs(fill = variavel,
+#        x = &#39;Longitude&#39;,
+#        y = &#39;Latitude&#39;) +
+#   scale_fill_viridis_c(limits = limites)
+# 
+#   print(p)
+# 
+#     ggsave(filename = paste0(&quot;../img/mapa_&quot;, variavel, &quot;_&quot;, my_year, &quot;.png&quot;),
+#          plot = p)
+# } # arquivos gerados excluídos devido memória cheia</code></pre>
+<p>Finalizar tratamento para posterior incorporação</p>
+<pre class="r"><code># último tratamento da base prodes
+# normalizando nomes dos municipios e padronizando nomes de colunas
+modis_final &lt;- read_rds(&quot;../data/appeears_modis.rds&quot;)
 
-  # Gerando mapas
-p &lt;- municipality |&gt; 
-  filter(abbrev_state %in% my_states) |&gt; 
-  left_join(
-    appeears_modis |&gt; 
-      group_by(year, city_ref) |&gt; 
-      reframe( #retornar somente coluna da variavel
-        !!variavel := .data[[variavel]],na.rm=TRUE, # VERIFICAR - municipios em cinza ao cacular a media
-        .groups = &quot;drop&quot;
-      ) |&gt;  
-      filter(.data[[variavel]] &lt;= 200) |&gt; # Filtrar outliers absurdos
-      rename(name_muni = city_ref),
-    by = c(&quot;name_muni&quot;)
+modis_final &lt;- modis_final |&gt;
+  filter(media_fpar &lt; 250, media_lai &lt; 250) |&gt; 
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), &quot;Latin-ASCII&quot;),
+    city_ref = trimws(city_ref)
   ) |&gt; 
-  filter(year == my_year) |&gt; 
-  ggplot()  +
-  geom_sf(aes(fill=.data[[variavel]]), color=&quot;transparent&quot;,
-          size=.05, show.legend = TRUE)  +
-  # geom_point(data = appeears_modis |&gt; 
-  #              filter(year==my_year), 
-  #              aes(lon, lat, #size = emission,
-  #                  color=&quot;red&quot;))+
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(size = rel(.9), color = &quot;black&quot;),
-    axis.title.x = element_text(size = rel(1.1), color = &quot;black&quot;),
-    axis.text.y = element_text(size = rel(.9), color = &quot;black&quot;),
-    axis.title.y = element_text(size = rel(1.1), color = &quot;black&quot;),
-    legend.text = element_text(size = rel(1), color = &quot;black&quot;),
-    legend.title = element_text(face = &#39;bold&#39;, size = rel(1.2))
-  ) +
-  labs(fill = variavel,
-       x = &#39;Longitude&#39;,
-       y = &#39;Latitude&#39;) +
-  scale_fill_viridis_c(limits = limites)
-  
-  print(p)
-  
-    ggsave(filename = paste0(&quot;img/mapa_&quot;, variavel, &quot;_&quot;, my_year, &quot;.png&quot;),
-         plot = p)
-} </code></pre>
+  group_by(year, state, city_ref) |&gt; 
+  summarise(
+    media_fpar = mean(media_fpar, na.rm = TRUE),
+    media_lai = mean(media_lai, na.rm = TRUE),
+    media_evi = mean(media_evi, na.rm = TRUE),
+    media_ndvi = mean(media_ndvi, na.rm = TRUE),
+    media_et = mean(media_et, na.rm = TRUE)
+  )
+
+# write_rds(modis_final, &quot;../data/appeears_modis_final.rds&quot;)</code></pre>
 <p>Não foi feita a interpolação para dados do appeears, pois todos os
-municípios estão presentes, os dados agrupados por média.</p>
+municípios estão presentes. Os dados foram agrupados por média.</p>
 </div>
 <div id="entrada-com-a-base-nasa-power.rds" class="section level4">
 <h4>💨 Entrada com a Base: <code>nasa-power.rds</code></h4>
@@ -1470,7 +1479,7 @@ glimpse(nasa_power)
   ggplot(aes(x=lon,y=lat)) +
   geom_point()</code></pre>
 </div>
-<div id="classificando-cada-ponto-em-município-2" class="section level4">
+<div id="classificando-cada-ponto-em-município-1" class="section level4">
 <h4>Classificando cada ponto em município</h4>
 <p>Já feito no script de faxina “nasa-power.Rmd”</p>
 </div>
@@ -1806,7 +1815,7 @@ map(2015:2023,~{
          title = .x) +
     scale_fill_viridis_c()})
 
-write_rds(nasa_power_bind,paste0(&quot;../data/nasa-power-&quot;,variavel,&quot;-bind.rds&quot;))</code></pre>
+# write_rds(nasa_power_bind,paste0(&quot;../data/nasa-power-&quot;,variavel,&quot;-bind.rds&quot;))</code></pre>
 <p>–&gt;</p>
 </div>
 </div>
@@ -1814,7 +1823,7 @@ write_rds(nasa_power_bind,paste0(&quot;../data/nasa-power-&quot;,variavel,&quot;
 <h3>🪓 Entrada com a Base: <code>prodes-deforestation.rds</code></h3>
 <pre class="r"><code># original archive &quot;prodes-deforestation.rds&quot; = 2.2gb
 
-prodes_deforestation &lt;- read_rds(&quot;data/prodes-deforestation.rds&quot;)
+prodes_deforestation &lt;- read_rds(&quot;../data/prodes_deforestation.rds&quot;)
   # sample_n(1000000)
   # &quot;state&quot; column previously filtred 
 
@@ -1833,13 +1842,17 @@ df_prodes &lt;- prodes_deforestation |&gt;
   group_by(categorie) |&gt; 
   mutate(
     percent = n/sum(n)*100
-  )</code></pre>
+  )
+
+# df_prodes |&gt; 
+#   filter(state == &#39;MS&#39;)</code></pre>
 <pre class="r"><code># Gerando o mapa de intensidade de desmatamento
- municipality |&gt; 
+map(15:22,~{
+municipality |&gt; 
     filter(abbrev_state %in% my_states) |&gt; 
     left_join(
       df_prodes |&gt; 
-        filter(categorie == 22) |&gt;  # mudar anos
+        filter(categorie == .x) |&gt;  # mudar anos
         rename(name_muni = muni),
       by = c(&quot;name_muni&quot;)
     ) |&gt; 
@@ -1862,7 +1875,7 @@ df_prodes &lt;- prodes_deforestation |&gt;
          x = &#39;Longitude&#39;,
          y = &#39;Latitude&#39;,
          title = &#39;Desmatamento&#39;) +
-    scale_fill_viridis_c()
+    scale_fill_viridis_c()})
 
 # Município em destaque no mapa é Corumbá (para anos como 2022)
  # municipality |&gt; 
@@ -1876,7 +1889,32 @@ df_prodes &lt;- prodes_deforestation |&gt;
  #        rename(name_muni = muni),
  #      by = c(&quot;name_muni&quot;)
  #    ) </code></pre>
-<p>–&gt;</p>
+<p>Finalizar tratamento para posterior incorporação</p>
+<pre class="r"><code># último tratamento da base prodes
+# normalizando nomes dos municipios e padronizando nomes de colunas
+prodes_final &lt;- read_rds(&quot;../data/prodes_deforestation.rds&quot;)
+prodes_final &lt;- prodes_final |&gt; 
+  filter(categorie %in% 15:22) |&gt; 
+  rename(year = categorie,
+         city_ref = muni) |&gt; 
+  mutate(
+    year = 2000 + as.numeric(year)
+    ) |&gt;
+  group_by(state, city_ref, year) |&gt; 
+  count() |&gt; 
+  group_by(year) |&gt; 
+  mutate(
+    percent = n/sum(n)*100
+  ) |&gt; 
+  rename(desmatamento = percent) |&gt; # destamento proporcional ao número de ocorrências em relação ao total de registros daquele ano.
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), &quot;Latin-ASCII&quot;),
+    city_ref = trimws(city_ref)
+  ) |&gt; 
+  group_by(year, city_ref, state) |&gt; 
+  summarise(desmatamento = mean(desmatamento, na.rm = TRUE))
+  
+# write_rds(prodes_final, &quot;../data/prodes_final.rds&quot;)</code></pre>
 </div>
 </div>
 <div id="entrada-com-a-base-deter_queimadas.rds" class="section level3">
@@ -1884,23 +1922,23 @@ df_prodes &lt;- prodes_deforestation |&gt;
 <p>É importante ressaltar que, embora diversos estados estejam
 contemplados nas observações, estes não apresentam informações
 referentes a queimadas, somente desmatamento ou outras.</p>
-<p>Apenas o estado do Mato Grosso apresenta observações de queimadas</p>
+<p>Apenas parte do estado do Mato Grosso apresenta observações de
+queimadas</p>
 <p>Disponibilidade de dados de cicatriz de queimada para biomas como
-Amazônia e Pantanal (<a href="https://terrabrasilis.dpi.inpe.br/downloads" class="uri">https://terrabrasilis.dpi.inpe.br/downloads</a>)</p>
+Pantanal(só 2023) e Amazônia (<a href="https://terrabrasilis.dpi.inpe.br/downloads" class="uri">https://terrabrasilis.dpi.inpe.br/downloads</a>)</p>
 <pre class="r"><code># original archive &quot;deter-queimadas.rds&quot; = 122,1mb
 
-deter_queimadas &lt;- read_rds(&quot;data/deter_queimadas.rds&quot;)
+deter_queimadas &lt;- read_rds(&quot;../data/deter_queimadas.rds&quot;)
 
-# glimpse(deter_queimadas)
-
-# deter_queimadas |&gt; 
-#   filter(UF == &quot;MT&quot;,
-#          ANO == 2024,
-#          CLASSNAME == &quot;CICATRIZ_DE_QUEIMADA&quot;) |&gt; 
+# Somente MT apresenta dados de queimadas
+# deter_queimadas |&gt;
+#   filter(UF == &quot;MT&quot;) |&gt; # alternar estados
+#   pull(CLASSNAME) |&gt; unique() |&gt;
 #   glimpse()</code></pre>
 <pre class="r"><code>deter_queimadas |&gt; 
   # pull(ANO) |&gt; unique()
-  filter(ANO == 2020) |&gt; 
+  filter(ANO == 2020,
+         CLASSNAME == &quot;CICATRIZ_DE_QUEIMADA&quot;) |&gt; 
   ggplot(aes(x=longitude,y=latitude)) +
   geom_point()</code></pre>
 </div>
@@ -1916,7 +1954,7 @@ mapas</p>
 df_deter &lt;- deter_queimadas |&gt; 
   filter(UF %in% my_states) |&gt; 
   rename(name_muni = MUNICIPALI) |&gt; 
-  select(name_muni, ANO, AREAMUNKM,) |&gt; 
+  select(name_muni, ANO, AREAMUNKM) |&gt; 
   arrange(name_muni) |&gt; 
   group_by(ANO, name_muni) |&gt; 
   summarise(
@@ -1942,20 +1980,44 @@ munic_geobr &lt;- municipality |&gt;
     #trimws() → remove espaços extras.
     name_muni = trimws(name_muni)
   )
+# munic_geobr &lt;- as.data.frame(munic_geobr)
+# glimpse(munic_geobr)
+</code></pre>
+<p>Finalizar tratamento para posterior incorporação</p>
+<pre class="r"><code># último tratamento da base deter
+# normlizando nomes dos municipios e padronizando nomes de colunas
+deter_final &lt;- read_rds(&quot;../data/deter_queimadas.rds&quot;)
+deter_final &lt;- deter_final |&gt; 
+  rename(state = UF,
+         year = ANO,
+         city_ref = MUNICIPALI,
+         area_queimada = AREAMUNKM) |&gt; 
+  select(state, city_ref, year, area_queimada) |&gt; 
+  filter(state %in% my_states,
+         year %in% 2015:2023) |&gt; 
+  group_by(state, city_ref, year, area_queimada) |&gt; 
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), &quot;Latin-ASCII&quot;),
+    city_ref = trimws(city_ref)
+  ) |&gt; 
+  group_by(year, city_ref, state) |&gt; 
+  summarise(area_queimada = mean(area_queimada, na.rm = TRUE))
 
-glimpse(munic_geobr)</code></pre>
+# write_rds(deter_final, &quot;../data/deter_final.rds&quot;)</code></pre>
 <div id="gerar-mapa---deter" class="section level4">
 <h4>Gerar mapa - deter</h4>
-<pre class="r"><code>my_year = 2022 # mudar anos (detalhe: alguns anos, como 2016, só tem para 1 estado)
+<pre class="r"><code>my_year = 2020 # mudar anos (detalhe: alguns anos, como 2016, só tem para 1 estado)
 
 # Fazer filtro por ano antes do join para passar NA = 0 nos municípios faltantes
 df_deter_ano &lt;- df_deter |&gt; 
-  filter(ANO == my_year)
+  filter(ANO %in% my_year)
 
+map(2016:2022, ~{
 munic_geobr |&gt; 
   filter(abbrev_state %in% my_states) |&gt; 
   left_join(
-    df_deter_ano |&gt; 
+    df_deter |&gt; 
+      filter(ANO == .x) |&gt; 
       group_by(ANO, name_muni) |&gt; 
       summarise(area_queimada_muni_km = sum(area_queimada_muni_km, na.rm = TRUE)),
     by = &quot;name_muni&quot;
@@ -1978,7 +2040,51 @@ munic_geobr |&gt;
        y = &#39;Latitude&#39;) +
   scale_fill_viridis_c(
     option = &quot;inferno&quot;
-  )</code></pre>
+  )})</code></pre>
+</div>
+<div id="gerar-mapa---deter-focos-de-queimadas" class="section level4">
+<h4>Gerar mapa - deter (focos de queimadas)</h4>
+<p>Essa é a outra base do deter, que contém somente os focos de
+queimadas por estados</p>
+<p>Análise pouca representativa (somente comentar no relatório)</p>
+<pre class="r"><code>focos_queimadas &lt;- read_rds((&quot;../data/focos_queimadas.rds&quot;)
+# focos_queimadas &lt;- focos_queimadas |&gt;
+#   rename(abbrev_state = uf)
+
+
+focos_queimadas |&gt; 
+  filter(ano %in% 2018:2023) |&gt; 
+  group_by(ano, abbrev_state) |&gt; 
+  summarise(focos_soma = sum(focos, na.rm = TRUE))
+  
+
+map(2018:2023,~{
+munic_geobr |&gt;
+  left_join(
+    focos_queimadas |&gt; 
+      filter(ano == .x) |&gt;
+      group_by(ano, abbrev_state) |&gt; 
+      summarise(focos_soma = sum(focos, na.rm = TRUE)),
+    by = &quot;abbrev_state&quot;
+    )|&gt; 
+      ggplot() +
+      geom_sf(aes(fill=focos_soma), color=&quot;transparent&quot;,
+              size=.05, show.legend = TRUE) +
+      theme_bw() +
+      theme(
+        axis.text.x = element_text(size = rel(.9), color = &quot;black&quot;),
+        axis.title.x = element_text(size = rel(1.1), color = &quot;black&quot;),
+        axis.text.y = element_text(size = rel(.9), color = &quot;black&quot;),
+        axis.title.y = element_text(size = rel(1.1), color = &quot;black&quot;),
+        legend.text = element_text(size = rel(1), color = &quot;black&quot;),
+        legend.title = element_text(face = &#39;bold&#39;, size = rel(1.2))
+      ) +
+      labs(fill = &#39;Focos de queimadas&#39;,
+           x = &#39;Longitude&#39;,
+           y = &#39;Latitude&#39;) +
+      scale_fill_viridis_c(
+        option = &quot;inferno&quot;
+      )})</code></pre>
 </div>
 </div>
 

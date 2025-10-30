@@ -884,7 +884,7 @@ ggplot(pantanal) +
   theme(legend.position = "bottom")
 ```
 
-```{r}
+```{r,eval=FALSE}
 # Unindo shapefiles em um único
 deter_all <- bind_rows(amz, cerrado, pantanal)
 
@@ -923,7 +923,7 @@ deter_all |>
 
 
 
-```{r}
+```{r,eval=FALSE}
 # Averiguação do Cálculo da Área
 # pantanal |> slice(1) |> pull(geometry) |> plot()# 0.1000308
 # coords <- pantanal$geometry[[1]] |> as.matrix()
@@ -948,7 +948,7 @@ df <- deter_all |>
 ) 
 df |> 
   as_tibble() |> 
-  write_rds("../data/deter-queimadas.rds")
+  # write_rds("../data-raw/deter_queimadas.rds")
 ```
 
 
