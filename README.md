@@ -194,9 +194,6 @@ for (variavel in variaveis) {
 
 ### 📊 Histogramas
 
-Algumas bases apresentam histogramas inconsistentes ou errados, devido a
-incorporação.
-
 ``` r
 variavel <- "xco2" # mudar
 
@@ -363,11 +360,10 @@ base_completa <- base_completa |>
   mutate(anomalia_xco2 = xco2 - median(xco2,na.rm=TRUE),
          .after = xco2) |> 
   dplyr::ungroup() |> 
-  relocate(year:city_ref, emissions_quantity, xco2, xch4, sif_757,
+  relocate(year:city_ref, starts_with('emissao'), xco2, xch4, sif_757,
            anomalia_xco2, temperatura, umidade, precipitacao, pressao, radiacao, vento,media_fpar:media_ndvi, desmatamento,area_queimada) |> 
     select(-media_et) |> 
-  rename(ano = year, estado = state, municipio = city_ref,
-         emissao = emissions_quantity,queimada = area_queimada,
+  rename(ano = year, estado = state, municipio = city_ref,queimada = area_queimada, 
          fpar = media_fpar,
          lai = media_lai,
          evi = media_evi,
@@ -390,8 +386,6 @@ corrplot(mc,method = "color",
          number.cex = 0.8
 ) 
 ```
-
-![](README_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
 ### Análise de correlação - ANO
 
@@ -544,321 +538,92 @@ for( i in 2015:2022){
 }
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-10-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-10-3.png)<!-- -->
+### Adicionando base climate TRACE atualizada na base antiga
 
-    #> [1] "==== Autovalores ===="
-    #>  [1] 3.120 2.576 1.586 1.015 0.942 0.904 0.810 0.441 0.357 0.142 0.088 0.019
-    #> [1] "==== % da variância explicada ===="
-    #>  [1] 0.2600 0.2146 0.1321 0.0846 0.0785 0.0753 0.0675 0.0368 0.0298 0.0119
-    #> [11] 0.0073 0.0016
-    #> [1] "==== % da variância explicada acumulada ===="
-    #>  [1]  26.00  47.47  60.68  69.14  76.99  84.52  91.27  94.95  97.92  99.11
-    #> [11]  99.84 100.00
-    #> [1] "==== Poder Discriminante ===="
+``` r
+# Primeiro devemos carregar a nova base e tratá-la 
 
-![](README_files/figure-gfm/unnamed-chunk-10-4.png)<!-- -->
+# Carregando base
+base_att <- readxl::read_excel("data-raw/climate-trace-br.xlsx")
 
-    #> [Grupo 1]:
-    #>  brasilia; abadia de goias; abadiania; acreuna; alexania; aloandia; alto horizonte; alto paraiso de goias; alvorada do norte; americano do brasil; amorinopolis; anicuns; anapolis; aparecida de goiania; apore; aragarcas; aragoiania; arapora; aracu; arenopolis; aurilandia; baliza; barro alto; bela vista de goias; bom jardim de goias; bom jesus de goias; bonfinopolis; brazabrantes; buriti alegre; buritinopolis; cabeceiras; cachoeira alta; cachoeira de goias; cachoeira dourada; caiaponia; caldas novas; caldazinha; campestre de goias; campinacu; campinorte; campo alegre de goias; campo limpo de goias; campos belos; carmo do rio verde; castelandia; catalao; caturai; cavalcante; cacu; ceres; cezarina; chapadao do ceu; cidade ocidental; cocalzinho de goias; colinas do sul; corumbaiba; corumba de goias; cristalina; cristianopolis; crixas; crominia; corrego do ouro; damianopolis; damolandia; davinopolis; diorama; divinopolis de goias; doverlandia; edealina; edeia; fazenda nova; firminopolis; flores de goias; formosa; formoso; gameleira de goias; goiandira; goianira; goianapolis; goianesia; goiatuba; goias; goiania; gouvelandia; guapo; guarani de goias; guaraita; guarinos; heitorai; hidrolina; hidrolandia; iaciara; inaciolandia; indiara; inhumas; ipameri; ipiranga de goias; ipora; israelandia; itaberai; itaguari; itaguaru; itaja; itapaci; itapuranga; itaruma; itaucu; itumbiara; ivolandia; jandaia; jaragua; jatai; jaupaci; jesupolis; joviania; jussara; lagoa santa; leopoldo de bulhoes; luziania; mairipotaba; mambai; marzagao; maurilandia; mimoso de goias; minacu; mineiros; moipora; monte alegre de goias; montes claros de goias; montividiu; montividiu do norte; morrinhos; morro agudo de goias; mossamedes; mutunopolis; nazario; neropolis; niquelandia; nova america; nova gloria; nova iguacu de goias; nova roma; nova veneza; novo brasil; novo gama; orizona; other; ouro verde de goias; ouvidor; padre bernardo; palestina de goias; palmeiras de goias; palmelo; panama; paranaiguara; parana; parauna; perolandia; petrolina de goias; pilar de goias; piracanjuba; piranhas; pirenopolis; planaltina; pontalina; porangatu; porteirao; portelandia; posse; professor jamil; quirinopolis; rialma; rianapolis; rio quente; rio verde; rubiataba; sanclerlandia; santa barbara de goias; santa cruz de goias; santa fe de goias; santa helena de goias; santa isabel; santa rita do novo destino; santa rosa de goias; santa tereza de goias; santo antonio da barra; santo antonio de goias; santo antonio do descoberto; senador canedo; serranopolis; silvania; simolandia; sao domingos; sao francisco de goias; sao joao d'alianca; sao joao da parauna; sao luis de montes belos; sao luiz do norte; sao miguel do passa quatro; sao patricio; sao simao; sitio d'abadia; taquaral de goias; teresina de goias; terezopolis de goias; trindade; trombas; tres ranchos; turvelandia; turvania; uruana; uruacu; urutai; valparaiso de goias; varjao; vianopolis; vicentinopolis; vila boa; vila propicio; agua fria de goias; agua limpa; aguas lindas de goias; alcinopolis; aparecida do taboado; bandeirantes; camapua; campo grande; cassilandia; chapadao do sul; costa rica; douradina; figueirao; inocencia; jaraguari; maracaju; paranaiba; ribas do rio pardo; sao gabriel do oeste; tres lagoas; agua clara; alto araguaia; alto garcas; alto taquari; apui; araguaiana; aruana; campo novo do parecis; campo verde; canarana; diamantino; dom aquino; general carneiro; itiquira; jaciara; juscimeira; lucas do rio verde; machadinho d'oeste; nova mutum; novo aripuana; other; ponte branca; primavera do leste; ribeiraozinho; santa rita do trivelato; santo antonio do leste; sao jose do rio claro; sao jose do xingu; torixoreu
-    #> 
-    #> [Grupo 2]:
-    #>  amaralina; araguapaz; aruana; bonopolis; britania; campos verdes; faina; itapirapua; mara rosa; matrincha; mozarlandia; mundo novo; nova crixas; novo planalto; santa terezinha de goias; sao miguel do araguaia; uirapuru; anastacio; aquidauana; bodoquena; bonito; brasilandia; caracol; corguinho; corumba; coxim; dois irmaos do buriti; ladario; miranda; nioaque; pedro gomes; porto murtinho; rio negro; rio verde de mato grosso; rochedo; selviria; sidrolandia; sonora; terenos; acorizal; alta floresta; alto boa vista; alto paraguai; apiacas; araputanga; arenapolis; aripuana; barra do bugres; barra do garcas; barao de melgaco; bom jesus do araguaia; brasnorte; campinapolis; campos de julio; canabrava do norte; carlinda; castanheira; chapada dos guimaraes; claudia; cocalinho; colniza; colider; comodoro; confresa; conquista d'oeste; cotriguacu; cuiaba; curvelandia; caceres; denise; feliz natal; figueiropolis d'oeste; gaucha do norte; gloria d'oeste; guaranta do norte; guiratinga; indiavai; ipiranga do norte; itanhanga; itauba; jauru; juara; juruena; juina; lambari d'oeste; luciara; marcelandia; matupa; nobres; nossa senhora do livramento; nova bandeirantes; nova brasilandia; nova canaa do norte; nova guarita; nova lacerda; nova marilandia; nova maringa; nova monte verde; nova nazare; nova olimpia; nova santa helena; nova ubirata; nova xavantina; novo horizonte do norte; novo mundo; novo santo antonio; novo sao joaquim; paranatinga; paranaita; pedra preta; peixoto de azevedo; planalto da serra; pocone; pontal do araguaia; pontes e lacerda; porto alegre do norte; porto dos gauchos; porto esperidiao; porto estrela; poxoreo; querencia; reserva do cabacal; ribeirao cascalheira; rondolandia; rondonopolis; rosario oeste; salto do ceu; santa carmem; santa cruz do xingu; santa terezinha; santo afonso; santo antonio do leverger; sapezal; serra nova dourada; sinop; sorriso; sao felix do araguaia; sao jose do povo; sao jose dos quatro marcos; sao pedro da cipa; tabapora; tangara da serra; tapurah; terra nova do norte; tesouro; uniao do sul; vale de sao domingos; vera; vila bela da santissima trindade; vila rica; varzea grande; agua boa
-    #> 
-    #> [Grupo 3]:
-    #>  amambai; anaurilandia; angelica; antonio joao; aral moreira; bataguassu; bataypora; bela vista; caarapo; coronel sapucaia; deodapolis; dourados; fatima do sul; gloria de dourados; guia lopes da laguna; iguatemi; itapora; itaquirai; ivinhema; jardim; jatei; juti; laguna carapa; mundo novo; navirai; nova alvorada do sul; nova andradina; novo horizonte do sul; paranhos; ponta pora; rio brilhante; santa rita do pardo; sete quedas; tacuru; taquarussu
+# Criando vetor para extrair os municipios de todos os tipos de emissões
+municipios <- base_att |> 
+  mutate(
+    fonte = stri_trans_general(tolower(fonte), "Latin-ASCII"),
+    fonte = trimws(fonte)) |> 
+  filter(admin == 'Municipal') |> 
+  pull(fonte) |> unique()
 
-![](README_files/figure-gfm/unnamed-chunk-10-5.png)<!-- -->
+padrao_municipios <- paste0(municipios, collapse = "|")
 
-    #> [1] "==== Tabela da correlação dos atributos com cada PC ===="
-    #>                       PC1         PC2         PC3          PC4
-    #> emissao        0.05357147  0.09309648  0.04875190 -0.846319947
-    #> desmatamento   0.26366337  0.36964209  0.02621943  0.351046219
-    #> temperatura    0.26522324  0.86615854 -0.31955934 -0.026341845
-    #> sif_757        0.32736206 -0.13713278 -0.01493901 -0.370666492
-    #> anomalia_xco2 -0.33643193  0.13772643  0.21637141  0.158610871
-    #> precipitacao   0.45550889 -0.77438321  0.05916835  0.052663130
-    #> fpar           0.46570339  0.24985421  0.78884758  0.002513904
-    #> lai            0.49649252  0.37569300  0.73434895 -0.007572288
-    #> umidade        0.60452222 -0.71276655  0.03942974  0.076879799
-    #> pressao        0.73077210  0.41350053 -0.42421149  0.004065028
-    #> xch4           0.75451839  0.24606287 -0.22113334  0.037958372
-    #> radiacao      -0.78570964  0.31569525  0.19471578 -0.044526407
+# Tratando base
+nova_base_ct <- base_att |> 
+  rename(city_ref = fonte,
+         emissao = emissao_co2e,
+         state = estado,
+         year = ano) |> 
+  filter(state %in% my_states,
+         year %in% 2021:2023) |> 
+  select(year, state, city_ref, emissao, setor, subsetor) |> 
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), "Latin-ASCII"),
+    city_ref = trimws(city_ref),
+    city_ref = str_extract(city_ref, padrao_municipios)
+  ) |>
+  group_by(year, state, city_ref, setor) |>
+  summarise(emissao_setores = sum(emissao)) |> 
+  pivot_wider(
+    names_from = setor,
+    values_from = emissao_setores,
+    names_prefix = "emissao_"
+  ) |> 
+  left_join(
+    base_att |> 
+  rename(city_ref = fonte,
+         emissao = emissao_co2e,
+         state = estado,
+         year = ano) |> 
+      filter(state %in% my_states,
+         year %in% 2021:2023) |> 
+  select(year, state, city_ref, emissao, setor, subsetor) |> 
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), "Latin-ASCII"),
+    city_ref = trimws(city_ref)
+  ) |>
+  group_by(year, state, city_ref, subsetor) |>
+  summarise(emissao_sub_setores = sum(emissao)) |> 
+  pivot_wider(
+    names_from = subsetor,
+    values_from = emissao_sub_setores,
+    names_prefix = "emissao_"
+  ),
+  by = c('city_ref', 'year', 'state')
+  )
 
-![](README_files/figure-gfm/unnamed-chunk-10-6.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-10-7.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-10-8.png)<!-- -->
+# Carregando base antiga
+base_antiga <- read_rds("data/emissions_sources_final.rds")
 
-    #> [1] "==== Autovalores ===="
-    #>  [1] 3.161 2.348 1.536 1.229 0.988 0.842 0.735 0.603 0.308 0.127 0.095 0.029
-    #> [1] "==== % da variância explicada ===="
-    #>  [1] 0.2634 0.1957 0.1280 0.1024 0.0823 0.0702 0.0612 0.0503 0.0257 0.0106
-    #> [11] 0.0079 0.0024
-    #> [1] "==== % da variância explicada acumulada ===="
-    #>  [1]  26.34  45.91  58.71  68.95  77.18  84.19  90.32  95.34  97.91  98.97
-    #> [11]  99.76 100.00
-    #> [1] "==== Poder Discriminante ===="
+# Adicionando base 
+bases_ct_atualizadas <- nova_base_ct |> left_join(
+  base_antiga,
+  by = c('year', 'city_ref', 'state'))|> 
+  select(-ends_with(".x"), -ends_with(".y"))
 
-![](README_files/figure-gfm/unnamed-chunk-10-9.png)<!-- -->
+bases_ct_atualizadas
+```
 
-    #> [Grupo 1]:
-    #>  brasilia; abadia de goias; abadiania; acreuna; alexania; aloandia; americano do brasil; amorinopolis; anicuns; anapolis; aparecida de goiania; aragarcas; aragoiania; arenopolis; aurilandia; avelinopolis; barro alto; bela vista de goias; bom jardim de goias; bom jesus de goias; bonfinopolis; brazabrantes; buriti alegre; cabeceiras; cachoeira alta; cachoeira de goias; cachoeira dourada; caiaponia; caldas novas; caldazinha; campestre de goias; campinacu; campinorte; campo alegre de goias; campo limpo de goias; carmo do rio verde; castelandia; catalao; caturai; cacu; cezarina; chapadao do ceu; cidade ocidental; cocalzinho de goias; colinas do sul; corumbaiba; corumba de goias; cristalina; cristianopolis; crixas; crominia; corrego do ouro; damolandia; davinopolis; diorama; edealina; edeia; fazenda nova; firminopolis; flores de goias; formosa; gameleira de goias; goiandira; goianira; goianapolis; goianesia; goias; goiania; gouvelandia; guapo; guaraita; guarinos; heitorai; hidrolina; hidrolandia; inaciolandia; indiara; inhumas; ipameri; ipiranga de goias; ipora; israelandia; itaberai; itaguari; itaguaru; itapaci; itapuranga; itaruma; itaucu; itumbiara; jandaia; jaragua; jatai; jesupolis; joviania; lagoa santa; leopoldo de bulhoes; luziania; marzagao; maurilandia; mineiros; montes claros de goias; montividiu; morrinhos; morro agudo de goias; mossamedes; mundo novo; nazario; neropolis; niquelandia; nova america; nova gloria; nova veneza; novo brasil; novo gama; orizona; ouro verde de goias; padre bernardo; palestina de goias; palmeiras de goias; palmelo; panama; paranaiguara; parauna; petrolina de goias; pilar de goias; piracanjuba; piranhas; pirenopolis; planaltina; pontalina; porteirao; portelandia; professor jamil; quirinopolis; rialma; rianapolis; rio quente; rio verde; rubiataba; sanclerlandia; santa barbara de goias; santa cruz de goias; santa isabel; santa rita do novo destino; santa rosa de goias; santo antonio de goias; santo antonio do descoberto; senador canedo; silvania; sao francisco de goias; sao joao d'alianca; sao joao da parauna; sao luis de montes belos; sao luiz do norte; sao miguel do araguaia; sao miguel do passa quatro; sao patricio; sao simao; taquaral de goias; terezopolis de goias; trindade; tres ranchos; turvelandia; turvania; uruana; urutai; valparaiso de goias; varjao; vianopolis; vicentinopolis; vila boa; vila propicio; agua fria de goias; agua limpa; alto taquari; novo santo antonio
-    #> 
-    #> [Grupo 2]:
-    #>  alto horizonte; alto paraiso de goias; alvorada do norte; amaralina; apore; araguapaz; aruana; baliza; bonopolis; britania; buritinopolis; campos belos; campos verdes; cavalcante; ceres; damianopolis; divinopolis de goias; doverlandia; faina; formoso; goiatuba; guarani de goias; iaciara; itaja; itapirapua; ivolandia; jaupaci; jussara; mairipotaba; mambai; mara rosa; matrincha; mimoso de goias; minacu; moipora; monte alegre de goias; montividiu do norte; mozarlandia; mutunopolis; nova crixas; nova iguacu de goias; nova roma; novo planalto; other; parana; perolandia; porangatu; posse; santa fe de goias; santa helena de goias; santa tereza de goias; santa terezinha de goias; santo antonio da barra; serranopolis; simolandia; sao domingos; sitio d'abadia; teresina de goias; trombas; uirapuru; uruacu; alcinopolis; aparecida do taboado; aquidauana; bataypora; bodoquena; bonito; camapua; cassilandia; chapadao do sul; corguinho; corumba; costa rica; coxim; dois irmaos do buriti; figueirao; inocencia; ladario; miranda; nova andradina; other; paranaiba; pedro gomes; porto murtinho; rio negro; rio verde de mato grosso; rochedo; sonora; sao gabriel do oeste; taquarussu; terenos; tres lagoas; agua clara; acorizal; alta floresta; altamira; alto araguaia; alto boa vista; alto garcas; alto paraguai; apiacas; apui; araguaiana; araputanga; arenapolis; aripuana; barra do bugres; barra do garcas; barao de melgaco; bom jesus do araguaia; brasnorte; campinapolis; campo novo do parecis; campo verde; campos de julio; canabrava do norte; canarana; carlinda; castanheira; chapada dos guimaraes; claudia; cocalinho; colniza; colider; comodoro; confresa; conquista d'oeste; cotriguacu; cuiaba; curvelandia; caceres; denise; diamantino; dom aquino; feliz natal; figueiropolis d'oeste; gaucha do norte; general carneiro; gloria d'oeste; guaranta do norte; guiratinga; indiavai; ipiranga do norte; itanhanga; itauba; itiquira; jacareacanga; jaciara; jauru; juara; juruena; juscimeira; juina; lambari d'oeste; lucas do rio verde; luciara; marcelandia; matupa; mirassol d'oeste; nobres; nossa senhora do livramento; nova bandeirantes; nova brasilandia; nova canaa do norte; nova guarita; nova lacerda; nova marilandia; nova maringa; nova monte verde; nova mutum; nova nazare; nova olimpia; nova santa helena; nova ubirata; nova xavantina; novo aripuana; novo horizonte do norte; novo mundo; novo sao joaquim; other; paranatinga; paranaita; pedra preta; peixoto de azevedo; planalto da serra; pocone; pontal do araguaia; ponte branca; pontes e lacerda; porto alegre do norte; porto dos gauchos; porto esperidiao; porto estrela; poxoreo; primavera do leste; querencia; reserva do cabacal; ribeirao cascalheira; ribeiraozinho; rondolandia; rondonopolis; rosario oeste; salto do ceu; santa carmem; santa cruz do xingu; santa rita do trivelato; santa terezinha; santana do araguaia; santo afonso; santo antonio do leste; santo antonio do leverger; sapezal; serra nova dourada; sinop; sorriso; sao felix do araguaia; sao felix do xingu; sao jose do povo; sao jose do rio claro; sao jose do xingu; sao jose dos quatro marcos; sao pedro da cipa; tabapora; tangara da serra; tapurah; terra nova do norte; tesouro; torixoreu; uniao do sul; vale de sao domingos; vera; vila bela da santissima trindade; vila rica; varzea grande; agua boa
-    #> 
-    #> [Grupo 3]:
-    #>  amambai; anastacio; anaurilandia; angelica; antonio joao; aral moreira; bandeirantes; bataguassu; bela vista; brasilandia; caarapo; campo grande; caracol; coronel sapucaia; deodapolis; douradina; dourados; eldorado; fatima do sul; gloria de dourados; guia lopes da laguna; iguatemi; itapora; itaquirai; ivinhema; japora; jaraguari; jardim; jatei; juti; laguna carapa; maracaju; mundo novo; navirai; nioaque; nova alvorada do sul; novo horizonte do sul; paranhos; ponta pora; ribas do rio pardo; rio brilhante; santa rita do pardo; selviria; sete quedas; sidrolandia; tacuru; vicentina
+### Incorporando base climate TRACE antiga e atual na base completa
 
-![](README_files/figure-gfm/unnamed-chunk-10-10.png)<!-- -->
+``` r
+base_completa <- base_completa |> 
+  left_join(bases_ct_atualizadas,
+  by = c('year', 'city_ref', 'state'))|> 
+  select(-ends_with(".x"), -ends_with(".y"))
 
-    #> [1] "==== Tabela da correlação dos atributos com cada PC ===="
-    #>                       PC1         PC2         PC3         PC4         PC5
-    #> anomalia_xco2  0.01159132  0.50714241 -0.34909882  0.44142065 -0.04134827
-    #> emissao        0.08906623  0.06843307 -0.12990231  0.11291236  0.97432363
-    #> temperatura    0.30174433  0.88982541  0.15600978  0.09941448 -0.02390536
-    #> sif_757        0.38786516 -0.13133130 -0.17617443  0.43073786 -0.09805491
-    #> desmatamento   0.42663266  0.28698848  0.23784235 -0.25259331 -0.05074150
-    #> umidade        0.48845702 -0.79951650  0.05545969  0.17988778  0.02696483
-    #> precipitacao   0.49433978 -0.36980701 -0.14786365  0.57941845 -0.09376147
-    #> fpar           0.59175165 -0.01728313 -0.62764650 -0.44823295 -0.01753815
-    #> radiacao      -0.62546409  0.44003802 -0.41976092  0.22333722 -0.05656822
-    #> lai            0.68791753  0.09286302 -0.60817259 -0.28577339 -0.04345742
-    #> pressao        0.71005262  0.18928002  0.53897329 -0.06980808  0.08028669
-    #> xch4           0.72613736  0.42490730  0.17344629  0.23730518 -0.05280492
+base_completa
 
-![](README_files/figure-gfm/unnamed-chunk-10-11.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-10-12.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-10-13.png)<!-- -->
+# Salvando
+# write_rds(base_completa, 'data/base_completa_att.rds')
+```
 
-    #> [1] "==== Autovalores ===="
-    #>  [1] 3.411 2.376 1.502 1.059 1.007 0.867 0.740 0.465 0.396 0.113 0.044 0.019
-    #> [1] "==== % da variância explicada ===="
-    #>  [1] 0.2843 0.1980 0.1252 0.0883 0.0839 0.0723 0.0617 0.0387 0.0330 0.0094
-    #> [11] 0.0036 0.0016
-    #> [1] "==== % da variância explicada acumulada ===="
-    #>  [1]  28.43  48.23  60.74  69.57  77.97  85.19  91.36  95.23  98.53  99.47
-    #> [11]  99.84 100.00
-    #> [1] "==== Poder Discriminante ===="
-
-![](README_files/figure-gfm/unnamed-chunk-10-14.png)<!-- -->
-
-    #> [Grupo 1]:
-    #>  brasilia; abadia de goias; abadiania; acreuna; alexania; aloandia; alto horizonte; alto paraiso de goias; alvorada do norte; amaralina; amorinopolis; anicuns; anapolis; aparecida de goiania; apore; aragarcas; aragoiania; araguapaz; arenopolis; aruana; aurilandia; baliza; barro alto; bela vista de goias; bom jardim de goias; bom jesus de goias; bonfinopolis; bonopolis; brazabrantes; britania; buriti alegre; buriti de goias; buritinopolis; cabeceiras; cachoeira alta; cachoeira de goias; cachoeira dourada; caiaponia; caldas novas; caldazinha; campinacu; campinorte; campo alegre de goias; campo limpo de goias; campos belos; campos verdes; carmo do rio verde; castelandia; catalao; caturai; cavalcante; cacu; ceres; cezarina; chapadao do ceu; cidade ocidental; cocalzinho de goias; colinas do sul; corumbaiba; corumba de goias; cristalina; cristianopolis; crixas; crominia; corrego do ouro; damianopolis; damolandia; davinopolis; diorama; divinopolis de goias; doverlandia; edealina; edeia; faina; fazenda nova; firminopolis; flores de goias; formosa; formoso; gameleira de goias; goiandira; goianira; goianapolis; goianesia; goiatuba; goias; goiania; gouvelandia; guapo; guarani de goias; guarinos; heitorai; hidrolina; hidrolandia; iaciara; inaciolandia; indiara; inhumas; ipameri; ipiranga de goias; ipora; israelandia; itaberai; itaguari; itaguaru; itaja; itapaci; itapirapua; itapuranga; itaruma; itaucu; itumbiara; ivolandia; jandaia; jaragua; jatai; jaupaci; jesupolis; joviania; jussara; leopoldo de bulhoes; luziania; mairipotaba; mambai; mara rosa; marzagao; matrincha; maurilandia; mimoso de goias; minacu; mineiros; moipora; monte alegre de goias; montes claros de goias; montividiu; montividiu do norte; morrinhos; mossamedes; mozarlandia; mundo novo; mutunopolis; nazario; neropolis; niquelandia; nova america; nova crixas; nova gloria; nova iguacu de goias; nova roma; nova veneza; novo brasil; novo planalto; orizona; other; ouro verde de goias; ouvidor; padre bernardo; palestina de goias; palmeiras de goias; palmelo; panama; paranaiguara; parana; parauna; perolandia; petrolina de goias; pilar de goias; piracanjuba; piranhas; pirenopolis; planaltina; pontalina; porangatu; porteirao; portelandia; posse; professor jamil; quirinopolis; rialma; rianapolis; rio quente; rio verde; rubiataba; sanclerlandia; santa barbara de goias; santa cruz de goias; santa fe de goias; santa helena de goias; santa isabel; santa rita do novo destino; santa rosa de goias; santa tereza de goias; santa terezinha de goias; santo antonio da barra; santo antonio de goias; santo antonio do descoberto; senador canedo; serranopolis; silvania; simolandia; sao domingos; sao francisco de goias; sao joao d'alianca; sao joao da parauna; sao luis de montes belos; sao luiz do norte; sao miguel do araguaia; sao miguel do passa quatro; sao patricio; sao simao; sitio d'abadia; taquaral de goias; teresina de goias; terezopolis de goias; trindade; trombas; tres ranchos; turvelandia; turvania; uirapuru; uruana; uruacu; urutai; varjao; vianopolis; vicentinopolis; vila boa; vila propicio; agua fria de goias; agua limpa; aguas lindas de goias; camapua; cassilandia; chapadao do sul; costa rica; other; paranaiba; sonora; alto araguaia; alto garcas; alto taquari; araguaiana; guiratinga; novo progresso; novo santo antonio; other; pontal do araguaia; ponte branca; primavera do leste; ribeiraozinho; santana do araguaia; sao jose do povo; torixoreu
-    #> 
-    #> [Grupo 2]:
-    #>  alcinopolis; aquidauana; bodoquena; bonito; caracol; corguinho; corumba; coxim; dois irmaos do buriti; figueirao; ladario; miranda; pedro gomes; porto murtinho; rio negro; rio verde de mato grosso; rochedo; sao gabriel do oeste; terenos; tres lagoas; acorizal; alta floresta; alto boa vista; alto paraguai; apiacas; apui; araputanga; arenapolis; aripuana; barra do bugres; barra do garcas; barao de melgaco; bom jesus do araguaia; brasnorte; campinapolis; campo novo do parecis; campo verde; campos de julio; canabrava do norte; canarana; carlinda; castanheira; chapada dos guimaraes; claudia; cocalinho; colniza; colider; comodoro; confresa; conquista d'oeste; cotriguacu; cuiaba; curvelandia; caceres; denise; diamantino; dom aquino; feliz natal; figueiropolis d'oeste; gaucha do norte; general carneiro; gloria d'oeste; guaranta do norte; indiavai; ipiranga do norte; itanhanga; itauba; itiquira; jaciara; jauru; juara; juruena; juscimeira; juina; lambari d'oeste; lucas do rio verde; luciara; marcelandia; matupa; nobres; nortelandia; nossa senhora do livramento; nova bandeirantes; nova brasilandia; nova canaa do norte; nova guarita; nova lacerda; nova marilandia; nova maringa; nova monte verde; nova mutum; nova nazare; nova olimpia; nova santa helena; nova ubirata; nova xavantina; novo horizonte do norte; novo mundo; novo sao joaquim; paranatinga; paranaita; pedra preta; peixoto de azevedo; planalto da serra; pocone; pontes e lacerda; porto alegre do norte; porto dos gauchos; porto esperidiao; porto estrela; poxoreo; querencia; reserva do cabacal; ribeirao cascalheira; rondolandia; rondonopolis; rosario oeste; salto do ceu; santa carmem; santa cruz do xingu; santa rita do trivelato; santa terezinha; santo afonso; santo antonio do leste; santo antonio do leverger; sapezal; serra nova dourada; sinop; sorriso; sao felix do araguaia; sao jose do rio claro; sao jose do xingu; sao jose dos quatro marcos; tabapora; tangara da serra; terra nova do norte; tesouro; uniao do sul; vale de sao domingos; vera; vila bela da santissima trindade; vila rica; varzea grande; agua boa
-    #> 
-    #> [Grupo 3]:
-    #>  amambai; anastacio; anaurilandia; angelica; antonio joao; aparecida do taboado; aral moreira; bandeirantes; bataguassu; bataypora; bela vista; brasilandia; caarapo; campo grande; coronel sapucaia; deodapolis; douradina; dourados; fatima do sul; gloria de dourados; guia lopes da laguna; iguatemi; inocencia; itapora; itaquirai; ivinhema; japora; jaraguari; jardim; jatei; laguna carapa; maracaju; mundo novo; navirai; nioaque; nova alvorada do sul; nova andradina; novo horizonte do sul; paranhos; ponta pora; ribas do rio pardo; rio brilhante; santa rita do pardo; selviria; sete quedas; sidrolandia; tacuru; taquarussu; agua clara; tapurah
-
-![](README_files/figure-gfm/unnamed-chunk-10-15.png)<!-- -->
-
-    #> [1] "==== Tabela da correlação dos atributos com cada PC ===="
-    #>                       PC1         PC2         PC3         PC4         PC5
-    #> emissao        0.06748297  0.02888877  0.04221203 -0.46907668  0.82605960
-    #> temperatura    0.12520828  0.93464263 -0.18748469 -0.04837750  0.05217466
-    #> anomalia_xco2 -0.26637374  0.15020199  0.27315824 -0.63111023 -0.47209677
-    #> desmatamento   0.31843066  0.43493583  0.03606510  0.09099731 -0.14618149
-    #> sif_757        0.38293058 -0.09880488 -0.07323960 -0.56619227 -0.05149191
-    #> xch4           0.54042286  0.55371616 -0.08728294 -0.18070938 -0.19627988
-    #> fpar           0.56914511  0.06179456  0.74399390  0.18100390  0.10101987
-    #> precipitacao   0.62201988 -0.60532463 -0.09260344 -0.14323481 -0.08735685
-    #> lai            0.62504565  0.17395168  0.71327615  0.05144941  0.02835943
-    #> pressao        0.65458890  0.47354948 -0.43395846  0.08581172  0.09348946
-    #> umidade        0.76282321 -0.57201220 -0.16389331 -0.04620776 -0.09097668
-    #> radiacao      -0.81743726  0.14664967  0.30028492 -0.10776654  0.03470902
-
-![](README_files/figure-gfm/unnamed-chunk-10-16.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-10-17.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-10-18.png)<!-- -->
-
-    #> [1] "==== Autovalores ===="
-    #>  [1] 3.349 2.035 1.601 1.172 1.015 0.907 0.712 0.534 0.471 0.112 0.061 0.030
-    #> [1] "==== % da variância explicada ===="
-    #>  [1] 0.2791 0.1696 0.1334 0.0977 0.0846 0.0756 0.0594 0.0445 0.0392 0.0094
-    #> [11] 0.0051 0.0025
-    #> [1] "==== % da variância explicada acumulada ===="
-    #>  [1]  27.91  44.87  58.21  67.98  76.44  83.99  89.93  94.38  98.30  99.24
-    #> [11]  99.75 100.00
-    #> [1] "==== Poder Discriminante ===="
-
-![](README_files/figure-gfm/unnamed-chunk-10-19.png)<!-- -->
-
-    #> [Grupo 1]:
-    #>  brasilia; abadiania; alexania; americano do brasil; anapolis; aparecida de goiania; bela vista de goias; bonfinopolis; brazabrantes; buriti alegre; cabeceiras; caiaponia; caldas novas; caldazinha; campestre de goias; campo alegre de goias; campo limpo de goias; catalao; cezarina; cidade ocidental; cocalzinho de goias; corumbaiba; corumba de goias; cristalina; cristianopolis; crominia; cumari; damolandia; diorama; edeia; formosa; gameleira de goias; goiandira; goianira; goianapolis; goianesia; goias; goiania; guapo; hidrolandia; inhumas; ipameri; itaberai; itaguaru; jaragua; jesupolis; joviania; leopoldo de bulhoes; luziania; marzagao; montividiu; morrinhos; neropolis; nova america; nova veneza; orizona; ouro verde de goias; padre bernardo; palmelo; panama; petrolina de goias; piracanjuba; pirenopolis; planaltina; pontalina; professor jamil; rianapolis; rio quente; santa barbara de goias; santa cruz de goias; santa rosa de goias; santo antonio de goias; santo antonio do descoberto; senador canedo; serranopolis; silvania; sao francisco de goias; sao miguel do passa quatro; taquaral de goias; terezopolis de goias; tres ranchos; urutai; varjao; vila boa; vila propicio; agua fria de goias; agua limpa; japora
-    #> 
-    #> [Grupo 2]:
-    #>  acreuna; aloandia; alto horizonte; alto paraiso de goias; alvorada do norte; amaralina; amorinopolis; anicuns; apore; aragarcas; araguapaz; arenopolis; aruana; aurilandia; baliza; barro alto; bom jardim de goias; bom jesus de goias; bonopolis; britania; buriti de goias; buritinopolis; cachoeira alta; cachoeira de goias; cachoeira dourada; campinacu; campinorte; campos belos; campos verdes; carmo do rio verde; castelandia; cavalcante; cacu; ceres; chapadao do ceu; colinas do sul; crixas; corrego do ouro; damianopolis; davinopolis; divinopolis de goias; doverlandia; edealina; faina; fazenda nova; firminopolis; flores de goias; formoso; goiatuba; gouvelandia; guarani de goias; guarinos; hidrolina; iaciara; inaciolandia; indiara; ipiranga de goias; ipora; israelandia; itaja; itapaci; itapirapua; itapuranga; itaruma; itaucu; itumbiara; ivolandia; jandaia; jatai; jaupaci; jussara; mairipotaba; mambai; mara rosa; matrincha; maurilandia; mimoso de goias; minacu; moipora; monte alegre de goias; montes claros de goias; montividiu do norte; morro agudo de goias; mossamedes; mozarlandia; mundo novo; mutunopolis; nazario; niquelandia; nova crixas; nova gloria; nova iguacu de goias; nova roma; novo brasil; novo planalto; other; palestina de goias; palmeiras de goias; paranaiguara; parana; parauna; perolandia; pilar de goias; piranhas; porangatu; porteirao; portelandia; posse; quirinopolis; rialma; rio verde; rubiataba; sanclerlandia; santa fe de goias; santa helena de goias; santa isabel; santa rita do novo destino; santa tereza de goias; santa terezinha de goias; santo antonio da barra; simolandia; sao domingos; sao joao d'alianca; sao joao da parauna; sao luis de montes belos; sao luiz do norte; sao miguel do araguaia; sao simao; sitio d'abadia; teresina de goias; trindade; trombas; turvelandia; turvania; uirapuru; uruana; uruacu; vianopolis; vicentinopolis; alcinopolis; anastacio; anaurilandia; aparecida do taboado; aquidauana; bandeirantes; bataguassu; bodoquena; brasilandia; camapua; campo grande; cassilandia; chapadao do sul; corguinho; corumba; costa rica; coxim; dois irmaos do buriti; figueirao; inocencia; jaraguari; ladario; maracaju; miranda; nioaque; nova alvorada do sul; nova andradina; paranaiba; pedro gomes; porto murtinho; ribas do rio pardo; rio brilhante; rio negro; rio verde de mato grosso; rochedo; santa rita do pardo; selviria; sidrolandia; sonora; sao gabriel do oeste; terenos; tres lagoas; agua clara; alto araguaia; alto boa vista; alto garcas; alto taquari; araputanga; barra do bugres; barra do garcas; barao de melgaco; bom jesus do araguaia; campinapolis; canarana; cocalinho; colniza; conquista d'oeste; curvelandia; caceres; figueiropolis d'oeste; general carneiro; gloria d'oeste; guiratinga; indiavai; jauru; juscimeira; lambari d'oeste; nossa senhora do livramento; nova nazare; nova xavantina; novo progresso; novo santo antonio; novo sao joaquim; other; paranatinga; pocone; pontal do araguaia; ponte branca; pontes e lacerda; porto alegre do norte; porto esperidiao; porto estrela; poxoreo; primavera do leste; querencia; ribeirao cascalheira; ribeiraozinho; rondonopolis; rosario oeste; salto do ceu; santo afonso; santo antonio do leste; santo antonio do leverger; serra nova dourada; sao felix do araguaia; sao felix do xingu; sao jose do povo; sao jose dos quatro marcos; sao pedro da cipa; tesouro; torixoreu; vila bela da santissima trindade; agua boa
-    #> 
-    #> [Grupo 3]:
-    #>  mineiros; amambai; angelica; antonio joao; aral moreira; bataypora; bela vista; bonito; caarapo; caracol; coronel sapucaia; deodapolis; douradina; dourados; eldorado; fatima do sul; gloria de dourados; guia lopes da laguna; iguatemi; itapora; itaquirai; ivinhema; jardim; jatei; juti; laguna carapa; mundo novo; navirai; novo horizonte do sul; paranhos; ponta pora; sete quedas; tacuru; taquarussu; acorizal; alta floresta; alto paraguai; apiacas; araguaiana; arenapolis; aripuana; brasnorte; campo novo do parecis; campo verde; campos de julio; canabrava do norte; carlinda; castanheira; chapada dos guimaraes; claudia; colider; comodoro; confresa; cotriguacu; cuiaba; denise; diamantino; dom aquino; feliz natal; gaucha do norte; guaranta do norte; ipiranga do norte; itanhanga; itauba; itiquira; jaciara; jangada; juara; juruena; juina; lucas do rio verde; luciara; marcelandia; matupa; nobres; nortelandia; nova bandeirantes; nova brasilandia; nova canaa do norte; nova guarita; nova lacerda; nova marilandia; nova maringa; nova monte verde; nova mutum; nova olimpia; nova santa helena; nova ubirata; novo horizonte do norte; novo mundo; paranaita; pedra preta; peixoto de azevedo; planalto da serra; porto dos gauchos; reserva do cabacal; rondolandia; santa carmem; santa cruz do xingu; santa rita do trivelato; santa terezinha; sapezal; sinop; sorriso; sao jose do rio claro; sao jose do xingu; tabapora; tangara da serra; tapurah; terra nova do norte; uniao do sul; vale de sao domingos; vera; vila rica; varzea grande
-
-![](README_files/figure-gfm/unnamed-chunk-10-20.png)<!-- -->
-
-    #> [1] "==== Tabela da correlação dos atributos com cada PC ===="
-    #>                       PC1         PC2         PC3          PC4          PC5
-    #> anomalia_xco2 -0.06782631  0.05057189 -0.53082261  0.703084993  0.009237348
-    #> emissao        0.07367400  0.04192177 -0.09113948 -0.078075886  0.908582997
-    #> temperatura    0.12779803  0.90112256 -0.14314646  0.154485261  0.077503418
-    #> sif_757        0.25937036 -0.25047871  0.01750180  0.122312116  0.381039916
-    #> desmatamento   0.42335886  0.37953332 -0.15036437  0.290248715 -0.156686624
-    #> fpar           0.56829134 -0.06330490 -0.61969096 -0.474248580 -0.068820895
-    #> precipitacao   0.61308086 -0.49593269 -0.04586842  0.414092763 -0.006370896
-    #> lai            0.63093890 -0.02613189 -0.68027378 -0.272530766 -0.060164216
-    #> xch4           0.66217506  0.30501345  0.29334526 -0.004950504 -0.020329998
-    #> pressao        0.66343302  0.58171617  0.27550348  0.062073893  0.049760818
-    #> umidade        0.73449091 -0.57349484  0.16592152  0.212909267 -0.023673853
-    #> radiacao      -0.74919656  0.02762606 -0.47881791  0.170317128  0.039908847
-
-![](README_files/figure-gfm/unnamed-chunk-10-21.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-10-22.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-10-23.png)<!-- -->
-
-    #> [1] "==== Autovalores ===="
-    #>  [1] 3.272 2.336 1.431 1.053 1.025 0.966 0.779 0.597 0.331 0.113 0.074 0.023
-    #> [1] "==== % da variância explicada ===="
-    #>  [1] 0.2727 0.1947 0.1193 0.0877 0.0854 0.0805 0.0649 0.0497 0.0276 0.0095
-    #> [11] 0.0062 0.0019
-    #> [1] "==== % da variância explicada acumulada ===="
-    #>  [1]  27.27  46.73  58.66  67.43  75.97  84.02  90.51  95.49  98.24  99.19
-    #> [11]  99.81 100.00
-    #> [1] "==== Poder Discriminante ===="
-
-![](README_files/figure-gfm/unnamed-chunk-10-24.png)<!-- -->
-
-    #> [Grupo 1]:
-    #>  brasilia; abadia de goias; abadiania; acreuna; alexania; aloandia; alto horizonte; alto paraiso de goias; alvorada do norte; americano do brasil; amorinopolis; anicuns; anapolis; aparecida de goiania; apore; aragarcas; aragoiania; aracu; arenopolis; aurilandia; baliza; barro alto; bela vista de goias; bom jardim de goias; bom jesus de goias; bonfinopolis; brazabrantes; buriti alegre; buritinopolis; cabeceiras; cachoeira alta; cachoeira de goias; cachoeira dourada; caiaponia; caldas novas; caldazinha; campinacu; campinorte; campo alegre de goias; campo limpo de goias; campos belos; campos verdes; carmo do rio verde; castelandia; catalao; cavalcante; cacu; ceres; cezarina; chapadao do ceu; cidade ocidental; cocalzinho de goias; colinas do sul; corumbaiba; corumba de goias; cristalina; crixas; crominia; corrego do ouro; damianopolis; damolandia; davinopolis; diorama; divinopolis de goias; doverlandia; edealina; edeia; fazenda nova; flores de goias; formosa; formoso; gameleira de goias; goiandira; goianira; goianapolis; goianesia; goiatuba; goias; goiania; gouvelandia; guapo; guarani de goias; guaraita; guarinos; heitorai; hidrolina; hidrolandia; iaciara; inaciolandia; indiara; inhumas; ipameri; ipiranga de goias; ipora; israelandia; itaberai; itaguari; itaguaru; itaja; itapaci; itapuranga; itaucu; itumbiara; ivolandia; jandaia; jaragua; jatai; jaupaci; jesupolis; joviania; leopoldo de bulhoes; luziania; mairipotaba; mambai; mara rosa; marzagao; maurilandia; mimoso de goias; minacu; mineiros; moipora; monte alegre de goias; montividiu; morrinhos; morro agudo de goias; mossamedes; nazario; neropolis; niquelandia; nova america; nova crixas; nova gloria; nova iguacu de goias; nova roma; nova veneza; novo brasil; novo gama; orizona; other; ouro verde de goias; ouvidor; padre bernardo; palestina de goias; palmeiras de goias; palmelo; panama; paranaiguara; parana; parauna; perolandia; petrolina de goias; pilar de goias; piracanjuba; piranhas; pirenopolis; planaltina; pontalina; porteirao; portelandia; posse; professor jamil; quirinopolis; rialma; rianapolis; rio quente; rio verde; rubiataba; santa barbara de goias; santa fe de goias; santa helena de goias; santa isabel; santa rita do araguaia; santa rita do novo destino; santa rosa de goias; santa tereza de goias; santa terezinha de goias; santo antonio da barra; santo antonio de goias; santo antonio do descoberto; senador canedo; serranopolis; silvania; simolandia; sao domingos; sao francisco de goias; sao joao d'alianca; sao joao da parauna; sao luis de montes belos; sao luiz do norte; sao miguel do passa quatro; sao patricio; sitio d'abadia; taquaral de goias; teresina de goias; terezopolis de goias; trindade; tres ranchos; turvelandia; turvania; uruana; uruacu; urutai; varjao; vianopolis; vicentinopolis; vila boa; vila propicio; agua fria de goias; agua limpa; aguas lindas de goias; bodoquena; bonito; cassilandia; chapadao do sul; costa rica; ladario; miranda; alto garcas; alto taquari; campo novo do parecis; campo verde; dom aquino; guiratinga; nova brasilandia; novo progresso; other; planalto da serra; reserva do cabacal; ribeiraozinho; santa rita do trivelato; santana do araguaia; sao jose do xingu; torixoreu
-    #> 
-    #> [Grupo 2]:
-    #>  amaralina; araguapaz; aruana; bonopolis; britania; faina; itapirapua; jussara; matrincha; montividiu do norte; mozarlandia; mundo novo; novo planalto; porangatu; sao miguel do araguaia; trombas; uirapuru; aquidauana; coxim; porto murtinho; rio verde de mato grosso; sonora; alto boa vista; araguaiana; araputanga; barra do bugres; barra do garcas; barao de melgaco; bom jesus do araguaia; campinapolis; canabrava do norte; canarana; cocalinho; confresa; conquista d'oeste; curvelandia; caceres; feliz natal; figueiropolis d'oeste; gaucha do norte; general carneiro; gloria d'oeste; indiavai; jauru; lambari d'oeste; luciara; nossa senhora do livramento; nova nazare; nova olimpia; nova ubirata; nova xavantina; novo santo antonio; novo sao joaquim; paranatinga; pocone; pontal do araguaia; pontes e lacerda; porto alegre do norte; porto esperidiao; porto estrela; querencia; ribeirao cascalheira; rosario oeste; salto do ceu; santa carmem; santa terezinha; santo afonso; santo antonio do leste; santo antonio do leverger; serra nova dourada; sao felix do araguaia; sao jose dos quatro marcos; tesouro; uniao do sul; vale de sao domingos; agua boa
-    #> 
-    #> [Grupo 3]:
-    #>  itaruma; montes claros de goias; sao simao; alcinopolis; amambai; anastacio; anaurilandia; angelica; antonio joao; aparecida do taboado; aral moreira; bandeirantes; bataguassu; bataypora; bela vista; brasilandia; caarapo; camapua; campo grande; caracol; corguinho; coronel sapucaia; corumba; deodapolis; dois irmaos do buriti; douradina; dourados; eldorado; figueirao; fatima do sul; gloria de dourados; guia lopes da laguna; iguatemi; inocencia; itapora; itaquirai; ivinhema; japora; jaraguari; jardim; jatei; juti; laguna carapa; maracaju; mundo novo; navirai; nioaque; nova alvorada do sul; nova andradina; novo horizonte do sul; paranaiba; paranhos; pedro gomes; ponta pora; ribas do rio pardo; rio brilhante; rio negro; rochedo; santa rita do pardo; selviria; sete quedas; sidrolandia; sao gabriel do oeste; tacuru; taquarussu; terenos; tres lagoas; vicentina; agua clara; acorizal; alta floresta; alto araguaia; alto paraguai; apiacas; araguainha; arenapolis; aripuana; brasnorte; campos de julio; carlinda; castanheira; chapada dos guimaraes; claudia; colniza; colider; comodoro; cotriguacu; cuiaba; denise; diamantino; guaranta do norte; ipiranga do norte; itanhanga; itauba; itiquira; jaciara; juara; juruena; juscimeira; juina; lucas do rio verde; marcelandia; matupa; nobres; nova bandeirantes; nova canaa do norte; nova guarita; nova lacerda; nova marilandia; nova maringa; nova monte verde; nova mutum; nova santa helena; novo horizonte do norte; novo mundo; paranaita; pedra preta; peixoto de azevedo; ponte branca; porto dos gauchos; poxoreo; primavera do leste; rondolandia; rondonopolis; santa cruz do xingu; sapezal; sinop; sorriso; sao jose do povo; sao jose do rio claro; sao pedro da cipa; tabapora; tangara da serra; tapurah; terra nova do norte; vera; vila bela da santissima trindade; vila rica; varzea grande
-
-![](README_files/figure-gfm/unnamed-chunk-10-25.png)<!-- -->
-
-    #> [1] "==== Tabela da correlação dos atributos com cada PC ===="
-    #>                       PC1         PC2         PC3         PC4         PC5
-    #> emissao        0.04370209  0.10653268  0.14450371  0.46525187  0.70566894
-    #> anomalia_xco2  0.20944710  0.18489045  0.00148143  0.78599063 -0.26854267
-    #> temperatura    0.22445646  0.92971192 -0.10834774 -0.01989684  0.03322189
-    #> sif_757        0.37281497 -0.10675169 -0.08182746 -0.09936477  0.59856857
-    #> desmatamento   0.51145003  0.25496600 -0.12189706  0.12417756 -0.28442266
-    #> pressao        0.57645133  0.58710231 -0.38194438 -0.18692661  0.06221505
-    #> precipitacao   0.58472438 -0.67124547 -0.17587519  0.16091866 -0.07034999
-    #> fpar           0.59068488  0.04613208  0.73769273 -0.17178624 -0.04946282
-    #> radiacao      -0.64383227  0.10129376  0.39471589  0.26822848 -0.03006836
-    #> umidade        0.64416892 -0.69790765 -0.17668057  0.06557449 -0.01086128
-    #> xch4           0.66453360  0.22267520 -0.14752988  0.14139259 -0.01322369
-    #> lai            0.69360123  0.07346520  0.66867406 -0.07977259 -0.04155770
-
-![](README_files/figure-gfm/unnamed-chunk-10-26.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-10-27.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-10-28.png)<!-- -->
-
-    #> [1] "==== Autovalores ===="
-    #>  [1] 3.213 2.450 1.325 1.075 1.002 0.884 0.796 0.661 0.364 0.113 0.080 0.036
-    #> [1] "==== % da variância explicada ===="
-    #>  [1] 0.2678 0.2042 0.1104 0.0896 0.0835 0.0737 0.0664 0.0551 0.0304 0.0094
-    #> [11] 0.0067 0.0030
-    #> [1] "==== % da variância explicada acumulada ===="
-    #>  [1]  26.78  47.20  58.24  67.20  75.55  82.91  89.55  95.06  98.09  99.03
-    #> [11]  99.70 100.00
-    #> [1] "==== Poder Discriminante ===="
-
-![](README_files/figure-gfm/unnamed-chunk-10-29.png)<!-- -->
-
-    #> [Grupo 1]:
-    #>  brasilia; abadia de goias; abadiania; adelandia; alexania; alvorada do norte; americano do brasil; amorinopolis; anicuns; anapolis; aracu; aurilandia; avelinopolis; barro alto; bela vista de goias; bonfinopolis; brazabrantes; buriti alegre; buritinopolis; cabeceiras; cachoeira de goias; caldas novas; caldazinha; campo alegre de goias; campo limpo de goias; campos belos; campos verdes; carmo do rio verde; catalao; caturai; ceres; cidade ocidental; cocalzinho de goias; colinas do sul; corumbaiba; corumba de goias; cristalina; cristianopolis; crominia; damianopolis; damolandia; davinopolis; divinopolis de goias; flores de goias; formosa; gameleira de goias; goiandira; goianira; goianapolis; goianesia; goias; goiania; guarani de goias; guaraita; guarinos; heitorai; hidrolina; hidrolandia; inhumas; ipameri; ipiranga de goias; itaberai; itaguari; itaguaru; itapaci; itapuranga; itaucu; jandaia; jaragua; jesupolis; leopoldo de bulhoes; luziania; mambai; marzagao; morrinhos; mossamedes; nazario; neropolis; nova america; nova gloria; nova veneza; novo gama; orizona; ouro verde de goias; ouvidor; padre bernardo; palmeiras de goias; palmelo; palminopolis; parauna; petrolina de goias; pilar de goias; piracanjuba; pirenopolis; pires do rio; planaltina; posse; professor jamil; rialma; rianapolis; rio quente; rubiataba; sanclerlandia; santa barbara de goias; santa cruz de goias; santa isabel; santa rita do novo destino; santa rosa de goias; santo antonio de goias; santo antonio do descoberto; senador canedo; silvania; sao domingos; sao francisco de goias; sao joao d'alianca; sao joao da parauna; sao luiz do norte; sao miguel do passa quatro; sao patricio; sitio d'abadia; taquaral de goias; terezopolis de goias; trindade; tres ranchos; turvania; uruana; urutai; valparaiso de goias; vianopolis; vila boa; vila propicio; agua fria de goias; agua limpa; aguas lindas de goias
-    #> 
-    #> [Grupo 2]:
-    #>  acreuna; aloandia; alto horizonte; alto paraiso de goias; amaralina; aparecida de goiania; aparecida do rio doce; apore; aragarcas; araguapaz; arenopolis; aruana; baliza; bom jardim de goias; bom jesus de goias; bonopolis; britania; buriti de goias; cachoeira alta; cachoeira dourada; caiaponia; campestre de goias; campinacu; campinorte; castelandia; cavalcante; cacu; cezarina; chapadao do ceu; crixas; corrego do ouro; diorama; doverlandia; edealina; edeia; estrela do norte; faina; fazenda nova; firminopolis; formoso; goiatuba; gouvelandia; guapo; iaciara; inaciolandia; indiara; ipora; israelandia; itaja; itapirapua; itaruma; itumbiara; ivolandia; jatai; jaupaci; joviania; jussara; lagoa santa; mairipotaba; mara rosa; matrincha; maurilandia; mimoso de goias; minacu; mineiros; moipora; monte alegre de goias; montes claros de goias; montividiu; montividiu do norte; morro agudo de goias; mozarlandia; mundo novo; mutunopolis; niquelandia; nova crixas; nova iguacu de goias; nova roma; novo brasil; novo planalto; other; palestina de goias; panama; paranaiguara; parana; perolandia; piranhas; pontalina; porangatu; porteirao; portelandia; quirinopolis; rio verde; santa fe de goias; santa helena de goias; santa rita do araguaia; santa tereza de goias; santa terezinha de goias; santo antonio da barra; serranopolis; simolandia; sao luis de montes belos; sao miguel do araguaia; sao simao; teresina de goias; trombas; turvelandia; uirapuru; uruacu; varjao; vicentinopolis; alcinopolis; amambai; anastacio; anaurilandia; angelica; antonio joao; aparecida do taboado; aquidauana; aral moreira; bandeirantes; bataguassu; bataypora; bela vista; bodoquena; bonito; brasilandia; caarapo; camapua; campo grande; caracol; cassilandia; chapadao do sul; corguinho; coronel sapucaia; costa rica; coxim; deodapolis; dois irmaos do buriti; douradina; dourados; eldorado; figueirao; fatima do sul; gloria de dourados; guia lopes da laguna; iguatemi; inocencia; itapora; itaquirai; ivinhema; japora; jaraguari; jardim; jatei; juti; ladario; laguna carapa; maracaju; miranda; mundo novo; navirai; nioaque; nova alvorada do sul; nova andradina; novo horizonte do sul; other; paranaiba; paranhos; pedro gomes; ponta pora; porto murtinho; ribas do rio pardo; rio brilhante; rio negro; rio verde de mato grosso; rochedo; santa rita do pardo; selviria; sete quedas; sidrolandia; sonora; sao gabriel do oeste; tacuru; taquarussu; terenos; tres lagoas; vicentina; agua clara; acorizal; alto araguaia; alto boa vista; alto garcas; alto paraguai; alto taquari; araguaiana; araguainha; araputanga; arenapolis; barra do bugres; barra do garcas; barao de melgaco; bom jesus do araguaia; campinapolis; campo verde; canabrava do norte; canarana; chapada dos guimaraes; cocalinho; confresa; conquista d'oeste; cuiaba; curvelandia; caceres; denise; diamantino; dom aquino; figueiropolis d'oeste; general carneiro; gloria d'oeste; guiratinga; indiavai; itiquira; jaciara; jangada; jauru; juscimeira; lambari d'oeste; lucas do rio verde; marcelandia; mirassol d'oeste; nobres; nortelandia; nossa senhora do livramento; nova brasilandia; nova lacerda; nova marilandia; nova mutum; nova nazare; nova olimpia; nova xavantina; novo progresso; novo santo antonio; novo sao joaquim; other; paranatinga; pedra preta; peixoto de azevedo; planalto da serra; pocone; pontal do araguaia; ponte branca; pontes e lacerda; porto alegre do norte; porto esperidiao; porto estrela; poxoreo; primavera do leste; querencia; reserva do cabacal; ribeirao cascalheira; ribeiraozinho; rondonopolis; rosario oeste; salto do ceu; santa cruz do xingu; santa rita do trivelato; santo afonso; santo antonio do leste; santo antonio do leverger; serra nova dourada; sorriso; sao felix do araguaia; sao jose do povo; sao jose do rio claro; sao jose do xingu; sao jose dos quatro marcos; sao pedro da cipa; tangara da serra; tapurah; tesouro; torixoreu; uniao do sul; vera; vila bela da santissima trindade; varzea grande; agua boa
-    #> 
-    #> [Grupo 3]:
-    #>  corumba; alta floresta; apiacas; aripuana; brasnorte; campo novo do parecis; campos de julio; carlinda; castanheira; claudia; colniza; colider; comodoro; cotriguacu; feliz natal; gaucha do norte; guaranta do norte; ipiranga do norte; itanhanga; itauba; juara; juruena; juina; luciara; matupa; nova bandeirantes; nova canaa do norte; nova guarita; nova maringa; nova monte verde; nova santa helena; nova ubirata; novo horizonte do norte; novo mundo; paranaita; porto dos gauchos; rondolandia; santa carmem; santa terezinha; sapezal; sinop; tabapora; terra nova do norte; vale de sao domingos; vila rica
-
-![](README_files/figure-gfm/unnamed-chunk-10-30.png)<!-- -->
-
-    #> [1] "==== Tabela da correlação dos atributos com cada PC ===="
-    #>                       PC1         PC2         PC3         PC4         PC5
-    #> anomalia_xco2  0.05737308  0.09591834 -0.49931487 -0.45695712  0.01594064
-    #> emissao        0.07066871  0.03442915  0.09029660 -0.05947836 -0.97809726
-    #> sif_757        0.17175227  0.22507968 -0.13573741  0.79303392 -0.06896708
-    #> fpar           0.33812633  0.63099626  0.60543936 -0.20710131  0.05517764
-    #> umidade       -0.35848024  0.81754465 -0.32072870  0.08737868 -0.02097486
-    #> precipitacao  -0.42577006  0.69241366 -0.33339773 -0.07103963 -0.06605426
-    #> lai            0.44065062  0.73257820  0.38147745 -0.16600755  0.02951430
-    #> desmatamento   0.50131916  0.14752722 -0.15419120 -0.11531215  0.14096804
-    #> xch4           0.61559495  0.19123496 -0.52607434 -0.12014674 -0.05818562
-    #> radiacao      -0.64112814 -0.35035714  0.05352417 -0.31699898 -0.06764972
-    #> temperatura    0.86916808 -0.32008503 -0.13685576 -0.12245789 -0.05529232
-    #> pressao        0.87200934 -0.15249453 -0.03411135  0.08421823 -0.01997568
-
-![](README_files/figure-gfm/unnamed-chunk-10-31.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-10-32.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-10-33.png)<!-- -->
-
-    #> [1] "==== Autovalores ===="
-    #>  [1] 3.486 1.767 1.450 1.181 1.005 0.968 0.829 0.684 0.349 0.148 0.102 0.032
-    #> [1] "==== % da variância explicada ===="
-    #>  [1] 0.2905 0.1473 0.1208 0.0984 0.0837 0.0806 0.0691 0.0570 0.0290 0.0124
-    #> [11] 0.0085 0.0027
-    #> [1] "==== % da variância explicada acumulada ===="
-    #>  [1]  29.05  43.78  55.86  65.70  74.07  82.13  89.04  94.74  97.64  98.88
-    #> [11]  99.73 100.00
-    #> [1] "==== Poder Discriminante ===="
-
-![](README_files/figure-gfm/unnamed-chunk-10-34.png)<!-- -->
-
-    #> [Grupo 1]:
-    #>  brasilia; abadia de goias; abadiania; acreuna; adelandia; alexania; alto horizonte; alto paraiso de goias; alvorada do norte; americano do brasil; amorinopolis; anhanguera; anicuns; anapolis; aparecida de goiania; apore; aragarcas; aragoiania; aracu; arenopolis; aurilandia; avelinopolis; baliza; barro alto; bela vista de goias; bom jardim de goias; bonfinopolis; brazabrantes; britania; buriti alegre; buriti de goias; buritinopolis; cabeceiras; cachoeira de goias; caiaponia; caldas novas; caldazinha; campestre de goias; campo alegre de goias; campo limpo de goias; campos belos; carmo do rio verde; catalao; caturai; cavalcante; ceres; cezarina; chapadao do ceu; cidade ocidental; cocalzinho de goias; colinas do sul; corumbaiba; corumba de goias; cristalina; cristianopolis; crominia; corrego do ouro; damianopolis; davinopolis; diorama; divinopolis de goias; doverlandia; edeia; fazenda nova; firminopolis; flores de goias; formosa; gameleira de goias; goiandira; goianira; goianapolis; goianesia; goias; goiania; guarani de goias; guaraita; guarinos; heitorai; hidrolina; hidrolandia; iaciara; indiara; inhumas; ipameri; ipiranga de goias; ipora; israelandia; itaberai; itaguari; itaguaru; itapaci; itapuranga; itumbiara; jandaia; jaragua; jatai; jaupaci; jesupolis; jussara; leopoldo de bulhoes; luziania; mambai; marzagao; mimoso de goias; mineiros; montes claros de goias; montividiu; morrinhos; mossamedes; nazario; neropolis; niquelandia; nova aurora; nova gloria; nova roma; nova veneza; novo brasil; novo gama; orizona; ouro verde de goias; ouvidor; padre bernardo; palestina de goias; palmeiras de goias; palmelo; palminopolis; panama; parauna; perolandia; petrolina de goias; pilar de goias; piracanjuba; pirenopolis; pires do rio; planaltina; posse; professor jamil; rialma; rianapolis; rio quente; rio verde; sanclerlandia; santa barbara de goias; santa cruz de goias; santa fe de goias; santa helena de goias; santa isabel; santa rita do novo destino; santa rosa de goias; santo antonio da barra; santo antonio de goias; santo antonio do descoberto; senador canedo; serranopolis; silvania; simolandia; sao domingos; sao francisco de goias; sao joao d'alianca; sao joao da parauna; sao luis de montes belos; sao luiz do norte; sao miguel do passa quatro; sao patricio; sitio d'abadia; taquaral de goias; terezopolis de goias; trindade; tres ranchos; turvania; uruana; urutai; vianopolis; vila boa; vila propicio; agua fria de goias; agua limpa; aguas lindas de goias; bandeirantes; camapua; cassilandia; chapadao do sul; costa rica; jaraguari; sao gabriel do oeste; alto araguaia; alto garcas; alto taquari; araguainha; guiratinga; ponte branca; ribeiraozinho; torixoreu
-    #> 
-    #> [Grupo 2]:
-    #>  aloandia; amaralina; aparecida do rio doce; araguapaz; aruana; bom jesus de goias; bonopolis; cachoeira alta; cachoeira dourada; campinacu; campinorte; campos verdes; castelandia; cacu; crixas; cumari; edealina; estrela do norte; faina; formoso; goiatuba; gouvelandia; guapo; inaciolandia; itaja; itapirapua; itaruma; itaucu; ivolandia; joviania; lagoa santa; mairipotaba; mara rosa; matrincha; maurilandia; minacu; moipora; monte alegre de goias; montividiu do norte; morro agudo de goias; mozarlandia; mundo novo; mutunopolis; nova america; nova crixas; nova iguacu de goias; novo planalto; other; paranaiguara; parana; piranhas; pontalina; porangatu; porteirao; portelandia; quirinopolis; rubiataba; santa tereza de goias; santa terezinha de goias; sao miguel do araguaia; sao simao; teresina de goias; trombas; turvelandia; uirapuru; uruacu; varjao; vicentinopolis; alcinopolis; amambai; anastacio; anaurilandia; angelica; antonio joao; aparecida do taboado; aquidauana; aral moreira; bataguassu; bataypora; bela vista; bodoquena; bonito; brasilandia; caarapo; campo grande; caracol; corguinho; coronel sapucaia; corumba; coxim; deodapolis; dois irmaos do buriti; douradina; dourados; eldorado; figueirao; fatima do sul; gloria de dourados; guia lopes da laguna; iguatemi; inocencia; itapora; itaquirai; ivinhema; japora; jardim; jatei; juti; ladario; laguna carapa; maracaju; miranda; mundo novo; navirai; nioaque; nova alvorada do sul; nova andradina; novo horizonte do sul; other; paranaiba; paranhos; pedro gomes; ponta pora; porto murtinho; ribas do rio pardo; rio brilhante; rio negro; rio verde de mato grosso; rochedo; santa rita do pardo; selviria; sete quedas; sidrolandia; sonora; tacuru; taquarussu; terenos; tres lagoas; agua clara; acorizal; altamira; alto boa vista; alto paraguai; araguaiana; araputanga; arenapolis; barra do bugres; barra do garcas; barao de melgaco; bom jesus do araguaia; campinapolis; campo novo do parecis; campo verde; canarana; chapada dos guimaraes; cocalinho; confresa; cuiaba; curvelandia; caceres; denise; dom aquino; general carneiro; gloria d'oeste; indiavai; itiquira; jaciara; jangada; juscimeira; lambari d'oeste; mirassol d'oeste; nobres; nortelandia; nossa senhora do livramento; nova brasilandia; nova marilandia; nova nazare; nova olimpia; nova xavantina; novo progresso; novo santo antonio; novo sao joaquim; other; pedra preta; planalto da serra; pocone; pontal do araguaia; pontes e lacerda; porto alegre do norte; porto esperidiao; porto estrela; poxoreo; primavera do leste; querencia; reserva do cabacal; ribeirao cascalheira; rio branco; rondonopolis; rosario oeste; salto do ceu; santa rita do trivelato; santana do araguaia; santo afonso; santo antonio do leste; santo antonio do leverger; sapezal; serra nova dourada; sao felix do araguaia; sao jose do povo; sao jose do xingu; sao jose dos quatro marcos; sao pedro da cipa; tangara da serra; tesouro; vilhena; varzea grande; agua boa
-    #> 
-    #> [Grupo 3]:
-    #>  alta floresta; apiacas; aripuana; brasnorte; campos de julio; canabrava do norte; carlinda; castanheira; claudia; colniza; colider; comodoro; conquista d'oeste; cotriguacu; diamantino; feliz natal; figueiropolis d'oeste; gaucha do norte; guaranta do norte; ipiranga do norte; itanhanga; itauba; jauru; juara; juruena; juina; lucas do rio verde; luciara; marcelandia; matupa; nova bandeirantes; nova canaa do norte; nova guarita; nova lacerda; nova maringa; nova monte verde; nova mutum; nova santa helena; nova ubirata; novo horizonte do norte; novo mundo; paranatinga; paranaita; peixoto de azevedo; porto dos gauchos; rondolandia; santa carmem; santa cruz do xingu; santa terezinha; sinop; sorriso; sao jose do rio claro; tabapora; tapurah; terra nova do norte; uniao do sul; vale de sao domingos; vera; vila bela da santissima trindade; vila rica
-
-![](README_files/figure-gfm/unnamed-chunk-10-35.png)<!-- -->
-
-    #> [1] "==== Tabela da correlação dos atributos com cada PC ===="
-    #>                       PC1         PC2          PC3         PC4          PC5
-    #> emissao        0.08272397 -0.03461138 -0.035241334  0.16200006 -0.925075223
-    #> sif_757        0.21163109 -0.10136540 -0.032546084  0.56040260  0.319263922
-    #> anomalia_xco2  0.35105037 -0.08622727  0.416888019 -0.26022684  0.156926106
-    #> desmatamento   0.41275176  0.23859912 -0.115673897 -0.06146189  0.045248904
-    #> fpar           0.46896959 -0.52291857 -0.596773164 -0.30581820  0.009739622
-    #> temperatura    0.58726760  0.68008556  0.009540996 -0.29815696 -0.055278938
-    #> xch4           0.58738757  0.03681096  0.473482568 -0.40450310  0.009454254
-    #> precipitacao   0.62751148 -0.31443080  0.547949251  0.06793582 -0.113758574
-    #> pressao        0.64413898  0.62531635 -0.244965513  0.14936180 -0.013200608
-    #> lai            0.66391290 -0.50788261 -0.423762250 -0.24885007  0.004582816
-    #> umidade        0.67187253 -0.38737760  0.276633257  0.44635505 -0.014955759
-    #> radiacao      -0.72816215 -0.23662043  0.251629556 -0.36711546 -0.061017227
-
-![](README_files/figure-gfm/unnamed-chunk-10-36.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-10-37.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-10-38.png)<!-- -->
-
-    #> [1] "==== Autovalores ===="
-    #>  [1] 3.286 1.686 1.314 1.241 0.989 0.845 0.736 0.541 0.203 0.103 0.055
-    #> [1] "==== % da variância explicada ===="
-    #>  [1] 0.2987 0.1533 0.1195 0.1128 0.0900 0.0768 0.0669 0.0492 0.0184 0.0094
-    #> [11] 0.0050
-    #> [1] "==== % da variância explicada acumulada ===="
-    #>  [1]  29.87  45.20  57.15  68.43  77.43  85.11  91.80  96.72  98.56  99.50
-    #> [11] 100.00
-    #> [1] "==== Poder Discriminante ===="
-
-![](README_files/figure-gfm/unnamed-chunk-10-39.png)<!-- -->
-
-    #> [Grupo 1]:
-    #>  brasilia; abadia de goias; abadiania; acreuna; adelandia; alexania; aloandia; alto paraiso de goias; alvorada do norte; americano do brasil; amorinopolis; anhanguera; anicuns; anapolis; aparecida de goiania; aparecida do rio doce; aragarcas; aragoiania; aracu; arenopolis; aurilandia; avelinopolis; baliza; barro alto; bela vista de goias; bom jardim de goias; bom jesus de goias; bonfinopolis; brazabrantes; buriti alegre; buriti de goias; buritinopolis; cabeceiras; cachoeira alta; cachoeira de goias; cachoeira dourada; caiaponia; caldas novas; caldazinha; campestre de goias; campo alegre de goias; campo limpo de goias; campos belos; carmo do rio verde; castelandia; catalao; caturai; cavalcante; cacu; ceres; cezarina; chapadao do ceu; cidade ocidental; cocalzinho de goias; colinas do sul; corumbaiba; corumba de goias; cristalina; cristianopolis; crixas; crominia; cumari; corrego do ouro; damianopolis; damolandia; davinopolis; diorama; divinopolis de goias; doverlandia; edealina; edeia; fazenda nova; firminopolis; flores de goias; formosa; gameleira de goias; goiandira; goianira; goianapolis; goianesia; goiatuba; goias; goiania; gouvelandia; guapo; guarani de goias; guaraita; guarinos; heitorai; hidrolina; hidrolandia; iaciara; inaciolandia; indiara; inhumas; ipameri; ipiranga de goias; ipora; israelandia; itaberai; itaguari; itaguaru; itaja; itapaci; itapuranga; itaruma; itaucu; itumbiara; jandaia; jaragua; jatai; jaupaci; joviania; lagoa santa; leopoldo de bulhoes; luziania; mambai; marzagao; maurilandia; mimoso de goias; mineiros; monte alegre de goias; montes claros de goias; montividiu; morrinhos; morro agudo de goias; mossamedes; nazario; neropolis; nova america; nova aurora; nova gloria; nova iguacu de goias; nova roma; nova veneza; novo brasil; orizona; ouro verde de goias; ouvidor; padre bernardo; palestina de goias; palmeiras de goias; palmelo; palminopolis; panama; paranaiguara; parauna; perolandia; petrolina de goias; pilar de goias; piracanjuba; piranhas; pirenopolis; pires do rio; planaltina; pontalina; porteirao; portelandia; posse; professor jamil; quirinopolis; rialma; rianapolis; rio quente; rio verde; rubiataba; sanclerlandia; santa barbara de goias; santa cruz de goias; santa fe de goias; santa helena de goias; santa isabel; santa rita do araguaia; santa rita do novo destino; santa rosa de goias; santa terezinha de goias; santo antonio da barra; santo antonio de goias; santo antonio do descoberto; senador canedo; serranopolis; silvania; simolandia; sao domingos; sao francisco de goias; sao joao d'alianca; sao joao da parauna; sao luis de montes belos; sao luiz do norte; sao miguel do passa quatro; sao patricio; sao simao; sitio d'abadia; taquaral de goias; teresina de goias; terezopolis de goias; trindade; tres ranchos; turvelandia; turvania; uruana; uruacu; urutai; valparaiso de goias; varjao; vianopolis; vicentinopolis; vila boa; vila propicio; agua fria de goias; agua limpa; aguas lindas de goias; alcinopolis; aparecida do taboado; costa rica; jaraguari; paranaiba; sao gabriel do oeste; agua clara; alto araguaia; alto garcas; alto taquari; araguainha; barra do garcas; campinapolis; general carneiro; guiratinga; itiquira; nova xavantina; novo sao joaquim; pontal do araguaia; ponte branca; poxoreo; primavera do leste; ribeiraozinho; santo antonio do leste; tesouro; torixoreu
-    #> 
-    #> [Grupo 2]:
-    #>  other; alto horizonte; amaralina; apore; araguapaz; aruana; bonopolis; britania; campinacu; campinorte; campos verdes; estrela do norte; faina; formoso; itapirapua; ivolandia; jussara; mairipotaba; mara rosa; matrincha; minacu; moipora; montividiu do norte; mozarlandia; mundo novo; mutunopolis; niquelandia; nova crixas; novo planalto; other; parana; porangatu; santa tereza de goias; sao miguel do araguaia; trombas; uirapuru; aquidauana; cassilandia; corumba; inocencia; other; porto murtinho; rio verde de mato grosso; selviria; acorizal; altamira; alto boa vista; araguaiana; aripuana; barra do bugres; barao de melgaco; bom jesus do araguaia; canabrava do norte; canarana; cocalinho; colniza; cuiaba; caceres; jangada; juara; luciara; nossa senhora do livramento; nova bandeirantes; nova nazare; novo progresso; novo santo antonio; other; paranatinga; pocone; porto alegre do norte; ribeirao cascalheira; santa terezinha; santo antonio do leverger; serra nova dourada; sao felix do araguaia; varzea grande; agua boa
-    #> 
-    #> [Grupo 3]:
-    #>  amambai; anastacio; anaurilandia; angelica; antonio joao; aral moreira; bandeirantes; bataguassu; bataypora; bela vista; bodoquena; bonito; brasilandia; caarapo; camapua; campo grande; caracol; chapadao do sul; corguinho; coronel sapucaia; coxim; deodapolis; dois irmaos do buriti; douradina; dourados; eldorado; figueirao; fatima do sul; gloria de dourados; guia lopes da laguna; iguatemi; itapora; itaquirai; ivinhema; japora; jardim; jatei; juti; ladario; laguna carapa; maracaju; miranda; mundo novo; navirai; nioaque; nova alvorada do sul; nova andradina; novo horizonte do sul; paranhos; pedro gomes; ponta pora; ribas do rio pardo; rio brilhante; rio negro; rochedo; santa rita do pardo; sete quedas; sidrolandia; sonora; tacuru; taquarussu; terenos; tres lagoas; vicentina; alta floresta; alto paraguai; apiacas; araputanga; brasnorte; campo novo do parecis; campo verde; campos de julio; carlinda; castanheira; chapada dos guimaraes; claudia; colider; comodoro; confresa; conquista d'oeste; cotriguacu; curvelandia; denise; diamantino; dom aquino; feliz natal; figueiropolis d'oeste; gaucha do norte; gloria d'oeste; guaranta do norte; indiavai; ipiranga do norte; itanhanga; itauba; jaciara; jauru; juruena; juscimeira; juina; lambari d'oeste; lucas do rio verde; marcelandia; matupa; mirassol d'oeste; nobres; nova brasilandia; nova canaa do norte; nova guarita; nova lacerda; nova marilandia; nova maringa; nova monte verde; nova mutum; nova olimpia; nova santa helena; nova ubirata; novo horizonte do norte; novo mundo; paranaita; pedra preta; peixoto de azevedo; planalto da serra; pontes e lacerda; porto dos gauchos; porto esperidiao; porto estrela; querencia; reserva do cabacal; rondolandia; rondonopolis; rosario oeste; salto do ceu; santa carmem; santa cruz do xingu; santa rita do trivelato; santo afonso; sapezal; sinop; sorriso; sao jose do povo; sao jose do rio claro; sao jose do xingu; sao jose dos quatro marcos; sao pedro da cipa; tabapora; tangara da serra; tapurah; terra nova do norte; uniao do sul; vale de sao domingos; vera; vila bela da santissima trindade; vila rica
-
-![](README_files/figure-gfm/unnamed-chunk-10-40.png)<!-- -->
-
-    #> [1] "==== Tabela da correlação dos atributos com cada PC ===="
-    #>                      PC1         PC2          PC3         PC4          PC5
-    #> emissao        0.1046442  0.01985563  0.062049252  0.22988665  0.950670964
-    #> anomalia_xco2 -0.1850819  0.34137718  0.376373175  0.67533760 -0.220223968
-    #> temperatura    0.2492742  0.88801705 -0.090082151  0.19596658  0.003984688
-    #> desmatamento   0.3467589  0.45948412 -0.007052358 -0.24957976 -0.070598768
-    #> sif_757        0.3796354 -0.28214656  0.056152002  0.39250761 -0.161810018
-    #> precipitacao   0.4392064 -0.31085243 -0.125215479  0.57565246 -0.029413114
-    #> fpar           0.6789928 -0.05702493  0.614490819 -0.26651468  0.029630618
-    #> pressao        0.6951839  0.47605945 -0.435126652  0.03024014  0.017187628
-    #> lai            0.7128251  0.06449373  0.638306219 -0.09655136 -0.007564978
-    #> umidade        0.7863536 -0.36827417 -0.209873990  0.15948292 -0.051333415
-    #> radiacao      -0.8066275  0.15441101  0.350796135  0.19817774  0.035599847
+## Carregando base completa e atualizada

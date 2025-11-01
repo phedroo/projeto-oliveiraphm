@@ -5,7 +5,6 @@ output: github_document
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
 
-
 ```{r, include = FALSE}
 ### 🌐 Opções globais para os chunks 
 
@@ -147,8 +146,6 @@ for (variavel in variaveis) {
 ```
 
 ### 📊 Histogramas
-
-Algumas bases apresentam histogramas inconsistentes ou errados, devido a incorporação.
 
 ```{r,eval=FALSE}
 variavel <- "xco2" # mudar
@@ -316,11 +313,10 @@ base_completa <- base_completa |>
   mutate(anomalia_xco2 = xco2 - median(xco2,na.rm=TRUE),
          .after = xco2) |> 
   dplyr::ungroup() |> 
-  relocate(year:city_ref, emissions_quantity, xco2, xch4, sif_757,
+  relocate(year:city_ref, starts_with('emissao'), xco2, xch4, sif_757,
            anomalia_xco2, temperatura, umidade, precipitacao, pressao, radiacao, vento,media_fpar:media_ndvi, desmatamento,area_queimada) |> 
     select(-media_et) |> 
-  rename(ano = year, estado = state, municipio = city_ref,
-         emissao = emissions_quantity,queimada = area_queimada,
+  rename(ano = year, estado = state, municipio = city_ref,queimada = area_queimada, 
          fpar = media_fpar,
          lai = media_lai,
          evi = media_evi,
@@ -330,7 +326,7 @@ base_completa <- base_completa |>
 
 ### Análise de correlação - total
 
-```{r}
+```{r,eval=FALSE}
 mc <- cor(base_completa |> 
             select(emissao:queimada), use = "complete.obs")
 corrplot(mc,method = "color",
@@ -347,7 +343,7 @@ corrplot(mc,method = "color",
 
 ### Análise de correlação - ANO 
 
-```{r}
+```{r,eval=FALSE}
 ngrp <- rep(3,8) # c(3,3,3,4,4,5,3,4)
 for( i in 2015:2022){
   # Análise de correlação
@@ -495,6 +491,102 @@ for( i in 2015:2022){
       print(tabelapca)
 }
 ```
+
+### Adicionando base climate TRACE atualizada na base antiga
+
+```{r,eval=FALSE}
+# Primeiro devemos carregar a nova base e tratá-la 
+
+# Carregando base
+base_att <- readxl::read_excel("data-raw/climate-trace-br.xlsx")
+
+# Criando vetor para extrair os municipios de todos os tipos de emissões
+municipios <- base_att |> 
+  mutate(
+    fonte = stri_trans_general(tolower(fonte), "Latin-ASCII"),
+    fonte = trimws(fonte)) |> 
+  filter(admin == 'Municipal') |> 
+  pull(fonte) |> unique()
+
+padrao_municipios <- paste0(municipios, collapse = "|")
+
+# Tratando base
+nova_base_ct <- base_att |> 
+  rename(city_ref = fonte,
+         emissao = emissao_co2e,
+         state = estado,
+         year = ano) |> 
+  filter(state %in% my_states,
+         year %in% 2021:2023) |> 
+  select(year, state, city_ref, emissao, setor, subsetor) |> 
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), "Latin-ASCII"),
+    city_ref = trimws(city_ref),
+    city_ref = str_extract(city_ref, padrao_municipios)
+  ) |>
+  group_by(year, state, city_ref, setor) |>
+  summarise(emissao_setores = sum(emissao)) |> 
+  pivot_wider(
+    names_from = setor,
+    values_from = emissao_setores,
+    names_prefix = "emissao_"
+  ) |> 
+  left_join(
+    base_att |> 
+  rename(city_ref = fonte,
+         emissao = emissao_co2e,
+         state = estado,
+         year = ano) |> 
+      filter(state %in% my_states,
+         year %in% 2021:2023) |> 
+  select(year, state, city_ref, emissao, setor, subsetor) |> 
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), "Latin-ASCII"),
+    city_ref = trimws(city_ref)
+  ) |>
+  group_by(year, state, city_ref, subsetor) |>
+  summarise(emissao_sub_setores = sum(emissao)) |> 
+  pivot_wider(
+    names_from = subsetor,
+    values_from = emissao_sub_setores,
+    names_prefix = "emissao_"
+  ),
+  by = c('city_ref', 'year', 'state')
+  )
+
+# Carregando base antiga
+base_antiga <- read_rds("data/emissions_sources_final.rds")
+
+# Adicionando base 
+bases_ct_atualizadas <- nova_base_ct |> left_join(
+  base_antiga,
+  by = c('year', 'city_ref', 'state'))|> 
+  select(-ends_with(".x"), -ends_with(".y"))
+
+bases_ct_atualizadas
+```
+
+### Incorporando base climate TRACE antiga e atual na base completa
+```{r,eval=FALSE}
+base_completa <- base_completa |> 
+  left_join(bases_ct_atualizadas,
+  by = c('year', 'city_ref', 'state'))|> 
+  select(-ends_with(".x"), -ends_with(".y"))
+
+base_completa
+
+# Salvando
+# write_rds(base_completa, 'data/base_completa_att.rds')
+```
+
+
+## Carregando base completa e atualizada
+```{r}
+
+```
+
+
+
 
 
     
