@@ -40,7 +40,7 @@ my_states <- c("MS","MT","GO","DF")
 
 ### 💨 Entrada com a Base: `emissions-sources.rds`
 ```{r, eval=FALSE}
-emissions_sources <- read_rds("../data/emissions_sources_final.rds")|> 
+emissions_sources <- read_rds("../data/emissions_sources.rds")|> 
   filter(sigla_uf %in% my_states)
 glimpse(emissions_sources)
 ```
@@ -411,7 +411,7 @@ base_parcial <- read_rds("../data/parcial_base.rds") |>
 deter <- read_rds("../data/deter_final.rds")
 prodes <- read_rds("../data/prodes_final.rds")
 modis <- read_rds("../data/appeears_modis_final.rds")
-climate_trace <- read_rds("../data/emissions_sources_antiga.rds")
+climate_trace <- read_rds("../data/emissions_sources_final.rds")
 ```
 
 
@@ -434,6 +434,6 @@ base_completa <- base_parcial |>
   left_join(climate_trace,
   by = c("year", "state", "city_ref"))
 
-glimpse(base_completa)
+base_completa
 # write_rds(base_completa, "../data/base_completa.rds")
 ```

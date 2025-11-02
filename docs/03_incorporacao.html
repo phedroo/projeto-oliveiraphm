@@ -377,7 +377,7 @@ source(&quot;../R/my-function.R&quot;) </code></pre>
 </div>
 <div id="entrada-com-a-base-emissions-sources.rds" class="section level3">
 <h3>💨 Entrada com a Base: <code>emissions-sources.rds</code></h3>
-<pre class="r"><code>emissions_sources &lt;- read_rds(&quot;../data/emissions_sources_final.rds&quot;)|&gt; 
+<pre class="r"><code>emissions_sources &lt;- read_rds(&quot;../data/emissions_sources.rds&quot;)|&gt; 
   filter(sigla_uf %in% my_states)
 glimpse(emissions_sources)</code></pre>
 <div id="filtrando-os-polígonos-do-municípios" class="section level4">
@@ -746,7 +746,7 @@ trace.</p>
 deter &lt;- read_rds(&quot;../data/deter_final.rds&quot;)
 prodes &lt;- read_rds(&quot;../data/prodes_final.rds&quot;)
 modis &lt;- read_rds(&quot;../data/appeears_modis_final.rds&quot;)
-climate_trace &lt;- read_rds(&quot;../data/emissions_sources_antiga.rds&quot;)</code></pre>
+climate_trace &lt;- read_rds(&quot;../data/emissions_sources_final.rds&quot;)</code></pre>
 </div>
 <div id="incorporando-as-bases-faltantes-e-criando-a-base-semicompleta" class="section level3">
 <h3>⛓️ Incorporando as bases faltantes e Criando a base
@@ -767,7 +767,7 @@ quantity (até 2023) não estao presente para todos os anos</em></p>
   left_join(climate_trace,
   by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;))
 
-glimpse(base_completa)
+base_completa
 # write_rds(base_completa, &quot;../data/base_completa.rds&quot;)</code></pre>
 </div>
 </div>
