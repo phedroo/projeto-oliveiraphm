@@ -382,8 +382,92 @@ source(&quot;../R/my-function.R&quot;)</code></pre>
 <pre class="r"><code>emissions_sources &lt;- read_rds(&quot;../data/emissions_sources.rds&quot;)|&gt; 
   filter(sigla_uf %in% my_states)
 glimpse(emissions_sources)</code></pre>
+</div>
+<div id="adicionando-base-climate-trace-atualizada-na-base-antiga" class="section level3">
+<h3>Adicionando base climate TRACE atualizada na base antiga</h3>
+<p>A base CT nova contém dados para o período de 2021 a 2025, enquanto a
+base antiga, para o perídoo de 2015 a 2023. Os dados desta (antiga)
+foram utilizados até o ano de 2020.</p>
+<pre class="r"><code># Primeiro devemos carregar a nova base e tratá-la 
+
+# Carregando nova base  -----------------------------------------------
+base_att &lt;- readxl::read_excel(&quot;../data-raw/climate-trace-br.xlsx&quot;)
+
+# Criando vetor para extrair os municipios de todos os tipos de emissões, possibilitando a padronização dos nomes para posterior incorporação
+municipios &lt;- base_att |&gt; 
+  mutate(
+    fonte = stri_trans_general(tolower(fonte), &quot;Latin-ASCII&quot;),
+    fonte = trimws(fonte)) |&gt; 
+  filter(admin == &#39;Municipal&#39;) |&gt; 
+  pull(fonte) |&gt; unique()
+
+padrao_municipios &lt;- paste0(municipios, collapse = &quot;|&quot;)
+
+# Tratando base --------------------------------------------------
+nova_base_ct &lt;- base_att |&gt; 
+  rename(city_ref = fonte,
+         emissao = emissao_co2e,
+         state = estado,
+         year = ano) |&gt; 
+  filter(state %in% my_states,
+         year %in% 2021:2023) |&gt; 
+  select(year, state, city_ref, emissao, setor, subsetor) |&gt; 
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), &quot;Latin-ASCII&quot;),
+    city_ref = trimws(city_ref),
+    city_ref = str_extract(city_ref, padrao_municipios)
+  ) |&gt;
+  group_by(year, state, city_ref, setor) |&gt;
+  summarise(emissao_setores = sum(emissao)) |&gt; 
+  pivot_wider(
+    names_from = setor,
+    values_from = emissao_setores,
+    names_prefix = &quot;emissao_&quot;
+  ) |&gt; 
+  left_join(
+    base_att |&gt; 
+  rename(city_ref = fonte,
+         emissao = emissao_co2e,
+         state = estado,
+         year = ano) |&gt; 
+      filter(state %in% my_states,
+         year %in% 2021:2023) |&gt; 
+  select(year, state, city_ref, emissao, setor, subsetor) |&gt; 
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), &quot;Latin-ASCII&quot;),
+    city_ref = trimws(city_ref)
+  ) |&gt;
+  group_by(year, state, city_ref, subsetor) |&gt;
+  summarise(emissao_sub_setores = sum(emissao)) |&gt; 
+  pivot_wider(
+    names_from = subsetor,
+    values_from = emissao_sub_setores,
+    names_prefix = &quot;emissao_&quot;
+  ),
+  by = c(&#39;city_ref&#39;, &#39;year&#39;, &#39;state&#39;)
+  )</code></pre>
+<pre class="r"><code># Carregando base antiga
+base_antiga &lt;- read_rds(&quot;../data/emissions_sources_final.rds&quot;)
+
+# Adicionando base e padronizando colunas que começam com emissao
+bases_ct_atualizadas &lt;- nova_base_ct |&gt; full_join(
+  base_antiga,
+  by = c(&#39;year&#39;, &#39;city_ref&#39;, &#39;state&#39;))|&gt; 
+  select(-ends_with(&quot;.x&quot;), -ends_with(&quot;.y&quot;))
+
+bases_ct_atualizadas</code></pre>
+</div>
+<div id="incorporando-base-climate-trace-antiga-e-atual-na-base-completa" class="section level3">
+<h3>Incorporando base climate TRACE antiga e atual na base completa</h3>
+<pre class="r"><code>base_completa &lt;- base_completa |&gt; 
+  left_join(bases_ct_atualizadas,
+  by = c(&#39;year&#39;, &#39;city_ref&#39;, &#39;state&#39;))|&gt; 
+  select(-ends_with(&quot;.x&quot;), -ends_with(&quot;.y&quot;))
+
+base_completa</code></pre>
 <p>Finalizar tratamento para posterior incorporação</p>
-<pre class="r"><code># último tratamento da base ct
+<p>Perdeu-se o setor de fósseis e alguns subsetores - verificar</p>
+<pre class="r"><code># Carregando base antiga
 emissions_sources_15_20 &lt;- read_rds(&quot;../data/emissions_sources.rds&quot;)
 
 # Atualizando a base ct para corresponder à nova
@@ -418,7 +502,11 @@ emissions_sources_15_20 &lt;- emissions_sources |&gt;
          subsetor = sub_sector) |&gt; 
   mutate(
     city_ref = stri_trans_general(tolower(city_ref), &quot;Latin-ASCII&quot;),
-    city_ref = trimws(city_ref)
+    city_ref = trimws(city_ref),
+    setor = stri_trans_general(tolower(setor), &quot;Latin-ASCII&quot;),
+    setor = trimws(setor),
+    subsetor = stri_trans_general(tolower(subsetor), &quot;Latin-ASCII&quot;),
+    subsetor = trimws(subsetor)
   ) |&gt; 
   group_by(year, state, city_ref, subsetor) |&gt;
   summarise(emissao_sub_setores = sum(emissao)) |&gt; 
@@ -433,14 +521,12 @@ emissions_sources_15_20 &lt;- emissions_sources |&gt;
 # Vetor antigo e novo
 setores_antigos &lt;- c(
   &quot;agriculture&quot;, &quot;forestry_and_land_use&quot;, &quot;fossil_fuel_operations&quot;,
-  &quot;manufacturing&quot;, &quot;mineral_extraction&quot;, &quot;power&quot;,
-  &quot;transportation&quot;, &quot;waste&quot;
+  &quot;manufacturing&quot;, &quot;transportation&quot;, &quot;power&quot;,
+  &quot;waste&quot;, &quot;mineral_extraction&quot;
 )
 
 setores_novos &lt;- c(
-  &quot;Agricultura&quot;, &quot;Florestas e Uso da Terra&quot;, &quot;Operações de Combustíveis Fósseis&quot;,
-  &quot;Manufatura&quot;, &quot;Extração Mineral&quot;, &quot;Energia&quot;,
-  &quot;Transporte&quot;, &quot;Resíduos&quot;
+  &quot;Agricultura&quot;, &quot;Florestas e Uso da Terra&quot;, &quot;Manufatura&quot;, &quot;Transporte&quot;, &quot;Energia&quot;, &quot;Resíduos&quot;,  &quot;Operações de Combustíveis Fósseis&quot;, &quot;Extração Mineral&quot;
 )
 
 # Vetor de nomes para usar no rename
@@ -488,7 +574,7 @@ emissions_sources_15_20_renomeada &lt;- emissions_sources_15_20 |&gt;
   rename_with(~ str_replace_all(., map_subsetores), .cols = starts_with(&quot;emissao_&quot;))
 
 # Salvar
-# write_rds(emissions_sources_15_20_renomeada, &quot;../data/emissions_sources_antiga.rds&quot;)</code></pre>
+# write_rds(emissions_sources_15_20_renomeada, &quot;../data/emissions_sources_final.rds&quot;)</code></pre>
 </div>
 <div id="entrada-com-a-base-nasa-xco2.rds" class="section level3">
 <h3>💨 Entrada com a Base: <code>nasa-xco2.rds</code></h3>
