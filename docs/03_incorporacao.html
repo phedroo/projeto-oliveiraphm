@@ -755,7 +755,7 @@ semicompleta</h3>
 <p>Essa base contém todas as variáveis em estudo <em>Lembrando:
 Variáveis como xch4 (até 2021), et (apartir de 2021) e emissions
 quantity (até 2023) não estao presente para todos os anos</em></p>
-<pre class="r"><code>base_completa &lt;- base_parcial |&gt; 
+<pre class="r"><code>base_semicompleta &lt;- base_parcial |&gt; 
   left_join(deter,
   by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;))|&gt; 
   left_join(prodes |&gt; 
@@ -763,12 +763,28 @@ quantity (até 2023) não estao presente para todos os anos</em></p>
   by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;))|&gt; 
   left_join(modis |&gt; select(
     year, state, city_ref, media_fpar, media_lai, media_evi, media_ndvi, media_et),
-  by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;))|&gt;
-  left_join(climate_trace,
   by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;))
 
+base_semicompleta
+# write_rds(base_semicompleta, &quot;../data/base_semicompleta.rds&quot;)</code></pre>
+</div>
+<div id="incorporando-base-climate-trace-antiga-e-atual-bases_ct_atualizadas-na-base-semicompleta-e-criando-base-completa" class="section level3">
+<h3>Incorporando base climate TRACE antiga e atual
+(bases_ct_atualizadas) na base semicompleta e criando base completa</h3>
+<p>Essa base completa é a base utilizada nas análises futuras e já
+incorporadas</p>
+<pre class="r"><code># Carregando bases_ct_atualizadas
+# bases_ct_atualizadas &lt;- read_rds(&#39;../data-raw/bases_ct_atualizadas.rds&#39;)
+
+# incorporando
+base_completa &lt;- base_semicompleta |&gt; 
+  full_join(bases_ct_atualizadas,
+  by = c(&#39;year&#39;, &#39;city_ref&#39;, &#39;state&#39;))|&gt; 
+  select(-ends_with(&quot;.x&quot;), -ends_with(&quot;.y&quot;))
+
+# Criando base completa
 base_completa
-# write_rds(base_completa, &quot;../data/base_completa.rds&quot;)</code></pre>
+# write_rds(base_completa, &#39;../data/base_completa.rds&#39;)</code></pre>
 </div>
 </div>
 

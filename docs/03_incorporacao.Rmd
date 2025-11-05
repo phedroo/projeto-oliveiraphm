@@ -422,7 +422,7 @@ Foi adicionada a base ct atualizada no novo documento README (04)
     *Lembrando: Variáveis como xch4 (até 2021), et (apartir de 2021) e emissions quantity (até 2023) não estao presente para todos os anos*
 
 ```{r,eval=FALSE}
-base_completa <- base_parcial |> 
+base_semicompleta <- base_parcial |> 
   left_join(deter,
   by = c("year", "state", "city_ref"))|> 
   left_join(prodes |> 
@@ -430,10 +430,27 @@ base_completa <- base_parcial |>
   by = c("year", "state", "city_ref"))|> 
   left_join(modis |> select(
     year, state, city_ref, media_fpar, media_lai, media_evi, media_ndvi, media_et),
-  by = c("year", "state", "city_ref"))|>
-  left_join(climate_trace,
   by = c("year", "state", "city_ref"))
 
+base_semicompleta
+# write_rds(base_semicompleta, "../data/base_semicompleta.rds")
+```
+
+### Incorporando base climate TRACE antiga e atual (bases_ct_atualizadas) na base semicompleta e criando base completa
+
+Essa base completa é a base utilizada nas análises futuras e já incorporadas
+
+```{r,eval=FALSE}
+# Carregando bases_ct_atualizadas
+# bases_ct_atualizadas <- read_rds('../data-raw/bases_ct_atualizadas.rds')
+
+# incorporando
+base_completa <- base_semicompleta |> 
+  full_join(bases_ct_atualizadas,
+  by = c('year', 'city_ref', 'state'))|> 
+  select(-ends_with(".x"), -ends_with(".y"))
+
+# Criando base completa
 base_completa
-# write_rds(base_completa, "../data/base_completa.rds")
+# write_rds(base_completa, '../data/base_completa.rds')
 ```
