@@ -50,10 +50,10 @@ A base CT nova contém dados para o período de 2021 a 2025, enquanto a base ant
 # Primeiro devemos carregar a nova base e tratá-la 
 
 # Carregando nova base  -----------------------------------------------
-base_att <- readxl::read_excel("../data-raw/climate-trace-br.xlsx")
+base_ct_att <- readxl::read_excel("../data-raw/climate-trace-br.xlsx")
 
 # Criando vetor para extrair os municipios de todos os tipos de emissões, possibilitando a padronização dos nomes para posterior incorporação
-municipios <- base_att |> 
+municipios <- base_ct_att |> 
   mutate(
     fonte = stri_trans_general(tolower(fonte), "Latin-ASCII"),
     fonte = trimws(fonte)) |> 
@@ -63,7 +63,7 @@ municipios <- base_att |>
 padrao_municipios <- paste0(municipios, collapse = "|")
 
 # Tratando base --------------------------------------------------
-nova_base_ct <- base_att |> 
+nova_base_ct <- base_ct_att |> 
   rename(city_ref = fonte,
          emissao = emissao_co2e,
          state = estado,
@@ -84,7 +84,7 @@ nova_base_ct <- base_att |>
     names_prefix = "emissao_"
   ) |> 
   left_join(
-    base_att |> 
+    base_ct_att |> 
   rename(city_ref = fonte,
          emissao = emissao_co2e,
          state = estado,
@@ -107,33 +107,8 @@ nova_base_ct <- base_att |>
   )
 ```
 
-```{r,eval=FALSE}
-# Carregando base antiga
-base_antiga <- read_rds("../data/emissions_sources_final.rds")
 
-# Adicionando base e padronizando colunas que começam com emissao
-bases_ct_atualizadas <- nova_base_ct |> full_join(
-  base_antiga,
-  by = c('year', 'city_ref', 'state'))|> 
-  select(-ends_with(".x"), -ends_with(".y"))
-
-bases_ct_atualizadas
-```
-
-### Incorporando base climate TRACE antiga e atual na base completa
-
-```{r,eval=FALSE}
-base_completa <- base_completa |> 
-  left_join(bases_ct_atualizadas,
-  by = c('year', 'city_ref', 'state'))|> 
-  select(-ends_with(".x"), -ends_with(".y"))
-
-base_completa
-```
-
-Finalizar tratamento para posterior incorporação
-
-Perdeu-se o setor de fósseis e alguns subsetores - verificar
+#### Finalizar tratamento da base antiga para posterior incorporação
 
 ```{r,eval=FALSE}
 # Carregando base antiga
@@ -240,10 +215,27 @@ map_subsetores <- setNames(subsetores_novos, subsetores_antigos)
 
 emissions_sources_15_20_renomeada <- emissions_sources_15_20 |> 
   rename_with(~ str_replace_all(., map_setores), .cols = starts_with("emissao_")) |> 
-  rename_with(~ str_replace_all(., map_subsetores), .cols = starts_with("emissao_"))
+  rename_with(~ str_replace_all(., map_subsetores), .cols = starts_with("emissao_")) 
 
 # Salvar
-# write_rds(emissions_sources_15_20_renomeada, "../data/emissions_sources_final.rds")
+# write_rds(emissions_sources_15_20_renomeada, "../data/emissions_sources_15_20.rds")
+```
+
+```{r,eval=FALSE}
+# Carregando base antiga
+base_antiga <- read_rds("../data/emissions_sources_15_20.rds") 
+
+# Adicionando base e padronizando colunas que começam com emissao
+bases_ct_atualizadas <- nova_base_ct |> full_join(
+  base_antiga,
+  # selecionar somente as colunas com nomes idênticos nas duas bases:
+  by = intersect(names(nova_base_ct), names(base_antiga)))|> 
+  # ----------------------------------------
+  select(-ends_with(".x"), -ends_with(".y"))
+
+bases_ct_atualizadas # ta considerando as regiões administrativas da nova base
+
+# write_rds(bases_ct_atualizadas, '../data-raw/bases_ct_atualizadas.rds')
 ```
 
 

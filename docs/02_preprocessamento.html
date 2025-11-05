@@ -391,10 +391,10 @@ foram utilizados até o ano de 2020.</p>
 <pre class="r"><code># Primeiro devemos carregar a nova base e tratá-la 
 
 # Carregando nova base  -----------------------------------------------
-base_att &lt;- readxl::read_excel(&quot;../data-raw/climate-trace-br.xlsx&quot;)
+base_ct_att &lt;- readxl::read_excel(&quot;../data-raw/climate-trace-br.xlsx&quot;)
 
 # Criando vetor para extrair os municipios de todos os tipos de emissões, possibilitando a padronização dos nomes para posterior incorporação
-municipios &lt;- base_att |&gt; 
+municipios &lt;- base_ct_att |&gt; 
   mutate(
     fonte = stri_trans_general(tolower(fonte), &quot;Latin-ASCII&quot;),
     fonte = trimws(fonte)) |&gt; 
@@ -404,7 +404,7 @@ municipios &lt;- base_att |&gt;
 padrao_municipios &lt;- paste0(municipios, collapse = &quot;|&quot;)
 
 # Tratando base --------------------------------------------------
-nova_base_ct &lt;- base_att |&gt; 
+nova_base_ct &lt;- base_ct_att |&gt; 
   rename(city_ref = fonte,
          emissao = emissao_co2e,
          state = estado,
@@ -425,7 +425,7 @@ nova_base_ct &lt;- base_att |&gt;
     names_prefix = &quot;emissao_&quot;
   ) |&gt; 
   left_join(
-    base_att |&gt; 
+    base_ct_att |&gt; 
   rename(city_ref = fonte,
          emissao = emissao_co2e,
          state = estado,
@@ -446,27 +446,8 @@ nova_base_ct &lt;- base_att |&gt;
   ),
   by = c(&#39;city_ref&#39;, &#39;year&#39;, &#39;state&#39;)
   )</code></pre>
-<pre class="r"><code># Carregando base antiga
-base_antiga &lt;- read_rds(&quot;../data/emissions_sources_final.rds&quot;)
-
-# Adicionando base e padronizando colunas que começam com emissao
-bases_ct_atualizadas &lt;- nova_base_ct |&gt; full_join(
-  base_antiga,
-  by = c(&#39;year&#39;, &#39;city_ref&#39;, &#39;state&#39;))|&gt; 
-  select(-ends_with(&quot;.x&quot;), -ends_with(&quot;.y&quot;))
-
-bases_ct_atualizadas</code></pre>
-</div>
-<div id="incorporando-base-climate-trace-antiga-e-atual-na-base-completa" class="section level3">
-<h3>Incorporando base climate TRACE antiga e atual na base completa</h3>
-<pre class="r"><code>base_completa &lt;- base_completa |&gt; 
-  left_join(bases_ct_atualizadas,
-  by = c(&#39;year&#39;, &#39;city_ref&#39;, &#39;state&#39;))|&gt; 
-  select(-ends_with(&quot;.x&quot;), -ends_with(&quot;.y&quot;))
-
-base_completa</code></pre>
-<p>Finalizar tratamento para posterior incorporação</p>
-<p>Perdeu-se o setor de fósseis e alguns subsetores - verificar</p>
+<div id="finalizar-tratamento-da-base-antiga-para-posterior-incorporação" class="section level4">
+<h4>Finalizar tratamento da base antiga para posterior incorporação</h4>
 <pre class="r"><code># Carregando base antiga
 emissions_sources_15_20 &lt;- read_rds(&quot;../data/emissions_sources.rds&quot;)
 
@@ -571,10 +552,25 @@ map_subsetores &lt;- setNames(subsetores_novos, subsetores_antigos)
 
 emissions_sources_15_20_renomeada &lt;- emissions_sources_15_20 |&gt; 
   rename_with(~ str_replace_all(., map_setores), .cols = starts_with(&quot;emissao_&quot;)) |&gt; 
-  rename_with(~ str_replace_all(., map_subsetores), .cols = starts_with(&quot;emissao_&quot;))
+  rename_with(~ str_replace_all(., map_subsetores), .cols = starts_with(&quot;emissao_&quot;)) 
 
 # Salvar
-# write_rds(emissions_sources_15_20_renomeada, &quot;../data/emissions_sources_final.rds&quot;)</code></pre>
+# write_rds(emissions_sources_15_20_renomeada, &quot;../data/emissions_sources_15_20.rds&quot;)</code></pre>
+<pre class="r"><code># Carregando base antiga
+base_antiga &lt;- read_rds(&quot;../data/emissions_sources_15_20.rds&quot;) 
+
+# Adicionando base e padronizando colunas que começam com emissao
+bases_ct_atualizadas &lt;- nova_base_ct |&gt; full_join(
+  base_antiga,
+  # selecionar somente as colunas com nomes idênticos nas duas bases:
+  by = intersect(names(nova_base_ct), names(base_antiga)))|&gt; 
+  # ----------------------------------------
+  select(-ends_with(&quot;.x&quot;), -ends_with(&quot;.y&quot;))
+
+bases_ct_atualizadas # ta considerando as regiões administrativas da nova base
+
+# write_rds(bases_ct_atualizadas, &#39;../data-raw/bases_ct_atualizadas.rds&#39;)</code></pre>
+</div>
 </div>
 <div id="entrada-com-a-base-nasa-xco2.rds" class="section level3">
 <h3>💨 Entrada com a Base: <code>nasa-xco2.rds</code></h3>
