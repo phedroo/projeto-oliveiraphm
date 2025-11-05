@@ -83,7 +83,10 @@ Formato dos arquivos:
  
  > salve os arquivos na pasta `data` do seu projeto
 
-### 🛠️ Pré-processameto [script](https://arpanosso.github.io//projeto-oliveiraphm//02_preprocessamento.html) 
+#### 🛠️ Pré-processameto [script](https://arpanosso.github.io//projeto-oliveiraphm//02_preprocessamento.html) 
+
+#### ⛓️ Incorporação das bases
+[script](adicionar link)
 
 ### 🛠 Preparação dos dados para análise.
 ```{r}
@@ -96,20 +99,16 @@ library(vegan)
 library(stringi)
 source("R/my-function.R") 
 ```
+
 #### Definindo estados
 ```{r}
 my_states <- c("MS","MT","GO","DF")
 ```
 
-## 💨 Entrada com todas as bases atualizadas `base_completa_att.rds`
+## 💨 Entrada com todas as bases atualizadas `base_completa.rds`
 ```{r}
-bases_att <- read_rds('data/base_completa.rds')
-```
-
-### Tratando `base_completa`
-```{r}
-# padronizar colunas que começam com emissao
-bases_att <- bases_att |>
+base_completa <- read_rds('data/base_completa.rds') |> 
+  # padronizar colunas que começam com emissao
   rename_with(
     .cols = starts_with("emissao"),
     .fn = function(x) {
@@ -121,8 +120,7 @@ bases_att <- bases_att |>
       x
     }
   )  # |> 
-  # mutate(across(where(is.numeric), ~replace_na(., 0)))
-bases_att
+# mutate(across(where(is.numeric), ~replace_na(., 0)))
 
 # NA na base toda
 # sum(is.na(base_completa))
@@ -132,10 +130,11 @@ bases_att
 ```
 
 
+
 ## 🔎 Análises
 
 ### 🧮 Estatística descritiva
-<!--
+
 ```{r,eval=FALSE}
 # variavel <- "xco2" # opcional (mudar variavel)
 
@@ -150,25 +149,26 @@ variaveis <- base_completa |>
 for (variavel in variaveis) {
   cat("Processando:", variavel, "\n")  # feedback
 
-# df <- base_completa |>
-#   group_by(year,state) |>
-#   summarise(
-#     N = sum(!is.na(.data[[variavel]]), na.rm = TRUE), # observações
-#     MIN = min(.data[[variavel]], na.rm = TRUE), # valor mínimo
-#     MEAN = mean(.data[[variavel]], na.rm = TRUE), # média
-#     MEDIAN = median(.data[[variavel]], na.rm = TRUE), # mediana
-#     MAX = max(.data[[variavel]], na.rm = TRUE), # valor máximo
-#     VARIANCIA  = var(.data[[variavel]], na.rm = TRUE), 
-#     STD_DV = sd(.data[[variavel]], na.rm = TRUE), # desvio padrão
-#     CV = 100*STD_DV/MEAN, # coeficiete de variação
-#     SKW = agricolae::skewness(.data[[variavel]]), #
-#     KRT = agricolae::kurtosis(.data[[variavel]]), #
-#   )
-# 
-# # Salvar
+df <- base_completa |>
+  filter(state != 'DF') |> 
+  group_by(year,state) |>
+  summarise(
+    N = sum(!is.na(.data[[variavel]]), na.rm = TRUE), # observações
+    MIN = min(.data[[variavel]], na.rm = TRUE), # valor mínimo
+    MEAN = mean(.data[[variavel]], na.rm = TRUE), # média
+    MEDIAN = median(.data[[variavel]], na.rm = TRUE), # mediana
+    MAX = max(.data[[variavel]], na.rm = TRUE), # valor máximo
+    VARIANCIA  = var(.data[[variavel]], na.rm = TRUE),
+    STD_DV = sd(.data[[variavel]], na.rm = TRUE), # desvio padrão
+    CV = 100*STD_DV/MEAN, # coeficiete de variação
+    SKW = agricolae::skewness(.data[[variavel]]), #
+    KRT = agricolae::kurtosis(.data[[variavel]]), #
+  )
+
+# Salvar
 # writexl::write_xlsx(df, paste0("output/estat-descritiva-",variavel,"_.xlsx"))
-# 
-# }
+
+}
 
 ```
 
@@ -177,137 +177,9 @@ for (variavel in variaveis) {
 ```{r,eval=FALSE}
 variavel <- "xco2" # mudar
 
-# xco2
-nasa_xco2 <- read_rds("data/nasa-xco2.rds")
-
-# base original
-nasa_xco2 |>
-  ggplot(aes(x=xco2)) +
-  geom_histogram(color="black",fill="gray",
-                 bins = 30) +
-  facet_wrap(~year, scales = "free") +
-  theme_bw()
-
 # base resumida
 base_completa |>
-  ggplot(aes(x=xco2)) +
-  geom_histogram(color="black",fill="gray",
-                 bins = 30) +
-  facet_wrap(~year, scales = "free") +
-  theme_bw()
-
-# xch4
-gosat_xch4 <- read_rds("data/gosat_xch4.rds")
-
-# base original
-gosat_xch4 |>
-  ggplot(aes(x=xch4)) +
-  geom_histogram(color="black",fill="gray",
-                 bins = 30) +
-  facet_wrap(~year, scales = "free") +
-  theme_bw()
-
-# base resumida
-base_completa |>
-  ggplot(aes(x=xch4)) +
-  geom_histogram(color="black",fill="gray",
-                 bins = 30) +
-  facet_wrap(~year, scales = "free")  +
-  scale_x_continuous(
-    limits = c(1800, 1900),  
-  ) +
-  theme_bw()
-
-# sif_757
-oco2_sif <- read_rds("data/oco2-sif.rds")
-
-# base original
-# oco2_sif |>
-#   ggplot(aes(x=SIF_757)) +
-#   geom_histogram(color="black",fill="gray",
-#                  bins = 30) +
-#   facet_wrap(~year, scales = "free") +
-#   theme_bw()
-
-# base resumida
-base_completa |>
-  ggplot(aes(x=sif_757)) +
-  geom_histogram(color="black",fill="gray",
-                 bins = 30) +
-  facet_wrap(~year, scales = "free") +
-  theme_bw()
-
-
-# appeears_modis - ndvi (correto)
-# appeears_modis <- read_rds("data/appeears_modis_final.rds")
-
-# base resumida
-base_completa |>
-  ggplot(aes(x = media_ndvi)) +
-  geom_histogram(color="black",fill = "#2E8B57",     # verde-vegetação
-    bins = 30          # transparência leve
-  ) +
-  facet_wrap(~year, scales = "free") +
-  scale_x_continuous(
-    limits = c(-0.2, 1),  # intervalo NDVI típico
-  ) +
-  theme_bw()
-
-# nasa_power
-nasa_power <- read_rds("data/nasa_power.rds")
-
-# base original
-nasa_power |>
-  ggplot(aes(x=t2m)) +
-  geom_histogram(color="black",fill="gray",
-                 bins = 30) +
-  facet_wrap(~year, scales = "free") +
-  theme_bw()
-
-# base resumida
-base_completa |>
-  ggplot(aes(x=temperatura)) +
-  geom_histogram(color="black",fill="gray",
-                 bins = 30) +
-  facet_wrap(~year, scales = "free") +
-  theme_bw()
-
-
-# desmatamento - arrumar
-# prodes_deforestation <- read_rds("data/prodes_deforestation.rds")
-
-# base original
-# prodes_deforestation |>
-#   ggplot(aes(x=categorie)) +
-#   geom_histogram(color="black",fill="gray",
-#                  bins = 30) +
-#   facet_wrap(~categorie, scales = "free") +
-#   theme_bw()
-
-# base resumida
-base_completa |>
-  ggplot(aes(x=desmatamento)) +
-  geom_histogram(color="black",fill="gray",
-                 bins = 30) +
-  facet_wrap(~year, scales = "free") +
-  theme_bw()
-
-
-# queimadas
-# base original
-deter_queimadas <- read_rds("data/deter_queimadas.rds")
-
-deter_queimadas |>
-  ggplot(aes(x=AREAMUNKM)) +
-  geom_histogram(color="black",fill="gray",
-                 bins = 30) +
-  facet_wrap(~ANO, scales = "free") +
-  theme_bw()
-
-# base resumida
-  
-base_completa |>
-  ggplot(aes(x=area_queimada)) +
+  ggplot(aes(x=.data[[variavel]])) +
   geom_histogram(color="black",fill="gray",
                  bins = 30) +
   facet_wrap(~year, scales = "free") +
@@ -321,7 +193,7 @@ base_completa |>
   ) |>
   ggplot(aes(y=fct_year)) +
   ggridges::geom_density_ridges(rel_min_height = 0.03,
-                      aes(x=sif_757, fill=state),
+                      aes(x=.data[[variavel]], fill=state),
                       alpha = .6, color = "black"
   ) +
   scale_fill_viridis_d() +
@@ -336,12 +208,12 @@ base_completa |>
 ### 🔄 Atualização da Base - Cáculo da Anomalia
 
 ```{r}
-bases_att <- bases_att |> 
+base_completa <- base_completa |> 
   group_by(year) |> 
   mutate(anomalia_xco2 = xco2 - median(xco2,na.rm=TRUE),
-         .after = xco2) |> 
+         anomalia_xch4 = xch4 - median(xch4, na.rm=TRUE)) |> 
   dplyr::ungroup() |> 
-  relocate(year:city_ref, starts_with('emissao'), xco2, anomalia_xco2, xch4, sif_757, temperatura, umidade, precipitacao, pressao, radiacao, vento,media_fpar:media_ndvi, desmatamento,area_queimada) |> 
+  relocate(year:city_ref, starts_with('emissao'), xco2, anomalia_xco2, xch4, anomalia_xch4, sif_757, temperatura, umidade, precipitacao, pressao, radiacao, vento,media_fpar:media_ndvi, desmatamento,area_queimada) |> 
     select(-media_et) |> 
   rename(queimada = area_queimada, 
          fpar = media_fpar,
@@ -355,8 +227,8 @@ bases_att <- bases_att |>
 
 (Adicionei esse chunk sábado 01/11)
 ```{r,eval=FALSE}
-mc_set <- cor(bases_att |>
-            select(agricultura:wetland_fires), use = "pairwise.complete.obs")
+mc_set <- cor(base_completa |>
+            select(agricultura, `remocoes_de_carbono_(sequestro)`), use = "complete.obs")
 corrplot(mc_set,method = "color",
          outline = TRUE,
          addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
@@ -367,12 +239,14 @@ corrplot(mc_set,method = "color",
          cl.length = 5,
          number.cex = 0.8
 ) 
+
+names(base_completa)
 ```
 
 ### 🔎 Análise de correlação - total
 
 ```{r,eval=FALSE}
-mc <- cor(bases_att |>
+mc <- cor(base_completa |>
                 rename(florestas_terra = florestas_e_uso_da_terra,
                        sequestro = `remocoes_de_carbono_(sequestro)`) |>
                 select(xco2:florestas_terra, sequestro), use = "pairwise.complete.obs") # "complete.obs" descarta totalemnte linha com qualquer NA
@@ -394,11 +268,11 @@ corrplot(mc,method = "color",
 ngrp <- rep(3,9) # c(3,3,3,4,4,5,3,4, -) #mudei
 for( i in 2015:2023){ #mudei
   # Análise de correlação
-  base_aux <- bases_att |>
+  base_aux <- base_completa |>
     filter(year == i) |> 
-    select(xco2:queimada, -vento, -ndvi, -xco2, -queimada, - evi) #mudei
+    select(xco2:desmatamento, -temperatura, -vento, -xco2, -xch4, -queimada, -evi, -ndvi) #mudei
   
-  municipios <-bases_att |>
+  municipios <-base_completa |>
     filter(year == i) |> 
     pull(city_ref)
   
