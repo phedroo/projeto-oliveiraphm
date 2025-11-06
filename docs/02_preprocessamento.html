@@ -382,27 +382,195 @@ source(&quot;../R/my-function.R&quot;)</code></pre>
 <pre class="r"><code>emissions_sources &lt;- read_rds(&quot;../data/emissions_sources.rds&quot;)|&gt; 
   filter(sigla_uf %in% my_states)
 glimpse(emissions_sources)</code></pre>
-<p>Finalizar tratamento para posterior incorporação</p>
-<pre class="r"><code># último tratamento da base prodes
-# normalizando nomes dos municipios e padronizando nomes de colunas
-emissions_sources &lt;- read_rds(&quot;../data/emissions_sources.rds&quot;)
+</div>
+<div id="adicionando-base-climate-trace-atualizada-na-base-antiga" class="section level3">
+<h3>Adicionando base climate TRACE atualizada na base antiga</h3>
+<p>A base CT nova contém dados para o período de 2021 a 2025, enquanto a
+base antiga, para o perídoo de 2015 a 2023. Os dados desta (antiga)
+foram utilizados até o ano de 2020.</p>
+<pre class="r"><code># Primeiro devemos carregar a nova base e tratá-la 
 
-emissions_sources &lt;- emissions_sources |&gt;
-  filter(year %in% 2015:2023,
+# Carregando nova base  -----------------------------------------------
+base_ct_att &lt;- readxl::read_excel(&quot;../data-raw/climate-trace-br.xlsx&quot;)
+
+# Criando vetor para extrair os municipios de todos os tipos de emissões, possibilitando a padronização dos nomes para posterior incorporação
+municipios &lt;- base_ct_att |&gt; 
+  mutate(
+    fonte = stri_trans_general(tolower(fonte), &quot;Latin-ASCII&quot;),
+    fonte = trimws(fonte)) |&gt; 
+  filter(admin == &#39;Municipal&#39;) |&gt; 
+  pull(fonte) |&gt; unique()
+
+padrao_municipios &lt;- paste0(municipios, collapse = &quot;|&quot;)
+
+# Tratando base --------------------------------------------------
+nova_base_ct &lt;- base_ct_att |&gt; 
+  rename(city_ref = fonte,
+         emissao = emissao_co2e,
+         state = estado,
+         year = ano) |&gt; 
+  filter(state %in% my_states,
+         year %in% 2021:2023) |&gt; 
+  select(year, state, city_ref, emissao, setor, subsetor) |&gt; 
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), &quot;Latin-ASCII&quot;),
+    city_ref = trimws(city_ref),
+    city_ref = str_extract(city_ref, padrao_municipios)
+  ) |&gt;
+  group_by(year, state, city_ref, setor) |&gt;
+  summarise(emissao_setores = sum(emissao)) |&gt; 
+  pivot_wider(
+    names_from = setor,
+    values_from = emissao_setores,
+    names_prefix = &quot;emissao_&quot;
+  ) |&gt; 
+  left_join(
+    base_ct_att |&gt; 
+  rename(city_ref = fonte,
+         emissao = emissao_co2e,
+         state = estado,
+         year = ano) |&gt; 
+      filter(state %in% my_states,
+         year %in% 2021:2023) |&gt; 
+  select(year, state, city_ref, emissao, setor, subsetor) |&gt; 
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), &quot;Latin-ASCII&quot;),
+    city_ref = trimws(city_ref)
+  ) |&gt;
+  group_by(year, state, city_ref, subsetor) |&gt;
+  summarise(emissao_sub_setores = sum(emissao)) |&gt; 
+  pivot_wider(
+    names_from = subsetor,
+    values_from = emissao_sub_setores,
+    names_prefix = &quot;emissao_&quot;
+  ),
+  by = c(&#39;city_ref&#39;, &#39;year&#39;, &#39;state&#39;)
+  )</code></pre>
+<div id="finalizar-tratamento-da-base-antiga-para-posterior-incorporação" class="section level4">
+<h4>Finalizar tratamento da base antiga para posterior incorporação</h4>
+<pre class="r"><code># Carregando base antiga
+emissions_sources_15_20 &lt;- read_rds(&quot;../data/emissions_sources.rds&quot;)
+
+# Atualizando a base ct para corresponder à nova
+emissions_sources_15_20 &lt;- emissions_sources |&gt;
+  filter(year %in% 2015:2020, # só até 2020, pois a nova contém a partir de 2021
          sigla_uf %in% my_states,
-         gas == &quot;co2e_100yr&quot;,
-         sector_name == &quot;agriculture&quot;) |&gt; 
-  select(city_ref, sigla_uf, emissions_quantity, year) |&gt;
-  rename(state = sigla_uf) |&gt; 
+         gas == &quot;co2e_100yr&quot;) |&gt; 
+  select(year, city_ref, sigla_uf, emissions_quantity, sector_name, sub_sector) |&gt;
+  rename(state = sigla_uf,
+         emissao = emissions_quantity,
+         setor = sector_name,
+         subsetor = sub_sector) |&gt; 
   mutate(
     city_ref = stri_trans_general(tolower(city_ref), &quot;Latin-ASCII&quot;),
     city_ref = trimws(city_ref)
   ) |&gt; 
-  group_by(year, city_ref, state) |&gt; 
-  summarise(emissions_quantity = mean(emissions_quantity, na.rm = TRUE))
+  group_by(year, state, city_ref, setor) |&gt;
+  summarise(emissao_setores = sum(emissao)) |&gt; 
+  pivot_wider(
+    names_from = setor,
+    values_from = emissao_setores,
+    names_prefix = &quot;emissao_&quot;) |&gt; 
+  left_join(
+    emissions_sources |&gt;
+  filter(year %in% 2015:2020, # só até 2020, pois a nova contém a partir de 2021
+         sigla_uf %in% my_states,
+         gas == &quot;co2e_100yr&quot;) |&gt; 
+  select(year, city_ref, sigla_uf, emissions_quantity, sector_name, sub_sector) |&gt;
+  rename(state = sigla_uf,
+         emissao = emissions_quantity,
+         setor = sector_name,
+         subsetor = sub_sector) |&gt; 
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), &quot;Latin-ASCII&quot;),
+    city_ref = trimws(city_ref),
+    setor = stri_trans_general(tolower(setor), &quot;Latin-ASCII&quot;),
+    setor = trimws(setor),
+    subsetor = stri_trans_general(tolower(subsetor), &quot;Latin-ASCII&quot;),
+    subsetor = trimws(subsetor)
+  ) |&gt; 
+  group_by(year, state, city_ref, subsetor) |&gt;
+  summarise(emissao_sub_setores = sum(emissao)) |&gt; 
+  pivot_wider(
+    names_from = subsetor,
+    values_from = emissao_sub_setores,
+    names_prefix = &quot;emissao_&quot;),
+    by = c(&#39;city_ref&#39;, &#39;year&#39;, &#39;state&#39;)
+  )
 
-# Filtrado somente para o setor de agricultura
-# write_rds(emissions_sources, &quot;../data/emissions_sources_final.rds&quot;)</code></pre>
+# Padronizando nomes dos setores e subsetores para a nova nomenclatura
+# Vetor antigo e novo
+setores_antigos &lt;- c(
+  &quot;agriculture&quot;, &quot;forestry_and_land_use&quot;, &quot;fossil_fuel_operations&quot;,
+  &quot;manufacturing&quot;, &quot;transportation&quot;, &quot;power&quot;,
+  &quot;waste&quot;, &quot;mineral_extraction&quot;
+)
+
+setores_novos &lt;- c(
+  &quot;Agricultura&quot;, &quot;Florestas e Uso da Terra&quot;, &quot;Manufatura&quot;, &quot;Transporte&quot;, &quot;Energia&quot;, &quot;Resíduos&quot;,  &quot;Operações de Combustíveis Fósseis&quot;, &quot;Extração Mineral&quot;
+)
+
+# Vetor de nomes para usar no rename
+map_setores &lt;- setNames(setores_novos, setores_antigos)
+
+subsetores_antigos &lt;- c(
+  &quot;cropland-fires&quot;, &quot;enteric-fermentation-cattle-feedlot&quot;,
+  &quot;enteric-fermentation-cattle-pasture&quot;, &quot;manure-left-on-pasture-cattle&quot;,
+  &quot;manure-management-cattle-feedlot&quot;, &quot;rice-cultivation&quot;,
+  &quot;synthetic-fertilizer-application&quot;, &quot;forest-land-clearing&quot;,
+  &quot;forest-land-degradation&quot;, &quot;forest-land-fires&quot;, &quot;net-forest-land&quot;,
+  &quot;net-shrubgrass&quot;, &quot;net-wetland&quot;, &quot;removals&quot;, &quot;shrubgrass-fires&quot;,
+  &quot;water-reservoirs&quot;, &quot;wetland-fires&quot;, &quot;coal-mining&quot;,
+  &quot;oil-and-gas-production-and-transport&quot;, &quot;oil-and-gas-refining&quot;,
+  &quot;aluminum&quot;, &quot;cement&quot;, &quot;chemicals&quot;, &quot;pulp-and-paper&quot;, &quot;steel&quot;,
+  &quot;bauxite-mining&quot;, &quot;copper-mining&quot;, &quot;iron-mining&quot;,
+  &quot;electricity-generation&quot;, &quot;domestic-aviation&quot;, &quot;domestic-shipping&quot;,
+  &quot;international-aviation&quot;, &quot;international-shipping&quot;,
+  &quot;road-transportation&quot;, &quot;solid-waste-disposal&quot;,
+  &quot;wastewater-treatment-and-discharge&quot;
+)
+
+subsetores_novos &lt;- c(
+  &quot;Queimadas em áreas agrícolas&quot;, &quot;Fermentação entérica – gado confinado&quot;,
+  &quot;Fermentação entérica – gado a pasto&quot;, &quot;Esterco deixado no pasto (gado)&quot;,
+  &quot;Manejo de esterco – gado confinado&quot;, &quot;Cultivo de arroz&quot;,
+  &quot;Aplicação de fertilizantes sintéticos&quot;, &quot;Forest land clearing&quot;,
+  &quot;Forest land degradation&quot;, &quot;Forest land fires&quot;, &quot;Uso líquido de terras florestais&quot;,
+  &quot;Uso líquido de áreas arbustivas e gramíneas&quot;, &quot;Uso líquido de áreas úmidas&quot;,
+  &quot;Remoções de carbono (sequestro)&quot;, &quot;Queimadas em áreas arbustivas&quot;,
+  &quot;Reservatórios de água&quot;, &quot;Wetland fires&quot;, &quot;Mineração de carvão&quot;,
+  &quot;Produção de petróleo e gás&quot;, &quot;Refino de petróleo e gás&quot;,
+  &quot;Produção de alumínio&quot;, &quot;Produção de cimento&quot;, &quot;Indústria química&quot;,
+  &quot;Produção de papel e celulose&quot;, &quot;Produção de ferro e aço&quot;,
+  &quot;Mineração de bauxita&quot;, &quot;Mineração de cobre&quot;, &quot;Mineração de ferro&quot;,
+  &quot;Geração de eletricidade&quot;, &quot;Aviação doméstica&quot;, &quot;Navegação doméstica&quot;,
+  &quot;Aviação internacional&quot;, &quot;Navegação internacional&quot;,
+  &quot;Transporte rodoviário&quot;, &quot;Disposição de resíduos sólidos&quot;,
+  &quot;Tratamento e descarte de esgoto doméstico&quot;
+)
+map_subsetores &lt;- setNames(subsetores_novos, subsetores_antigos)
+
+emissions_sources_15_20_renomeada &lt;- emissions_sources_15_20 |&gt; 
+  rename_with(~ str_replace_all(., map_setores), .cols = starts_with(&quot;emissao_&quot;)) |&gt; 
+  rename_with(~ str_replace_all(., map_subsetores), .cols = starts_with(&quot;emissao_&quot;)) 
+
+# Salvar
+# write_rds(emissions_sources_15_20_renomeada, &quot;../data/emissions_sources_15_20.rds&quot;)</code></pre>
+<pre class="r"><code># Carregando base antiga
+base_antiga &lt;- read_rds(&quot;../data/emissions_sources_15_20.rds&quot;) 
+
+# Adicionando base e padronizando colunas que começam com emissao
+bases_ct_atualizadas &lt;- nova_base_ct |&gt; full_join(
+  base_antiga,
+  # selecionar somente as colunas com nomes idênticos nas duas bases:
+  by = intersect(names(nova_base_ct), names(base_antiga)))|&gt; 
+  # ----------------------------------------
+  select(-ends_with(&quot;.x&quot;), -ends_with(&quot;.y&quot;))
+
+bases_ct_atualizadas # ta considerando as regiões administrativas da nova base
+
+# write_rds(bases_ct_atualizadas, &#39;../data-raw/bases_ct_atualizadas.rds&#39;)</code></pre>
+</div>
 </div>
 <div id="entrada-com-a-base-nasa-xco2.rds" class="section level3">
 <h3>💨 Entrada com a Base: <code>nasa-xco2.rds</code></h3>
