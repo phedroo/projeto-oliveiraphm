@@ -454,3 +454,20 @@ base_completa <- base_semicompleta |>
 base_completa
 # write_rds(base_completa, '../data/base_completa.rds')
 ```
+
+
+
+```{r,eval=FALSE}
+!sub_setor %in% c("forest-land-clearing",
+                      "forest-land-degradation",
+                      "shrubgrass-fires",
+                      "forest-land-fires",
+                      "wetland-fires",
+                      "removals")
+```
+
+tirar
+
+
+                      
+                      

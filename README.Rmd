@@ -149,21 +149,21 @@ variaveis <- base_completa |>
 for (variavel in variaveis) {
   cat("Processando:", variavel, "\n")  # feedback
 
-df <- base_completa |>
-  filter(state != 'DF') |> 
-  group_by(year,state) |>
-  summarise(
-    N = sum(!is.na(.data[[variavel]]), na.rm = TRUE), # observações
-    MIN = min(.data[[variavel]], na.rm = TRUE), # valor mínimo
-    MEAN = mean(.data[[variavel]], na.rm = TRUE), # média
-    MEDIAN = median(.data[[variavel]], na.rm = TRUE), # mediana
-    MAX = max(.data[[variavel]], na.rm = TRUE), # valor máximo
-    VARIANCIA  = var(.data[[variavel]], na.rm = TRUE),
-    STD_DV = sd(.data[[variavel]], na.rm = TRUE), # desvio padrão
-    CV = 100*STD_DV/MEAN, # coeficiete de variação
-    SKW = agricolae::skewness(.data[[variavel]]), #
-    KRT = agricolae::kurtosis(.data[[variavel]]), #
-  )
+# df <- base_completa |>
+#   filter(state != 'DF') |> 
+#   group_by(year,state) |>
+#   summarise(
+#     N = sum(!is.na(.data[[variavel]]), na.rm = TRUE), # observações
+#     MIN = min(.data[[variavel]], na.rm = TRUE), # valor mínimo
+#     MEAN = mean(.data[[variavel]], na.rm = TRUE), # média
+#     MEDIAN = median(.data[[variavel]], na.rm = TRUE), # mediana
+#     MAX = max(.data[[variavel]], na.rm = TRUE), # valor máximo
+#     VARIANCIA  = var(.data[[variavel]], na.rm = TRUE),
+#     STD_DV = sd(.data[[variavel]], na.rm = TRUE), # desvio padrão
+#     CV = 100*STD_DV/MEAN, # coeficiete de variação
+#     SKW = agricolae::skewness(.data[[variavel]]), #
+#     KRT = agricolae::kurtosis(.data[[variavel]]), #
+#   )
 
 # Salvar
 # writexl::write_xlsx(df, paste0("output/estat-descritiva-",variavel,"_.xlsx"))
@@ -413,13 +413,162 @@ for( i in 2015:2023){ #mudei
 }
 ```
 
+## Mapa de EMISSÃO TOTAL
+
+```{r}
+map(2015:2023,~{municipality |> 
+    mutate(
+      name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
+      name_muni = trimws(name_muni)
+    )  |> 
+    filter(abbrev_state %in% my_states) |> 
+    left_join(
+      data.frame(
+      base_completa |> 
+        select(- `remocoes_de_carbono_(sequestro)`, -florestas_e_uso_da_terra,
+               -uso_liquido_de_terras_florestais, -uso_liquido_de_areas_arbustivas_e_gramineas, -uso_liquido_de_areas_umidas,
+               -forest_land_clearing,-forest_land_degradation,-forest_land_fires,-queimadas_em_areas_arbustivas, -wetland_fires ) |> 
+        filter(year == .x) |> 
+        pivot_longer(
+          cols = agricultura:operacoes_de_combustiveis_fosseiswater_treatment_and_discharge,
+          names_to = "subsector",
+          values_to = "emission"
+        ) |> 
+        group_by(year, state, city_ref) |> 
+        summarise(
+          emission = sum(emission, na.rm = TRUE)
+        ) |> 
+        select(state:emission) |> 
+        rename(name_muni = city_ref)
+       ),by = "name_muni", relationship = "many-to-many"
+    ) |> drop_na() |>      
+    ggplot() +
+    geom_sf(aes(fill=emission/1e6), color="transparent",
+            size=.05, show.legend = TRUE)  +
+    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(size = rel(.9), color = "black"),
+      axis.title.x = element_text(size = rel(1.1), color = "black"),
+      axis.text.y = element_text(size = rel(.9), color = "black"),
+      axis.title.y = element_text(size = rel(1.1), color = "black"),
+      legend.text = element_text(size = rel(1), color = "black"),
+      legend.title = element_text(face = 'bold', size = rel(1.2))
+    ) +
+    labs(fill = 'Agrupamento',
+         x = 'Longitude',
+         y = 'Latitude') +
+    scale_fill_viridis_c()})
+
+```
+
+
+## SETOR/SUBSETOR DE MAIOR EMISSÃO DA CIDADE
+
+```{r}
+map(2015:2023,~{municipality |> 
+    mutate(
+      name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
+      name_muni = trimws(name_muni)
+    )  |> 
+    filter(abbrev_state %in% my_states) |> 
+    left_join(
+      data.frame(
+      base_completa |> 
+        select(- `remocoes_de_carbono_(sequestro)`, -florestas_e_uso_da_terra,
+               -uso_liquido_de_terras_florestais, -uso_liquido_de_areas_arbustivas_e_gramineas, -uso_liquido_de_areas_umidas,
+               -forest_land_clearing,-forest_land_degradation,-forest_land_fires,-queimadas_em_areas_arbustivas, -wetland_fires ) |> 
+        filter(year == .x) |> 
+        pivot_longer(
+          cols = agricultura:operacoes_de_combustiveis_fosseiswater_treatment_and_discharge,
+          names_to = "subsector",
+          values_to = "emission"
+        ) |> 
+        group_by(year, state, city_ref) |> 
+        mutate(
+          max_emisson = max(emission,na.rm = TRUE),
+          sub_max_emission = ifelse(emission == max_emisson,subsector,NA)
+          ) |> 
+        filter(!is.na(sub_max_emission)) |> 
+        select(state:sub_max_emission) |> 
+        rename(name_muni = city_ref)
+       ),by = "name_muni", relationship = "many-to-many"
+    ) |> drop_na() |>      
+    ggplot() +
+    geom_sf(aes(fill=sub_max_emission), color="transparent",
+            size=.05, show.legend = TRUE)  +
+    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(size = rel(.9), color = "black"),
+      axis.title.x = element_text(size = rel(1.1), color = "black"),
+      axis.text.y = element_text(size = rel(.9), color = "black"),
+      axis.title.y = element_text(size = rel(1.1), color = "black"),
+      legend.text = element_text(size = rel(1), color = "black"),
+      legend.title = element_text(face = 'bold', size = rel(1.2))
+    ) +
+    labs(fill = 'Agrupamento',
+         x = 'Longitude',
+         y = 'Latitude') +
+    scale_fill_viridis_d()})
+```
+
+
+## Mapa de REMOÇÃO
+
+```{r}
+map(2015:2023,~{municipality |> 
+    mutate(
+      name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
+      name_muni = trimws(name_muni)
+    )  |> 
+    filter(abbrev_state %in% my_states) |> 
+    left_join(
+      data.frame(
+      base_completa |> 
+        filter(year == .x) |> 
+        pivot_longer(
+          cols = `remocoes_de_carbono_(sequestro)`,
+          names_to = "subsector",
+          values_to = "emission"
+        ) |> 
+        group_by(year, state, city_ref) |> 
+        summarise(
+          emission = sum(emission, na.rm = TRUE)
+        ) |> 
+        select(state:emission) |> 
+        rename(name_muni = city_ref)
+       ),by = "name_muni", relationship = "many-to-many"
+    ) |> drop_na() |>      
+    ggplot() +
+    geom_sf(aes(fill=emission/1e6), color="transparent",
+            size=.05, show.legend = TRUE)  +
+    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(size = rel(.9), color = "black"),
+      axis.title.x = element_text(size = rel(1.1), color = "black"),
+      axis.text.y = element_text(size = rel(.9), color = "black"),
+      axis.title.y = element_text(size = rel(1.1), color = "black"),
+      legend.text = element_text(size = rel(1), color = "black"),
+      legend.title = element_text(face = 'bold', size = rel(1.2))
+    ) +
+    labs(fill = 'Agrupamento',
+         x = 'Longitude',
+         y = 'Latitude') +
+    scale_fill_viridis_c()})
+```
+
+
+## Instruções
+
+1- Na incorporação retirar os subsetores (para não contar duas vezes)
+2- fazer a soma de emissão por setor
+3- pivto_wider com as emissão para os diferentes setores nas colunas
 
 
 
 
-
-
-    
 
 
 
