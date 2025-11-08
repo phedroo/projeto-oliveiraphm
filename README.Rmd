@@ -105,30 +105,22 @@ source("R/my-function.R")
 my_states <- c("MS","MT","GO","DF")
 ```
 
-## 💨 Entrada com todas as bases atualizadas `base_completa.rds`
+## 💨 Entrada com todas as bases atualizadas com os setores `base_completa_setores.rds`
 ```{r}
-base_completa <- read_rds('data/base_completa.rds') |> 
-  # padronizar colunas que começam com emissao
-  rename_with(
-    .cols = starts_with("emissao"),
-    .fn = function(x) {
-      x <- tolower(x)
-      x <- stri_trans_general(x, "Latin-ASCII")
-      x <- gsub('emissao_', "", x) # encurtar nomes
-      x <- gsub(" ", "_", x) #espaço -> _
-      x <- gsub("-", "_", x) # - -> _
-      x
-    }
-  )  # |> 
-# mutate(across(where(is.numeric), ~replace_na(., 0)))
+base_completa_setores <- read_rds('data/base_completa_setores.rds')
 
 # NA na base toda
-# sum(is.na(base_completa))
+sum(is.na(base_completa_setores))
 
 # NA por coluna
-# sapply(base_completa, function(x) sum(is.na(x)))
+sapply(base_completa_setores, function(x) sum(is.na(x)))
 ```
 
+## 💨 Entrada com todas as bases atualizadas com os setores `base_completa_subsetores.rds`
+
+```{r}
+base_completa_subsetores <- read_rds('data/base_completa_subsetores.rds')
+```
 
 
 ## 🔎 Análises
@@ -178,7 +170,7 @@ df <- base_completa |>
 variavel <- "xco2" # mudar
 
 # base resumida
-base_completa |>
+base_completa_setores |>
   ggplot(aes(x=.data[[variavel]])) +
   geom_histogram(color="black",fill="gray",
                  bins = 30) +
@@ -208,12 +200,12 @@ base_completa |>
 ### 🔄 Atualização da Base - Cáculo da Anomalia
 
 ```{r}
-base_completa <- base_completa |> 
+base_completa_set <- base_completa_setores |> 
   group_by(year) |> 
   mutate(anomalia_xco2 = xco2 - median(xco2,na.rm=TRUE),
          anomalia_xch4 = xch4 - median(xch4, na.rm=TRUE)) |> 
   dplyr::ungroup() |> 
-  relocate(year:city_ref, starts_with('emissao'), xco2, anomalia_xco2, xch4, anomalia_xch4, sif_757, temperatura, umidade, precipitacao, pressao, radiacao, vento,media_fpar:media_ndvi, desmatamento,area_queimada) |> 
+  relocate(year:city_ref, xco2, anomalia_xco2, xch4, anomalia_xch4, sif_757, temperatura, umidade, precipitacao, pressao, radiacao, vento,media_fpar:media_ndvi, desmatamento,area_queimada) |> 
     select(-media_et) |> 
   rename(queimada = area_queimada, 
          fpar = media_fpar,
@@ -225,33 +217,30 @@ base_completa <- base_completa |>
 
 ### 🔎 Análise de correlação - entre setores
 
-(Adicionei esse chunk sábado 01/11)
 ```{r,eval=FALSE}
-mc_set <- cor(base_completa |>
-            select(agricultura, `remocoes_de_carbono_(sequestro)`), use = "complete.obs")
+mc_set <- cor(base_completa_set |>
+            select(florestas_e_uso_da_terra:edificacoes, -operacoes_de_combustiveis_fosseis), use = "pairwise.complete.obs")
 corrplot(mc_set,method = "color",
          outline = TRUE,
+         type = "upper",
          addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
-         tl.cex = .5, cl.cex = 1,  bg="azure2",
+         tl.cex = .7, cl.cex = 1,  bg="azure2",
          # diag = FALSE,
          # addCoef.col = "black",
          cl.ratio = 0.2,
          cl.length = 5,
          number.cex = 0.8
 ) 
-
-names(base_completa)
 ```
 
 ### 🔎 Análise de correlação - total
 
 ```{r,eval=FALSE}
-mc <- cor(base_completa |>
-                rename(florestas_terra = florestas_e_uso_da_terra,
-                       sequestro = `remocoes_de_carbono_(sequestro)`) |>
-                select(xco2:florestas_terra, sequestro), use = "pairwise.complete.obs") # "complete.obs" descarta totalemnte linha com qualquer NA
+mc <- cor(base_completa_set |>
+                select(anomalia_xco2:queimada, -xch4, -evi,-ndvi), use = "pairwise.complete.obs") # "complete.obs" descarta totalemnte linha com qualquer NA
 corrplot(mc,method = "color",
          outline = TRUE,
+         type = "upper",
          addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
          tl.cex = .8, cl.cex = 1,  bg="azure2",
          # diag = FALSE,
@@ -265,14 +254,14 @@ corrplot(mc,method = "color",
 ### 🔎 Análise de correlação - ANO 
 
 ```{r,eval=FALSE}
-ngrp <- rep(3,9) # c(3,3,3,4,4,5,3,4, -) #mudei
-for( i in 2015:2023){ #mudei
+ngrp <- rep(3,9) # c(3,3,3,4,4,5,3,4, -) 
+for( i in 2015:2023){
   # Análise de correlação
-  base_aux <- base_completa |>
+  base_aux <- base_completa_set |>
     filter(year == i) |> 
-    select(xco2:desmatamento, -temperatura, -vento, -xco2, -xch4, -queimada, -evi, -ndvi) #mudei
+    select(xco2:desmatamento, -evi, -ndvi,-xco2,-xch4, -temperatura,-sif_757) 
   
-  municipios <-base_completa |>
+  municipios <-base_completa_set |>
     filter(year == i) |> 
     pull(city_ref)
   
@@ -293,7 +282,7 @@ for( i in 2015:2023){ #mudei
   
   # Análise de agrupamento
   da_pad <- decostand(base_aux[,fc] |> 
-                        mutate(across(everything(), ~replace_na(., 0))),  
+                        mutate(across(everything(), ~replace_na(., 0))),  # invés de passar NA = 0, não podemos passar a mediana do estado?
                       method = "standardize",
                       na.rm=TRUE)
   da_pad_euc <- vegdist(da_pad,"euclidean") 
