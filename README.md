@@ -151,50 +151,40 @@ source("R/my-function.R")
 my_states <- c("MS","MT","GO","DF")
 ```
 
-## 💨 Entrada com todas as bases atualizadas `base_completa.rds`
+## 💨 Entrada com todas as bases atualizadas com os setores `base_completa_setores.rds`
 
 ``` r
-base_completa <- read_rds('data/base_completa.rds') |> 
-  # padronizar colunas que começam com emissao
-  rename_with(
-    .cols = starts_with("emissao"),
-    .fn = function(x) {
-      x <- tolower(x)
-      x <- stri_trans_general(x, "Latin-ASCII")
-      x <- gsub('emissao_', "", x) # encurtar nomes
-      x <- gsub(" ", "_", x) #espaço -> _
-      x <- gsub("-", "_", x) # - -> _
-      x
-    }
-  )  # |> 
-# mutate(across(where(is.numeric), ~replace_na(., 0)))
+base_completa_setores <- read_rds('data/base_completa_setores.rds')
 
-# NA na base toda
-# sum(is.na(base_completa))
+# # NA na base toda
+# sum(is.na(base_completa_setores))
+# 
+# # NA por coluna
+# sapply(base_completa_setores, function(x) sum(is.na(x)))
+```
 
-# NA por coluna
-# sapply(base_completa, function(x) sum(is.na(x)))
+## 💨 Entrada com todas as bases atualizadas com os subsetores `base_completa_subsetores.rds`
+
+``` r
+base_completa_subset <- read_rds('data/base_completa_subsetores.rds')
 ```
 
 ## 🔎 Análises
 
+<!--
 ### 🧮 Estatística descritiva
-
+&#10;
 ``` r
 # variavel <- "xco2" # opcional (mudar variavel)
-
-# Criar vetor com as variáveis
-variaveis <- base_completa |>
+&#10;# Criar vetor com as variáveis
+variaveis <- base_completa_setores |>
   select(-year, -state, -city_ref) |>
   names()
-
-# names(base_completa) # ver colunas
-
-# Função de loop sobre as variáveis para facilitar processo
+&#10;# names(base_completa_setores) # ver colunas
+&#10;# Função de loop sobre as variáveis para facilitar processo
 for (variavel in variaveis) {
   cat("Processando:", variavel, "\n")  # feedback
-
-# df <- base_completa |>
+&#10;# df <- base_completa_setores |>
 #   filter(state != 'DF') |> 
 #   group_by(year,state) |>
 #   summarise(
@@ -209,27 +199,23 @@ for (variavel in variaveis) {
 #     SKW = agricolae::skewness(.data[[variavel]]), #
 #     KRT = agricolae::kurtosis(.data[[variavel]]), #
 #   )
-
-# Salvar
+&#10;# Salvar
 # writexl::write_xlsx(df, paste0("output/estat-descritiva-",variavel,"_.xlsx"))
-
-}
-```
-
-### 📊 Histogramas
-
+&#10;}
+&#10;```
+&#10;### 📊 Histogramas
+&#10;
 ``` r
 variavel <- "xco2" # mudar
-
-# base resumida
-base_completa |>
+&#10;# base resumida
+base_completa_setores |>
   ggplot(aes(x=.data[[variavel]])) +
   geom_histogram(color="black",fill="gray",
                  bins = 30) +
   facet_wrap(~year, scales = "free") +
   theme_bw()
 ```
-
+&#10;
 ``` r
 base_completa |>
   mutate(
@@ -247,18 +233,17 @@ base_completa |>
   ) +
   labs(fill="")
 ```
-
-–\>
+-->
 
 ### 🔄 Atualização da Base - Cáculo da Anomalia
 
 ``` r
-base_completa <- base_completa |> 
+base_completa_set <- base_completa_setores |> 
   group_by(year) |> 
   mutate(anomalia_xco2 = xco2 - median(xco2,na.rm=TRUE),
          anomalia_xch4 = xch4 - median(xch4, na.rm=TRUE)) |> 
   dplyr::ungroup() |> 
-  relocate(year:city_ref, starts_with('emissao'), xco2, anomalia_xco2, xch4, anomalia_xch4, sif_757, temperatura, umidade, precipitacao, pressao, radiacao, vento,media_fpar:media_ndvi, desmatamento,area_queimada) |> 
+  relocate(year:city_ref, xco2, anomalia_xco2, xch4, anomalia_xch4, sif_757, temperatura, umidade, precipitacao, pressao, radiacao, vento,media_fpar:media_ndvi, desmatamento,area_queimada) |> 
     select(-media_et) |> 
   rename(queimada = area_queimada, 
          fpar = media_fpar,
@@ -269,34 +254,30 @@ base_completa <- base_completa |>
 
 ### 🔎 Análise de correlação - entre setores
 
-(Adicionei esse chunk sábado 01/11)
-
 ``` r
-mc_set <- cor(base_completa |>
-            select(agricultura, `remocoes_de_carbono_(sequestro)`), use = "complete.obs")
+mc_set <- cor(base_completa_set |>
+            select(florestas_e_uso_da_terra:edificacoes, -operacoes_de_combustiveis_fosseis), use = "pairwise.complete.obs")
 corrplot(mc_set,method = "color",
          outline = TRUE,
+         type = "upper",
          addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
-         tl.cex = .5, cl.cex = 1,  bg="azure2",
+         tl.cex = .7, cl.cex = 1,  bg="azure2",
          # diag = FALSE,
          # addCoef.col = "black",
          cl.ratio = 0.2,
          cl.length = 5,
          number.cex = 0.8
 ) 
-
-names(base_completa)
 ```
 
 ### 🔎 Análise de correlação - total
 
 ``` r
-mc <- cor(base_completa |>
-                rename(florestas_terra = florestas_e_uso_da_terra,
-                       sequestro = `remocoes_de_carbono_(sequestro)`) |>
-                select(xco2:florestas_terra, sequestro), use = "pairwise.complete.obs") # "complete.obs" descarta totalemnte linha com qualquer NA
+mc <- cor(base_completa_set |>
+                select(anomalia_xco2:queimada, -xch4, -evi,-ndvi), use = "pairwise.complete.obs") # "complete.obs" descarta totalemnte linha com qualquer NA
 corrplot(mc,method = "color",
          outline = TRUE,
+         type = "upper",
          addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
          tl.cex = .8, cl.cex = 1,  bg="azure2",
          # diag = FALSE,
@@ -310,14 +291,14 @@ corrplot(mc,method = "color",
 ### 🔎 Análise de correlação - ANO
 
 ``` r
-ngrp <- rep(3,9) # c(3,3,3,4,4,5,3,4, -) #mudei
-for( i in 2015:2023){ #mudei
+ngrp <- rep(3,9) # c(3,3,3,4,4,5,3,4, -) 
+for( i in 2015:2023){
   # Análise de correlação
-  base_aux <- base_completa |>
+  base_aux <- base_completa_set |>
     filter(year == i) |> 
-    select(xco2:desmatamento, -temperatura, -vento, -xco2, -xch4, -queimada, -evi, -ndvi) #mudei
+    select(xco2:desmatamento, -evi, -ndvi,-xco2,-xch4, -temperatura,-sif_757) 
   
-  municipios <-base_completa |>
+  municipios <-base_completa_set |>
     filter(year == i) |> 
     pull(city_ref)
   
@@ -338,7 +319,7 @@ for( i in 2015:2023){ #mudei
   
   # Análise de agrupamento
   da_pad <- decostand(base_aux[,fc] |> 
-                        mutate(across(everything(), ~replace_na(., 0))),  
+                        mutate(across(everything(), ~replace_na(., 0))),  # invés de passar NA = 0, não podemos passar a mediana do estado?
                       method = "standardize",
                       na.rm=TRUE)
   da_pad_euc <- vegdist(da_pad,"euclidean") 
@@ -458,9 +439,38 @@ for( i in 2015:2023){ #mudei
 }
 ```
 
-## Mapa de EMISSÃO TOTAL
+## 🗺️ Mapa de EMISSÃO TOTAL - setores
 
 ``` r
+# Remover outliers 
+# Criando vetor com os municipios que são outliers, nos anos em que são outliers
+  # observação: é possível fazer um replace dos valores para estes outliers com a média dos anos seguintes (2021 a 2025)
+remov_out <- base_completa_set |> filter(
+  state %in% my_states) |>
+  # select(-florestas_e_uso_da_terra) |> 
+  pivot_longer(
+    cols = florestas_e_uso_da_terra:edificacoes,
+    names_to = "setor",
+    values_to = "emission"
+  ) |> 
+  group_by(year, state, city_ref) |> 
+  summarise(
+    emission = sum(emission/1e6, na.rm = TRUE)
+  ) |> 
+  arrange(desc(emission)) |> 
+  head(11) |> 
+  pull(city_ref, year)
+
+# Criando vetor para extrair os municipios de todos os tipos de emissões, possibilitando a padronização dos nomes para evitar outliers aparecendo
+municipios <- base_completa_set |>
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), "Latin-ASCII"),
+    city_ref = trimws(city_ref)) |>
+  pull(city_ref) |> unique()
+
+padrao_municipios <- paste0(municipios, collapse = "|") 
+
+# Gerando mapa
 map(2015:2023,~{municipality |> 
     mutate(
       name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
@@ -469,14 +479,13 @@ map(2015:2023,~{municipality |>
     filter(abbrev_state %in% my_states) |> 
     left_join(
       data.frame(
-      base_completa |> 
-        select(- `remocoes_de_carbono_(sequestro)`, -florestas_e_uso_da_terra,
-               -uso_liquido_de_terras_florestais, -uso_liquido_de_areas_arbustivas_e_gramineas, -uso_liquido_de_areas_umidas,
-               -forest_land_clearing,-forest_land_degradation,-forest_land_fires,-queimadas_em_areas_arbustivas, -wetland_fires ) |> 
-        filter(year == .x) |> 
+      base_completa_set |> 
+        select(-edificacoes) |> 
+        filter(year == .x,
+               !(city_ref %in% remov_out)) |> 
         pivot_longer(
-          cols = agricultura:operacoes_de_combustiveis_fosseiswater_treatment_and_discharge,
-          names_to = "subsector",
+          cols = agricultura:extracao_mineral, # não considera edificacoes porque só tem na base 2021 a 2025, e devido remoções, o de florestas 
+          names_to = "setor",
           values_to = "emission"
         ) |> 
         group_by(year, state, city_ref) |> 
@@ -486,7 +495,7 @@ map(2015:2023,~{municipality |>
         select(state:emission) |> 
         rename(name_muni = city_ref)
        ),by = "name_muni", relationship = "many-to-many"
-    ) |> drop_na() |>      
+    ) |> drop_na() |>
     ggplot() +
     geom_sf(aes(fill=emission/1e6), color="transparent",
             size=.05, show.legend = TRUE)  +
@@ -504,99 +513,6 @@ map(2015:2023,~{municipality |>
          x = 'Longitude',
          y = 'Latitude') +
     scale_fill_viridis_c()})
-#> [[1]]
-```
-
-![](README_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
-
-    #> 
-    #> [[2]]
-
-![](README_files/figure-gfm/unnamed-chunk-12-2.png)<!-- -->
-
-    #> 
-    #> [[3]]
-
-![](README_files/figure-gfm/unnamed-chunk-12-3.png)<!-- -->
-
-    #> 
-    #> [[4]]
-
-![](README_files/figure-gfm/unnamed-chunk-12-4.png)<!-- -->
-
-    #> 
-    #> [[5]]
-
-![](README_files/figure-gfm/unnamed-chunk-12-5.png)<!-- -->
-
-    #> 
-    #> [[6]]
-
-![](README_files/figure-gfm/unnamed-chunk-12-6.png)<!-- -->
-
-    #> 
-    #> [[7]]
-
-![](README_files/figure-gfm/unnamed-chunk-12-7.png)<!-- -->
-
-    #> 
-    #> [[8]]
-
-![](README_files/figure-gfm/unnamed-chunk-12-8.png)<!-- -->
-
-    #> 
-    #> [[9]]
-
-![](README_files/figure-gfm/unnamed-chunk-12-9.png)<!-- -->
-
-## SETOR/SUBSETOR DE MAIOR EMISSÃO DA CIDADE
-
-``` r
-map(2015:2023,~{municipality |> 
-    mutate(
-      name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
-      name_muni = trimws(name_muni)
-    )  |> 
-    filter(abbrev_state %in% my_states) |> 
-    left_join(
-      data.frame(
-      base_completa |> 
-        select(- `remocoes_de_carbono_(sequestro)`, -florestas_e_uso_da_terra,
-               -uso_liquido_de_terras_florestais, -uso_liquido_de_areas_arbustivas_e_gramineas, -uso_liquido_de_areas_umidas,
-               -forest_land_clearing,-forest_land_degradation,-forest_land_fires,-queimadas_em_areas_arbustivas, -wetland_fires ) |> 
-        filter(year == .x) |> 
-        pivot_longer(
-          cols = agricultura:operacoes_de_combustiveis_fosseiswater_treatment_and_discharge,
-          names_to = "subsector",
-          values_to = "emission"
-        ) |> 
-        group_by(year, state, city_ref) |> 
-        mutate(
-          max_emisson = max(emission,na.rm = TRUE),
-          sub_max_emission = ifelse(emission == max_emisson,subsector,NA)
-          ) |> 
-        filter(!is.na(sub_max_emission)) |> 
-        select(state:sub_max_emission) |> 
-        rename(name_muni = city_ref)
-       ),by = "name_muni", relationship = "many-to-many"
-    ) |> drop_na() |>      
-    ggplot() +
-    geom_sf(aes(fill=sub_max_emission), color="transparent",
-            size=.05, show.legend = TRUE)  +
-    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
-    theme_bw() +
-    theme(
-      axis.text.x = element_text(size = rel(.9), color = "black"),
-      axis.title.x = element_text(size = rel(1.1), color = "black"),
-      axis.text.y = element_text(size = rel(.9), color = "black"),
-      axis.title.y = element_text(size = rel(1.1), color = "black"),
-      legend.text = element_text(size = rel(1), color = "black"),
-      legend.title = element_text(face = 'bold', size = rel(1.2))
-    ) +
-    labs(fill = 'Agrupamento',
-         x = 'Longitude',
-         y = 'Latitude') +
-    scale_fill_viridis_d()})
 #> [[1]]
 ```
 
@@ -642,7 +558,9 @@ map(2015:2023,~{municipality |>
 
 ![](README_files/figure-gfm/unnamed-chunk-13-9.png)<!-- -->
 
-## Mapa de REMOÇÃO
+## 🗺️ Mapa de EMISSÃO TOTAL - setores
+
+Criando classe de emissão
 
 ``` r
 map(2015:2023,~{municipality |> 
@@ -653,11 +571,13 @@ map(2015:2023,~{municipality |>
     filter(abbrev_state %in% my_states) |> 
     left_join(
       data.frame(
-      base_completa |> 
-        filter(year == .x) |> 
+      base_completa_set |> 
+        select(-edificacoes) |> 
+        filter(year == .x,
+               !(city_ref %in% remov_out)) |> 
         pivot_longer(
-          cols = `remocoes_de_carbono_(sequestro)`,
-          names_to = "subsector",
+          cols = agricultura:extracao_mineral, #remove edificacoes porque só tem na base 2021 a 2023 e florestas e uso devido remoções
+          names_to = "setor",
           values_to = "emission"
         ) |> 
         group_by(year, state, city_ref) |> 
@@ -667,24 +587,23 @@ map(2015:2023,~{municipality |>
         select(state:emission) |> 
         rename(name_muni = city_ref)
        ),by = "name_muni", relationship = "many-to-many"
-    ) |> drop_na() |>      
+    ) |> drop_na() |>  
+    mutate(
+       classe_emissao = case_when(
+       emission <1e6 ~ ' <  1 Mton',
+       emission <2e6 ~ ' <  2 Mton',
+       emission >=2e6 ~ '>= 2 Mton'
+     )
+    ) |> 
     ggplot() +
-    geom_sf(aes(fill=emission/1e6), color="transparent",
+    geom_sf(aes(fill=classe_emissao), color="transparent",
             size=.05, show.legend = TRUE)  +
     geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
     theme_bw() +
-    theme(
-      axis.text.x = element_text(size = rel(.9), color = "black"),
-      axis.title.x = element_text(size = rel(1.1), color = "black"),
-      axis.text.y = element_text(size = rel(.9), color = "black"),
-      axis.title.y = element_text(size = rel(1.1), color = "black"),
-      legend.text = element_text(size = rel(1), color = "black"),
-      legend.title = element_text(face = 'bold', size = rel(1.2))
-    ) +
     labs(fill = 'Agrupamento',
          x = 'Longitude',
          y = 'Latitude') +
-    scale_fill_viridis_c()})
+    scale_fill_viridis_d()})
 #> [[1]]
 ```
 
@@ -729,6 +648,368 @@ map(2015:2023,~{municipality |>
     #> [[9]]
 
 ![](README_files/figure-gfm/unnamed-chunk-14-9.png)<!-- -->
+
+## 🗺️ Mapa de EMISSÃO TOTAL - subsetores
+
+``` r
+map(2015:2023,~{municipality |> 
+    mutate(
+      name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
+      name_muni = trimws(name_muni)
+    )  |> 
+    filter(abbrev_state %in% my_states) |> 
+    left_join(
+      data.frame(
+      base_completa_subset |> 
+        select(-remocoes_de_carbono_sequestro,
+               -uso_liquido_de_terras_florestais, -uso_liquido_de_areas_arbustivas_e_gramineas, -uso_liquido_de_areas_umidas,-queimadas_em_areas_arbustivas) |>
+        filter(year == .x,
+               !(city_ref %in% remov_out)) |> 
+        pivot_longer(
+          cols = degradacao_em_terras_florestais:tratamento_e_descarte_de_efluentes_industriais,
+          names_to = "subsetor",
+          values_to = "emission"
+        ) |> 
+        group_by(year, state, city_ref) |> 
+        summarise(
+          emission = sum(emission, na.rm = TRUE)
+        ) |> 
+        select(state:emission) |> 
+        rename(name_muni = city_ref)
+       ),by = "name_muni", relationship = "many-to-many"
+    ) |> drop_na() |>      
+    ggplot() +
+    geom_sf(aes(fill=emission/1e6), color="transparent",
+            size=.05, show.legend = TRUE)  +
+    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(size = rel(.9), color = "black"),
+      axis.title.x = element_text(size = rel(1.1), color = "black"),
+      axis.text.y = element_text(size = rel(.9), color = "black"),
+      axis.title.y = element_text(size = rel(1.1), color = "black"),
+      legend.text = element_text(size = rel(1), color = "black"),
+      legend.title = element_text(face = 'bold', size = rel(1.2))
+    ) +
+    labs(fill = 'Agrupamento',
+         x = 'Longitude',
+         y = 'Latitude') +
+    scale_fill_viridis_c()})
+#> [[1]]
+```
+
+![](README_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+
+    #> 
+    #> [[2]]
+
+![](README_files/figure-gfm/unnamed-chunk-15-2.png)<!-- -->
+
+    #> 
+    #> [[3]]
+
+![](README_files/figure-gfm/unnamed-chunk-15-3.png)<!-- -->
+
+    #> 
+    #> [[4]]
+
+![](README_files/figure-gfm/unnamed-chunk-15-4.png)<!-- -->
+
+    #> 
+    #> [[5]]
+
+![](README_files/figure-gfm/unnamed-chunk-15-5.png)<!-- -->
+
+    #> 
+    #> [[6]]
+
+![](README_files/figure-gfm/unnamed-chunk-15-6.png)<!-- -->
+
+    #> 
+    #> [[7]]
+
+![](README_files/figure-gfm/unnamed-chunk-15-7.png)<!-- -->
+
+    #> 
+    #> [[8]]
+
+![](README_files/figure-gfm/unnamed-chunk-15-8.png)<!-- -->
+
+    #> 
+    #> [[9]]
+
+![](README_files/figure-gfm/unnamed-chunk-15-9.png)<!-- -->
+
+## 🗺️ Mapa de EMISSÃO TOTAL - subsetores
+
+Criando classe de emissão
+
+``` r
+map(2015:2023,~{municipality |> 
+    mutate(
+      name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
+      name_muni = trimws(name_muni)
+    )  |> 
+    filter(abbrev_state %in% my_states) |> 
+    left_join(
+      data.frame(
+      base_completa_subset |> 
+        filter(year == .x,
+               !(city_ref %in% remov_out)) |> 
+        pivot_longer(
+          cols = degradacao_em_terras_florestais:tratamento_e_descarte_de_efluentes_industriais,
+          names_to = "setor",
+          values_to = "emission"
+        ) |> 
+        group_by(year, state, city_ref) |> 
+        summarise(
+          emission = sum(emission, na.rm = TRUE)
+        ) |> 
+        select(state:emission) |> 
+        rename(name_muni = city_ref)
+       ),by = "name_muni", relationship = "many-to-many"
+    ) |> drop_na() |>  
+    mutate(
+       classe_emissao = case_when(
+       emission <1e6 ~ ' <  1 Mton',
+       emission <2e6 ~ ' <  2 Mton',
+       emission >=2e6 ~ '>= 2 Mton'
+     )
+    ) |> 
+    ggplot() +
+    geom_sf(aes(fill=classe_emissao), color="transparent",
+            size=.05, show.legend = TRUE)  +
+    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
+    theme_bw() +
+    labs(fill = 'Agrupamento',
+         x = 'Longitude',
+         y = 'Latitude') +
+    scale_fill_viridis_d()})
+#> [[1]]
+```
+
+![](README_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+
+    #> 
+    #> [[2]]
+
+![](README_files/figure-gfm/unnamed-chunk-16-2.png)<!-- -->
+
+    #> 
+    #> [[3]]
+
+![](README_files/figure-gfm/unnamed-chunk-16-3.png)<!-- -->
+
+    #> 
+    #> [[4]]
+
+![](README_files/figure-gfm/unnamed-chunk-16-4.png)<!-- -->
+
+    #> 
+    #> [[5]]
+
+![](README_files/figure-gfm/unnamed-chunk-16-5.png)<!-- -->
+
+    #> 
+    #> [[6]]
+
+![](README_files/figure-gfm/unnamed-chunk-16-6.png)<!-- -->
+
+    #> 
+    #> [[7]]
+
+![](README_files/figure-gfm/unnamed-chunk-16-7.png)<!-- -->
+
+    #> 
+    #> [[8]]
+
+![](README_files/figure-gfm/unnamed-chunk-16-8.png)<!-- -->
+
+    #> 
+    #> [[9]]
+
+![](README_files/figure-gfm/unnamed-chunk-16-9.png)<!-- -->
+
+## 🗺️ SETOR/SUBSETOR DE MAIOR EMISSÃO DA CIDADE
+
+``` r
+map(2015:2023,~{municipality |> 
+    mutate(
+      name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
+      name_muni = trimws(name_muni)
+    )  |> 
+    filter(abbrev_state %in% my_states) |> 
+    left_join(
+      data.frame(
+      base_completa_subset |> 
+        # select(- `remocoes_de_carbono_(sequestro)`, -florestas_e_uso_da_terra,
+        #        -uso_liquido_de_terras_florestais, -uso_liquido_de_areas_arbustivas_e_gramineas, -uso_liquido_de_areas_umidas,
+        #        -forest_land_clearing,-forest_land_degradation,-forest_land_fires,-queimadas_em_areas_arbustivas, -wetland_fires ) |> 
+        filter(year == .x) |> 
+        pivot_longer(
+          cols = degradacao_em_terras_florestais:tratamento_e_descarte_de_efluentes_industriais,
+          names_to = "subsector",
+          values_to = "emission"
+        ) |> 
+        group_by(year, state, city_ref) |> 
+        mutate(
+          max_emisson = max(emission,na.rm = TRUE),
+          sub_max_emission = ifelse(emission == max_emisson,subsector,NA)
+          ) |> 
+        filter(!is.na(sub_max_emission)) |> 
+        select(state:sub_max_emission) |> 
+        rename(name_muni = city_ref)
+       ),by = "name_muni", relationship = "many-to-many"
+    ) |> drop_na() |>      
+    ggplot() +
+    geom_sf(aes(fill=sub_max_emission), color="transparent",
+            size=.05, show.legend = TRUE)  +
+    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(size = rel(.9), color = "black"),
+      axis.title.x = element_text(size = rel(1.1), color = "black"),
+      axis.text.y = element_text(size = rel(.9), color = "black"),
+      axis.title.y = element_text(size = rel(1.1), color = "black"),
+      legend.text = element_text(size = rel(1), color = "black"),
+      legend.title = element_text(face = 'bold', size = rel(1.2))
+    ) +
+    labs(fill = 'Agrupamento',
+         x = 'Longitude',
+         y = 'Latitude') +
+    scale_fill_viridis_d()})
+#> [[1]]
+```
+
+![](README_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+
+    #> 
+    #> [[2]]
+
+![](README_files/figure-gfm/unnamed-chunk-17-2.png)<!-- -->
+
+    #> 
+    #> [[3]]
+
+![](README_files/figure-gfm/unnamed-chunk-17-3.png)<!-- -->
+
+    #> 
+    #> [[4]]
+
+![](README_files/figure-gfm/unnamed-chunk-17-4.png)<!-- -->
+
+    #> 
+    #> [[5]]
+
+![](README_files/figure-gfm/unnamed-chunk-17-5.png)<!-- -->
+
+    #> 
+    #> [[6]]
+
+![](README_files/figure-gfm/unnamed-chunk-17-6.png)<!-- -->
+
+    #> 
+    #> [[7]]
+
+![](README_files/figure-gfm/unnamed-chunk-17-7.png)<!-- -->
+
+    #> 
+    #> [[8]]
+
+![](README_files/figure-gfm/unnamed-chunk-17-8.png)<!-- -->
+
+    #> 
+    #> [[9]]
+
+![](README_files/figure-gfm/unnamed-chunk-17-9.png)<!-- -->
+
+## Mapa de REMOÇÃO
+
+``` r
+map(2015:2023,~{municipality |> 
+    mutate(
+      name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
+      name_muni = trimws(name_muni)
+    )  |> 
+    filter(abbrev_state %in% my_states) |> 
+    left_join(
+      data.frame(
+      base_completa_subset |> 
+        filter(year == .x) |> 
+        pivot_longer(
+          cols = remocoes_de_carbono_sequestro,
+          names_to = "subsector",
+          values_to = "emission"
+        ) |> 
+        group_by(year, state, city_ref) |> 
+        summarise(
+          emission = sum(emission, na.rm = TRUE)
+        ) |> 
+        select(state:emission) |> 
+        rename(name_muni = city_ref)
+       ),by = "name_muni", relationship = "many-to-many"
+    ) |> drop_na() |>      
+    ggplot() +
+    geom_sf(aes(fill=emission/1e6), color="transparent",
+            size=.05, show.legend = TRUE)  +
+    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(size = rel(.9), color = "black"),
+      axis.title.x = element_text(size = rel(1.1), color = "black"),
+      axis.text.y = element_text(size = rel(.9), color = "black"),
+      axis.title.y = element_text(size = rel(1.1), color = "black"),
+      legend.text = element_text(size = rel(1), color = "black"),
+      legend.title = element_text(face = 'bold', size = rel(1.2))
+    ) +
+    labs(fill = 'Agrupamento',
+         x = 'Longitude',
+         y = 'Latitude') +
+    scale_fill_viridis_c()})
+#> [[1]]
+```
+
+![](README_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
+
+    #> 
+    #> [[2]]
+
+![](README_files/figure-gfm/unnamed-chunk-18-2.png)<!-- -->
+
+    #> 
+    #> [[3]]
+
+![](README_files/figure-gfm/unnamed-chunk-18-3.png)<!-- -->
+
+    #> 
+    #> [[4]]
+
+![](README_files/figure-gfm/unnamed-chunk-18-4.png)<!-- -->
+
+    #> 
+    #> [[5]]
+
+![](README_files/figure-gfm/unnamed-chunk-18-5.png)<!-- -->
+
+    #> 
+    #> [[6]]
+
+![](README_files/figure-gfm/unnamed-chunk-18-6.png)<!-- -->
+
+    #> 
+    #> [[7]]
+
+![](README_files/figure-gfm/unnamed-chunk-18-7.png)<!-- -->
+
+    #> 
+    #> [[8]]
+
+![](README_files/figure-gfm/unnamed-chunk-18-8.png)<!-- -->
+
+    #> 
+    #> [[9]]
+
+![](README_files/figure-gfm/unnamed-chunk-18-9.png)<!-- -->
 
 ## Instruções
 
