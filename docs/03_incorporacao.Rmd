@@ -435,9 +435,6 @@ base_semicompleta
 Essa base completa é a base utilizada nas análises futuras e já incorporadas
 
 ```{r,eval=FALSE}
-# Carregando bases_ct_atualizadas
-# bases_ct_atualizadas <- read_rds('../data-raw/bases_ct_atualizadas.rds')
-
 # incorporando
 base_completa_setores <- base_semicompleta |> 
   full_join(climate_trace_setores,
@@ -452,19 +449,6 @@ base_completa_subsetores <- base_semicompleta |>
 # write_rds(base_completa_setores, '../data/base_completa_setores.rds')
 # write_rds(base_completa_subsetores, '../data/base_completa_subsetores.rds')
 ```
-
-
-
-```{r,eval=FALSE}
-!sub_setor %in% c("forest-land-clearing",
-                      "forest-land-degradation",
-                      "shrubgrass-fires",
-                      "forest-land-fires",
-                      "wetland-fires",
-                      "removals")
-```
-
-tirar
 
 
                       

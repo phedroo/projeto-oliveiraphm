@@ -769,10 +769,7 @@ base_semicompleta
 “base_completa_setores” e “base_completa_susetores”</h3>
 <p>Essa base completa é a base utilizada nas análises futuras e já
 incorporadas</p>
-<pre class="r"><code># Carregando bases_ct_atualizadas
-# bases_ct_atualizadas &lt;- read_rds(&#39;../data-raw/bases_ct_atualizadas.rds&#39;)
-
-# incorporando
+<pre class="r"><code># incorporando
 base_completa_setores &lt;- base_semicompleta |&gt; 
   full_join(climate_trace_setores,
   by = c(&#39;year&#39;, &#39;city_ref&#39;, &#39;state&#39;))|&gt; 
