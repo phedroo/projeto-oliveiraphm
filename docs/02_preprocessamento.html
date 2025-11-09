@@ -381,8 +381,7 @@ source(&quot;../R/my-function.R&quot;)</code></pre>
 <h3>💨 Entrada com a Base: <code>emissions-sources.rds</code></h3>
 <p>Essa é a base antiga do Climate TRACE, que compreende o período de
 2015 a 2020</p>
-<pre class="r"><code>emissions_sources &lt;- read_rds(&quot;../data/emissions_sources.rds&quot;)
-# emissions_sources |&gt; pull(sub_sector) |&gt; unique()</code></pre>
+<pre class="r"><code>emissions_sources &lt;- read_rds(&quot;../data/emissions_sources.rds&quot;)</code></pre>
 </div>
 <div id="entrada-com-a-base-climate-trace-br.xlsx" class="section level3">
 <h3>💨 Entrada com a Base: <code>climate-trace-br.xlsx</code></h3>
@@ -401,6 +400,8 @@ utilizados até o ano de 2020.</p>
 <div id="pegando-setores-da-base-nova" class="section level5">
 <h5>Pegando setores da base nova</h5>
 <pre class="r"><code># Criando vetor para extrair os municipios de todos os tipos de emissões, possibilitando a padronização dos nomes para posterior incorporação
+# base_ct_att |&gt; pull(admin) |&gt; unique()
+
 municipios &lt;- base_ct_att |&gt; 
   filter(estado %in% my_states) |&gt; 
   mutate(
@@ -412,7 +413,7 @@ municipios &lt;- base_ct_att |&gt;
 padrao_municipios &lt;- paste0(municipios, collapse = &quot;|&quot;)
 
 # Tratando base --------------------------------------------------
-emissions_sources_21_23_setores &lt;- base_ct_att |&gt; 
+emissions_sources_21_25_setores &lt;- base_ct_att |&gt; 
   rename(city_ref = fonte,
          emissao = emissao_co2e,
          state = estado,
@@ -441,11 +442,11 @@ emissions_sources_21_23_setores &lt;- base_ct_att |&gt;
       x
     }) |&gt; 
   filter(state %in% my_states,
-         year %in% 2021:2023)</code></pre>
+         year %in% 2021:2025)</code></pre>
 </div>
 <div id="pegando-subsetores-da-base-nova" class="section level5">
 <h5>Pegando subsetores da base nova</h5>
-<pre class="r"><code>emissions_sources_21_23_subsetores &lt;- base_ct_att |&gt; 
+<pre class="r"><code>emissions_sources_21_25_subsetores &lt;- base_ct_att |&gt; 
   rename(city_ref = fonte,
          emissao = emissao_co2e,
          state = estado,
@@ -483,35 +484,20 @@ emissions_sources_21_23_setores &lt;- base_ct_att |&gt;
     industria_quimica = industria_quimica
   ) |&gt; 
   filter(state %in% my_states,
-         year %in% 2021:2023)</code></pre>
+         year %in% 2021:2025)</code></pre>
 </div>
 </div>
 <div id="finalizar-tratamento-da-base-antiga-para-posterior-incorporação" class="section level4">
 <h4>Finalizar tratamento da base antiga para posterior incorporação</h4>
-<div id="pegando-setores-da-base-antiga" class="section level5">
-<h5>Pegando setores da base antiga</h5>
-<pre class="r"><code># Carregando base antiga
-emissions_sources &lt;- read_rds(&quot;../data/emissions_sources.rds&quot;)
-
-# Visualizando setores da base antiga
-emissions_sources |&gt; pull(sector_name) |&gt; unique()
-  # # [1] &quot;agriculture&quot;            &quot;forestry_and_land_use&quot; 
-  # [3] &quot;fossil_fuel_operations&quot; &quot;manufacturing&quot;         
-  # [5] &quot;mineral_extraction&quot;     &quot;power&quot;                 
-  # [7] &quot;transportation&quot;         &quot;waste&quot;  
+<div id="pegando-setores-da-base-antiga-emissions_sources.rds" class="section level5">
+<h5>Pegando setores da base antiga
+<code>emissions_sources.rds</code></h5>
+<pre class="r"><code># Visualizando setores da base antiga
+emissions_sources |&gt; pull(sector_name) |&gt; unique() 
   
 # Extraindo setores da base antiga
   # Antes, visualizar setores da nova base para padronizarmos:
       base_ct_att |&gt; pull(setor) |&gt; unique()
-        # [1] &quot;Agricultura&quot;                      
-        # [2] &quot;Edificações&quot;                      
-        # [3] &quot;Florestas e Uso da Terra&quot;         
-        # [4] &quot;Transporte&quot;                       
-        # [5] &quot;Energia&quot;                          
-        # [6] &quot;Resíduos&quot;                         
-        # [7] &quot;Operações de Combustíveis Fósseis&quot;
-        # [8] &quot;Manufatura&quot;                       
-        # [9] &quot;Extração Mineral&quot;  
 
 emissions_sources_15_20_setores &lt;- emissions_sources |&gt; 
   filter(#  filtro de ano e estados passado para o final, para evitar ausência de observação para alguns dos subsetores
@@ -628,7 +614,7 @@ emissions_sources_15_20_subsetores &lt;- emissions_sources |&gt;
 <div id="incorporando-bases-climate-trace-setores" class="section level3">
 <h3>Incorporando bases Climate TRACE setores</h3>
 <pre class="r"><code>climate_trace_setores &lt;- emissions_sources_15_20_setores |&gt; 
-  full_join(emissions_sources_21_23_setores,
+  full_join(emissions_sources_21_25_setores,
             by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;, &quot;residuos&quot;, &quot;agricultura&quot;, &quot;florestas_e_uso_da_terra&quot;, &quot;manufatura&quot;, &quot;transporte&quot;, &quot;extracao_mineral&quot;, &quot;energia&quot;, &quot;operacoes_de_combustiveis_fosseis&quot;))
 
 # write_rds(climate_trace_setores, &#39;../data/climate_trace_setores.rds&#39;)</code></pre>
@@ -636,7 +622,7 @@ emissions_sources_15_20_subsetores &lt;- emissions_sources |&gt;
 <div id="incorporando-bases-climate-trace-subsetores" class="section level3">
 <h3>Incorporando bases Climate TRACE subsetores</h3>
 <pre class="r"><code>climate_trace_subsetores &lt;- emissions_sources_15_20_subsetores |&gt; 
-  full_join(emissions_sources_21_23_subsetores,
+  full_join(emissions_sources_21_25_subsetores,
             by = c(&quot;year&quot;, &quot;state&quot;, &quot;city_ref&quot;, &quot;aplicacao_de_fertilizantes_sinteticos&quot;,
       &quot;aviacao_domestica&quot;,
       &quot;aviacao_internacional&quot;,
@@ -690,6 +676,81 @@ emissions_sources_15_20_subsetores &lt;- emissions_sources |&gt;
 
 # write_rds(climate_trace_subsetores, &#39;../data/climate_trace_subsetores.rds&#39;)</code></pre>
 </div>
+<div id="problemas-com-as-análises" class="section level1">
+<h1>PROBLEMAS COM AS ANÁLISES</h1>
+<pre class="r"><code>
+  # Observando maiores emissões para verificar problemas no plot do readme
+
+   # Base completa ct
+emissions_sources |&gt; filter(
+  sigla_uf %in% my_states,
+  gas == &#39;co2e_100yr&#39;) |&gt; 
+  arrange(desc(emissions_quantity))
+
+
+ct_set &lt;- read_rds(&#39;../data/climate_trace_setores.rds&#39;)
+
+ct_set |&gt; filter(
+  state %in% my_states) |&gt;
+  # select(-florestas_e_uso_da_terra) |&gt; 
+  pivot_longer(
+    cols = florestas_e_uso_da_terra:edificacoes,
+    names_to = &quot;setor&quot;,
+    values_to = &quot;emission&quot;
+  ) |&gt; 
+  group_by(year, state, city_ref) |&gt; 
+  summarise(
+    emission = sum(emission, na.rm = TRUE)
+  ) |&gt; 
+  arrange(desc(emission))
+
+base_completa_set |&gt; filter(
+  state %in% my_states) |&gt;
+  # select(-florestas_e_uso_da_terra) |&gt; 
+  pivot_longer(
+    cols = florestas_e_uso_da_terra:edificacoes,
+    names_to = &quot;setor&quot;,
+    values_to = &quot;emission&quot;
+  ) |&gt; 
+  group_by(year, state, city_ref) |&gt; 
+  summarise(
+    emission = sum(emission/1e6, na.rm = TRUE)
+  ) |&gt; 
+  arrange(desc(emission))
+
+    # Base nova ct
+
+emissions_sources_21_23_setores |&gt; filter(
+  state %in% my_states) |&gt;
+  # select(-florestas_e_uso_da_terra, -edificacoes) |&gt; 
+  pivot_longer(
+    cols = agricultura:operacoes_de_combustiveis_fosseis,
+    names_to = &quot;setor&quot;,
+    values_to = &quot;emission&quot;
+  ) |&gt; 
+  group_by(year, state, city_ref) |&gt; 
+  summarise(
+    emission = sum(emission/1e6, na.rm = TRUE)
+  ) |&gt; 
+  arrange(desc(emission)) 
+
+    # Base antiga ct
+
+emissions_sources_15_20_setores |&gt; filter(
+  state %in% my_states) |&gt;
+  # select(-florestas_e_uso_da_terra) |&gt; 
+  pivot_longer(
+    cols = florestas_e_uso_da_terra:extracao_mineral,
+    names_to = &quot;setor&quot;,
+    values_to = &quot;emission&quot;
+  ) |&gt; 
+  group_by(year, state, city_ref) |&gt; 
+  summarise(
+    emission = sum(emission/1e6, na.rm = TRUE)
+  ) |&gt; 
+  arrange(desc(emission))
+
+names(emissions_sources_21_23_setores)</code></pre>
 <div id="entrada-com-a-base-nasa-xco2.rds" class="section level3">
 <h3>💨 Entrada com a Base: <code>nasa-xco2.rds</code></h3>
 <pre class="r"><code>nasa_xco2 &lt;- read_rds(&quot;../data/nasa-xco2.rds&quot;) |&gt; 
@@ -2370,6 +2431,7 @@ munic_geobr |&gt;
       scale_fill_viridis_c(
         option = &quot;inferno&quot;
       )})</code></pre>
+</div>
 </div>
 </div>
 
