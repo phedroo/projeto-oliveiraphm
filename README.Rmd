@@ -123,7 +123,7 @@ base_completa_subset <- read_rds('data/base_completa_subsetores.rds')
 ```
 
 
-## 🔎 Análises
+# 🔎 Análises
 
 <!--
 ### 🧮 Estatística descritiva
@@ -444,11 +444,13 @@ map(2015:2023,~{municipality |>
     left_join(
       data.frame(
       base_completa_set |> 
-        select(-edificacoes) |> 
+        #remover edificacoes por estar presente só na nova base
+        select(-edificacoes) |>
+        mutate(florestas_e_uso_da_terra = florestas_e_uso_da_terra>0) |> 
         filter(year == .x,
                !(city_ref %in% remov_out)) |> 
         pivot_longer(
-          cols = agricultura:extracao_mineral, # não considera edificacoes porque só tem na base 2021 a 2025, e devido remoções, o de florestas 
+          cols = florestas_e_uso_da_terra:extracao_mineral, # não considera edificacoes porque só tem na base 2021 a 2025, e devido remoções, o de florestas 
           names_to = "setor",
           values_to = "emission"
         ) |> 
@@ -479,9 +481,9 @@ map(2015:2023,~{municipality |>
     scale_fill_viridis_c()})
 ```
 
-## 🗺️ Mapa de EMISSÃO TOTAL - setores
 
-Criando classe de emissão
+
+#### 🗺️ Mapa de EMISSÃO TOTAL - setores - Criando classe de emissão
 
 ```{r} 
 map(2015:2023,~{municipality |> 
@@ -493,11 +495,61 @@ map(2015:2023,~{municipality |>
     left_join(
       data.frame(
       base_completa_set |> 
-        select(-edificacoes) |> 
+        #remover edificacoes por estar presente só na nova base
+        select(-edificacoes) |>
+        mutate(florestas_e_uso_da_terra = florestas_e_uso_da_terra>0) |> 
         filter(year == .x,
                !(city_ref %in% remov_out)) |> 
         pivot_longer(
-          cols = agricultura:extracao_mineral, #remove edificacoes porque só tem na base 2021 a 2023 e florestas e uso devido remoções
+          cols = florestas_e_uso_da_terra:extracao_mineral, #remove edificacoes porque só tem na base 2021 a 2023 
+          names_to = "setor",
+          values_to = "emission"
+        ) |> 
+        group_by(year, state, city_ref) |> 
+        summarise(
+          emission = sum(emission, na.rm = TRUE)
+        ) |> 
+        select(state:emission) |> 
+        rename(name_muni = city_ref)
+       ),by = "name_muni", relationship = "many-to-many"
+    ) |> drop_na() |>  
+    mutate(
+       classe_emissao = case_when(
+       emission <1e6 ~ ' <  1 Mton',
+       emission <2e6 ~ ' <  2 Mton',
+       emission >=2e6 ~ '>= 2 Mton'
+     )
+    ) |> 
+    ggplot() +
+    geom_sf(aes(fill=classe_emissao), color="transparent",
+            size=.05, show.legend = TRUE)  +
+    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
+    theme_bw() +
+    labs(fill = 'Classe de emissão',
+         x = 'Longitude',
+         y = 'Latitude') +
+    scale_fill_viridis_d()})
+```
+#### 🗺️ Mapa de EMISSÃO TOTAL - escolher setor
+
+```{r} 
+setor = "agricultura" #mudar
+# setor = c("agricultura", "florestas_e_uso_da_terra") #escolher mais de 1 setor...
+
+# Gerando mapa
+map(2015:2025,~{municipality |> 
+    mutate(
+      name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
+      name_muni = trimws(name_muni)
+    )  |> 
+    filter(abbrev_state %in% my_states) |> 
+    left_join(
+      data.frame(
+      base_completa_set |> 
+        filter(year == .x,
+               !(city_ref %in% remov_out)) |> 
+        pivot_longer(
+          cols = setor, 
           names_to = "setor",
           values_to = "emission"
         ) |> 
@@ -529,6 +581,8 @@ map(2015:2023,~{municipality |>
 
 ## 🗺️ Mapa de EMISSÃO TOTAL - subsetores
 
+Aparentemente, muitos subsetores (não consegui ver quais são todos) estão com suas metodologias alteradas. e isso esta gerando divergência entre os mapas
+
 ```{r}
 map(2015:2023,~{municipality |> 
     mutate(
@@ -539,8 +593,16 @@ map(2015:2023,~{municipality |>
     left_join(
       data.frame(
       base_completa_subset |> 
+        # mutate(
+          # Valores não positivos para essas colunas de remoção recebem 0
+            # Isso pois alguns subsetores contém remoções e emissões juntas
+  #   uso_liquido_de_terras_florestais = ifelse(uso_liquido_de_terras_florestais > 0, uso_liquido_de_terras_florestais, 0),
+  #   uso_liquido_de_areas_arbustivas_e_gramineas = ifelse(uso_liquido_de_areas_arbustivas_e_gramineas > 0, uso_liquido_de_areas_arbustivas_e_gramineas, 0),
+  #   uso_liquido_de_areas_umidas = ifelse(uso_liquido_de_areas_umidas > 0, uso_liquido_de_areas_umidas, 0)
+  # ) |>
+    # Removendo subsetores que contém remoções
         select(-remocoes_de_carbono_sequestro,
-               -uso_liquido_de_terras_florestais, -uso_liquido_de_areas_arbustivas_e_gramineas, -uso_liquido_de_areas_umidas,-queimadas_em_areas_arbustivas) |>
+               -uso_liquido_de_terras_florestais, -uso_liquido_de_areas_arbustivas_e_gramineas, -uso_liquido_de_areas_umidas) |>
         filter(year == .x,
                !(city_ref %in% remov_out)) |> 
         pivot_longer(
@@ -575,9 +637,7 @@ map(2015:2023,~{municipality |>
     scale_fill_viridis_c()})
 ```
 
-## 🗺️ Mapa de EMISSÃO TOTAL - subsetores
-
-Criando classe de emissão
+#### 🗺️ Mapa de EMISSÃO TOTAL - subsetores - Criando classe de emissão
 
 ```{r} 
 map(2015:2023,~{municipality |> 
@@ -589,6 +649,16 @@ map(2015:2023,~{municipality |>
     left_join(
       data.frame(
       base_completa_subset |> 
+        mutate(
+          # Valores não positivos para essas colunas de remoção recebem 0
+            # Isso pois alguns subsetores contém remoções e emissões juntas
+    uso_liquido_de_terras_florestais = ifelse(uso_liquido_de_terras_florestais > 0, uso_liquido_de_terras_florestais, 0),
+    uso_liquido_de_areas_arbustivas_e_gramineas = ifelse(uso_liquido_de_areas_arbustivas_e_gramineas > 0, uso_liquido_de_areas_arbustivas_e_gramineas, 0),
+    uso_liquido_de_areas_umidas = ifelse(uso_liquido_de_areas_umidas > 0, uso_liquido_de_areas_umidas, 0)
+  ) |>
+    # Removendo subsetores que contém remoções
+        # select(-remocoes_de_carbono_sequestro,
+        #        -uso_liquido_de_terras_florestais, -uso_liquido_de_areas_arbustivas_e_gramineas, -uso_liquido_de_areas_umidas) |>
         filter(year == .x,
                !(city_ref %in% remov_out)) |> 
         pivot_longer(
@@ -616,7 +686,7 @@ map(2015:2023,~{municipality |>
             size=.05, show.legend = TRUE)  +
     geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
     theme_bw() +
-    labs(fill = 'Agrupamento',
+    labs(fill = 'Classe de emissão',
          x = 'Longitude',
          y = 'Latitude') +
     scale_fill_viridis_d()})
@@ -626,6 +696,14 @@ map(2015:2023,~{municipality |>
 ## 🗺️ SETOR/SUBSETOR DE MAIOR EMISSÃO DA CIDADE
 
 ```{r}
+# Unindo as bases climate TRACE
+  # Feito caso queira visualizar os setores e subsetores de maior emissão em um mesmo mapa
+# base_completa_ct <- base_completa_set |> 
+#   select(year:city_ref, florestas_e_uso_da_terra:edificacoes) |> 
+#   full_join(base_completa_subset |> 
+#               select(year:city_ref, degradacao_em_terras_florestais:tratamento_e_descarte_de_efluentes_industriais),
+#             by = c("year", "city_ref", "state"))
+
 map(2015:2023,~{municipality |> 
     mutate(
       name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
@@ -634,28 +712,33 @@ map(2015:2023,~{municipality |>
     filter(abbrev_state %in% my_states) |> 
     left_join(
       data.frame(
-      base_completa_subset |> 
-        # select(- `remocoes_de_carbono_(sequestro)`, -florestas_e_uso_da_terra,
-        #        -uso_liquido_de_terras_florestais, -uso_liquido_de_areas_arbustivas_e_gramineas, -uso_liquido_de_areas_umidas,
-        #        -forest_land_clearing,-forest_land_degradation,-forest_land_fires,-queimadas_em_areas_arbustivas, -wetland_fires ) |> 
-        filter(year == .x) |> 
-        pivot_longer(
-          cols = degradacao_em_terras_florestais:tratamento_e_descarte_de_efluentes_industriais,
-          names_to = "subsector",
-          values_to = "emission"
-        ) |> 
-        group_by(year, state, city_ref) |> 
-        mutate(
-          max_emisson = max(emission,na.rm = TRUE),
-          sub_max_emission = ifelse(emission == max_emisson,subsector,NA)
+        base_completa_set |> # substituir por "base_completa_ct", caso queira visualizar ambos ao mesmo tempo, e ajustar linhas abaixo (select, cols e names_to)
+          # Removendo setores que contém remoções
+            # Ressalta-se que "florestas_e_uso_da_terra" contém emissões relevantes, por isso deve-se fazer um mutate e selecioanr valores positivos
+          mutate(
+          ifelse(florestas_e_uso_da_terra >0, florestas_e_uso_da_terra, 0)
           ) |> 
-        filter(!is.na(sub_max_emission)) |> 
-        select(state:sub_max_emission) |> 
-        rename(name_muni = city_ref)
-       ),by = "name_muni", relationship = "many-to-many"
-    ) |> drop_na() |>      
+          # Removendo subsetores que contém remoções
+          # select(-remocoes_de_carbono_sequestro,
+          #        -uso_liquido_de_terras_florestais, -uso_liquido_de_areas_arbustivas_e_gramineas, -uso_liquido_de_areas_umidas) |>
+          filter(year == .x) |> 
+          pivot_longer(
+            cols = agricultura:extracao_mineral,
+            names_to = "setores",
+            values_to = "emission"
+          ) |> 
+          group_by(year, state, city_ref) |> 
+          mutate(
+            max_emission = max(emission,na.rm = TRUE),
+            s_max_emission = ifelse(emission == max_emission,setores,NA)
+          ) |> 
+          filter(!is.na(s_max_emission)) |> 
+          select(state:s_max_emission) |> 
+          rename(name_muni = city_ref)
+      ),by = "name_muni", relationship = "many-to-many"
+    ) |> drop_na() |>
     ggplot() +
-    geom_sf(aes(fill=sub_max_emission), color="transparent",
+    geom_sf(aes(fill=s_max_emission), color="transparent",
             size=.05, show.legend = TRUE)  +
     geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
     theme_bw() +
@@ -674,9 +757,26 @@ map(2015:2023,~{municipality |>
 ```
 
 
-## Mapa de REMOÇÃO
+## 🗺 Mapa de REMOÇÃO
+
+Vale ressaltar que a nova metodologia do climate TRACE subdivide o subsetor de *remocoes_de_carbono_sequestro* (as remoções) em 3 novos subsetores: 
+
+*uso_liquido_de_terras_florestais*
+*uso_liquido_de_areas_arbustivas_e_gramineas*
+*uso_liquido_de_areas_umidas*
 
 ```{r}
+# Primeiramente, é necessário passar os valores da coluna "remocoes_de_carbono_sequestro" da nova base do climate TRACE para negativos, para tornar a análise visual entre os mapas iguais:
+  # 2 formas:
+  # 1.
+    # base_completa_subset |> 
+    #   mutate(remocoes_de_carbono_sequestro = case_when(
+    #     remocoes_de_carbono_sequestro < 0 ~ remocoes_de_carbono_sequestro*-1))
+  # 2. Maior garantia, pois torna todos os valores absolutos positivos
+      base_completa_subset |>
+        mutate(remocoes_de_carbono_sequestro = -abs(remocoes_de_carbono_sequestro)) |>  select(year,city_ref,remocoes_de_carbono_sequestro,uso_liquido_de_terras_florestais,uso_liquido_de_areas_arbustivas_e_gramineas,uso_liquido_de_areas_umidas)
+
+
 map(2015:2023,~{municipality |> 
     mutate(
       name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
@@ -685,20 +785,26 @@ map(2015:2023,~{municipality |>
     filter(abbrev_state %in% my_states) |> 
     left_join(
       data.frame(
-      base_completa_subset |> 
-        filter(year == .x) |> 
-        pivot_longer(
-          cols = remocoes_de_carbono_sequestro,
-          names_to = "subsector",
-          values_to = "emission"
-        ) |> 
-        group_by(year, state, city_ref) |> 
-        summarise(
-          emission = sum(emission, na.rm = TRUE)
-        ) |> 
-        select(state:emission) |> 
-        rename(name_muni = city_ref)
-       ),by = "name_muni", relationship = "many-to-many"
+        base_completa_subset |> 
+          mutate(remocoes_de_carbono_sequestro = -abs(remocoes_de_carbono_sequestro)) |> #valores absolutos negativos 
+          filter(year == .x,
+               !(city_ref %in% remov_out),
+                 remocoes_de_carbono_sequestro <=0,
+                 uso_liquido_de_terras_florestais<=0,
+                 uso_liquido_de_areas_arbustivas_e_gramineas<=0,
+                 uso_liquido_de_areas_umidas<=0) |> 
+          pivot_longer(
+            cols = c(remocoes_de_carbono_sequestro,uso_liquido_de_terras_florestais,uso_liquido_de_areas_arbustivas_e_gramineas,uso_liquido_de_areas_umidas),
+            names_to = "subsector",
+            values_to = "emission"
+          ) |> 
+          group_by(year, state, city_ref) |> 
+          summarise(
+            emission = sum(emission, na.rm = TRUE)
+          ) |> 
+          select(state:emission) |> 
+          rename(name_muni = city_ref)
+      ),by = "name_muni", relationship = "many-to-many"
     ) |> drop_na() |>      
     ggplot() +
     geom_sf(aes(fill=emission/1e6), color="transparent",
@@ -718,13 +824,47 @@ map(2015:2023,~{municipality |>
          y = 'Latitude') +
     scale_fill_viridis_c()})
 ```
+# teste remoções
+```{r}
+municipality |> 
+    mutate(
+      name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
+      name_muni = trimws(name_muni)
+    )  |> 
+    filter(abbrev_state %in% my_states) |> 
+    left_join(
+      data.frame(
+        base_completa_subset |> 
+          mutate(remocoes_de_carbono_sequestro = -abs(remocoes_de_carbono_sequestro)) |> #valores absolutos negativos 
+          filter(
+               !(city_ref %in% remov_out),
+                 remocoes_de_carbono_sequestro <=0,
+                 uso_liquido_de_terras_florestais<=0,
+                 uso_liquido_de_areas_arbustivas_e_gramineas<=0,
+                 uso_liquido_de_areas_umidas<=0) |> 
+          pivot_longer(
+            cols = c(remocoes_de_carbono_sequestro,uso_liquido_de_terras_florestais,uso_liquido_de_areas_arbustivas_e_gramineas,uso_liquido_de_areas_umidas),
+            names_to = "subsector",
+            values_to = "emission"
+          ) |> 
+          group_by(year, state, city_ref) |> 
+          summarise(
+            emission = sum(emission, na.rm = TRUE)
+          ) |> 
+          select(state:emission) |> 
+          rename(name_muni = city_ref)
+      ),by = "name_muni", relationship = "many-to-many"
+    ) |> drop_na()
+```
 
 
-## Instruções
+
+## Instruções - feitas ✅
 
 1- Na incorporação retirar os subsetores (para não contar duas vezes)
 2- fazer a soma de emissão por setor
 3- pivto_wider com as emissão para os diferentes setores nas colunas
+
 
 
 
