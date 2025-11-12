@@ -15,27 +15,27 @@ monitoramento de GEE em escala global e regional. Esta proposta tem como
 objetivo descrever a variabilidade espaçotemporal das concentrações
 atmosféricas de CO<sub>2</sub> e CH<sub>4</sub> em áreas do Brasil
 Central, identificando fontes e possíveis sumidouros desses gases ao
-longo dos anos de 2015 a 2023. Serão adquiridos dados das concentrações
-atmosféricas de CO<sub>2</sub> (X<sub>CO2</sub>) e CH<sub>4</sub>
-(X<sub>CH4</sub>) a partir dos sensores orbitais GOSAT e OCO-2. Em
-adição, dados das variáveis climáticas serão obtidos na plataforma da
-Agência Espacial Americana (NASA). Para todos os setores emissores de
-GEE, os dados serão obtidos a partir dos relatórios da plataforma
-Climate TRACE, coalizão sem fins lucrativos capaz de rastrear e fornecer
-informações sobre as emissões de GEE globalmente. A aquisição dos dados
-será sistematizada para redução das diferenças entre as resoluções
-espaciais dos dados de sensoriamento remoto, com posterior remoção da
-tendência mundial de X<sub>CO2</sub> e X<sub>CH4</sub>. Para exploração
-dos dados adquiridos, serão utilizadas técnicas exploratórias
-multivariadas e análise geoestatística, implementadas em linguagem R. A
-interrelação entre as variáveis analisadas será descrita por de
-reconhecimento de padrão, que incluíram análises de agrupamento
-hierárquico e não-hierárquico, análise de componentes principais
-associadas aos padrões de variabilidade espacial. Espera-se que essa
-abordagem contribua para melhorar a compreensão da dinâmica dos gases de
-efeito estufa na atmosfera e suas interações com variáveis climáticas e
-de uso da terra no Brasil Central, auxiliando na formulação de políticas
-públicas voltadas para a mitigação das emissões de GEE e,
+longo dos anos de 2015 a 2023. **Serão adquiridos dados das
+concentrações atmosféricas de CO<sub>2</sub> (X<sub>CO2</sub>) e
+CH<sub>4</sub> (X<sub>CH4</sub>) a partir dos sensores orbitais GOSAT e
+OCO-2. Em adição, dados das variáveis climáticas serão obtidos na
+plataforma da Agência Espacial Americana (NASA). Para todos os setores
+emissores de GEE, os dados serão obtidos a partir dos relatórios da
+plataforma Climate TRACE, coalizão sem fins lucrativos capaz de rastrear
+e fornecer informações sobre as emissões de GEE globalmente**. A
+aquisição dos dados será sistematizada para redução das diferenças entre
+as resoluções espaciais dos dados de sensoriamento remoto, com posterior
+remoção da tendência mundial de X<sub>CO2</sub> e X<sub>CH4</sub>.
+**Para exploração dos dados adquiridos, serão utilizadas técnicas
+exploratórias multivariadas e análise geoestatística, implementadas em
+linguagem R**. A interrelação entre as variáveis analisadas será
+descrita por de reconhecimento de padrão, que incluíram análises de
+agrupamento hierárquico e não-hierárquico, análise de componentes
+principais associadas aos padrões de variabilidade espacial. Espera-se
+que essa abordagem contribua para melhorar a compreensão da dinâmica dos
+gases de efeito estufa na atmosfera e suas interações com variáveis
+climáticas e de uso da terra no Brasil Central, auxiliando na formulação
+de políticas públicas voltadas para a mitigação das emissões de GEE e,
 principalmente, a adaptação às mudanças climáticas.
 
 **Objetivo**: Analisar a variabilidade espaçotemporal das concentrações
@@ -141,8 +141,8 @@ library(tibble)
 library(corrplot)
 library(vegan)
 library(stringi)
+library(patchwork)
 source("R/my-function.R") 
-#> List of polygons loaded [list_pol]
 ```
 
 #### Definindo estados
@@ -339,6 +339,27 @@ base_completa |>
 ### 🔄 Atualização da Base - Cáculo da Anomalia
 
 ``` r
+city_ref <- base_completa_set$city_ref |> unique()
+
+for(i in seq_along(city_ref)){
+  da <- base_completa_set |> 
+    filter(city_ref == city_ref[i]) |> 
+    filter(year >= 2017 & year <= 2021)
+  if(nrow(da) >= 2){
+  mod <- lm(xch4 ~ year,data=da)
+  a <- mod$coefficients[[1]]
+  b <- mod$coefficients[[2]]
+  
+  base_completa_set <- base_completa_set |> 
+    mutate(
+      xch4 = ifelse(city_ref == city_ref[i],
+                    ifelse(is.na(xch4),
+                           a+year*b,xch4),xch4)
+    )}
+}
+```
+
+``` r
 base_completa_set <- base_completa_set_corrigida |> 
   group_by(year) |> 
   mutate(anomalia_xco2 = xco2 - median(xco2,na.rm=TRUE),
@@ -351,6 +372,101 @@ base_completa_set <- base_completa_set_corrigida |>
          lai = media_lai,
          evi = media_evi,
          ndvi = media_ndvi)
+```
+
+### 🔎 Mapas de XCO2 e XCH4 + respectivas anomalias
+
+``` r
+map(2015:2023,~{
+  df_aux <- municipality |> 
+    mutate(
+      name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
+      name_muni = trimws(name_muni)
+    )  |> 
+    filter(abbrev_state %in% my_states) |> 
+    left_join(
+      base_completa_set |> 
+        filter(year == .x) |> 
+        rename(name_muni = city_ref,abbrev_state=state),
+  by = c("abbrev_state","name_muni")) 
+
+plot_xco2 <- df_aux |> 
+  ggplot() +
+    geom_sf(aes(fill=xco2), color="transparent",
+            size=.05, show.legend = TRUE)  +
+    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(size = rel(.9), color = "black"),
+      axis.title.x = element_text(size = rel(1.1), color = "black"),
+      axis.text.y = element_text(size = rel(.9), color = "black"),
+      axis.title.y = element_text(size = rel(1.1), color = "black"),
+      legend.text = element_text(size = rel(1), color = "black"),
+      legend.title = element_text(face = 'bold', size = rel(1.2))
+    ) +
+    labs(fill = 'XCO2 (ppm)',
+         x = 'Longitude',
+         y = 'Latitude') +
+    scale_fill_viridis_c()
+
+plot_anom_xco2 <- df_aux |> 
+  ggplot() +
+    geom_sf(aes(fill=anomalia_xco2), color="transparent",
+            size=.05, show.legend = TRUE)  +
+    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(size = rel(.9), color = "black"),
+      axis.title.x = element_text(size = rel(1.1), color = "black"),
+      axis.text.y = element_text(size = rel(.9), color = "black"),
+      axis.title.y = element_text(size = rel(1.1), color = "black"),
+      legend.text = element_text(size = rel(1), color = "black"),
+      legend.title = element_text(face = 'bold', size = rel(1.2))
+    ) +
+    labs(fill = 'Anomalia-XCO2',
+         x = 'Longitude',
+         y = 'Latitude') +
+    scale_fill_viridis_c(option = "A")
+###-----------------
+plot_xch4 <- df_aux |> 
+  ggplot() +
+    geom_sf(aes(fill=xch4), color="transparent",
+            size=.05, show.legend = TRUE)  +
+    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(size = rel(.9), color = "black"),
+      axis.title.x = element_text(size = rel(1.1), color = "black"),
+      axis.text.y = element_text(size = rel(.9), color = "black"),
+      axis.title.y = element_text(size = rel(1.1), color = "black"),
+      legend.text = element_text(size = rel(1), color = "black"),
+      legend.title = element_text(face = 'bold', size = rel(1.2))
+    ) +
+    labs(fill = 'XCH4 (ppb)',
+         x = 'Longitude',
+         y = 'Latitude') +
+    scale_fill_viridis_c(option = "E")
+
+plot_anom_xch4 <- df_aux |> 
+  ggplot() +
+    geom_sf(aes(fill=anomalia_xch4), color="transparent",
+            size=.05, show.legend = TRUE)  +
+    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(size = rel(.9), color = "black"),
+      axis.title.x = element_text(size = rel(1.1), color = "black"),
+      axis.text.y = element_text(size = rel(.9), color = "black"),
+      axis.title.y = element_text(size = rel(1.1), color = "black"),
+      legend.text = element_text(size = rel(1), color = "black"),
+      legend.title = element_text(face = 'bold', size = rel(1.2))
+    ) +
+    labs(fill = 'Anomalia-XCH4',
+         x = 'Longitude',
+         y = 'Latitude') +
+    scale_fill_viridis_c(option = "B")
+(plot_xco2 | plot_anom_xco2)/
+(plot_xch4 | plot_anom_xch4) + plot_annotation(title = .x)})
 ```
 
 ### 🔎 Análise de correlação - entre setores
@@ -616,50 +732,7 @@ map(2015:2023,~{municipality |>
          x = 'Longitude',
          y = 'Latitude') +
     scale_fill_viridis_c()})
-#> [[1]]
 ```
-
-![](README_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
-
-    #> 
-    #> [[2]]
-
-![](README_files/figure-gfm/unnamed-chunk-15-2.png)<!-- -->
-
-    #> 
-    #> [[3]]
-
-![](README_files/figure-gfm/unnamed-chunk-15-3.png)<!-- -->
-
-    #> 
-    #> [[4]]
-
-![](README_files/figure-gfm/unnamed-chunk-15-4.png)<!-- -->
-
-    #> 
-    #> [[5]]
-
-![](README_files/figure-gfm/unnamed-chunk-15-5.png)<!-- -->
-
-    #> 
-    #> [[6]]
-
-![](README_files/figure-gfm/unnamed-chunk-15-6.png)<!-- -->
-
-    #> 
-    #> [[7]]
-
-![](README_files/figure-gfm/unnamed-chunk-15-7.png)<!-- -->
-
-    #> 
-    #> [[8]]
-
-![](README_files/figure-gfm/unnamed-chunk-15-8.png)<!-- -->
-
-    #> 
-    #> [[9]]
-
-![](README_files/figure-gfm/unnamed-chunk-15-9.png)<!-- -->
 
 #### 🗺️ Mapa de EMISSÃO TOTAL - setores - Criando classe de emissão
 
@@ -706,51 +779,9 @@ map(2015:2023,~{municipality |>
          x = 'Longitude',
          y = 'Latitude') +
     scale_fill_viridis_d()})
-#> [[1]]
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
-
-    #> 
-    #> [[2]]
-
-![](README_files/figure-gfm/unnamed-chunk-16-2.png)<!-- -->
-
-    #> 
-    #> [[3]]
-
-![](README_files/figure-gfm/unnamed-chunk-16-3.png)<!-- -->
-
-    #> 
-    #> [[4]]
-
-![](README_files/figure-gfm/unnamed-chunk-16-4.png)<!-- -->
-
-    #> 
-    #> [[5]]
-
-![](README_files/figure-gfm/unnamed-chunk-16-5.png)<!-- -->
-
-    #> 
-    #> [[6]]
-
-![](README_files/figure-gfm/unnamed-chunk-16-6.png)<!-- -->
-
-    #> 
-    #> [[7]]
-
-![](README_files/figure-gfm/unnamed-chunk-16-7.png)<!-- -->
-
-    #> 
-    #> [[8]]
-
-![](README_files/figure-gfm/unnamed-chunk-16-8.png)<!-- -->
-
-    #> 
-    #> [[9]]
-
-![](README_files/figure-gfm/unnamed-chunk-16-9.png)<!-- --> \#### 🗺️
-Mapa de EMISSÃO TOTAL - escolher setor
+#### 🗺️ Mapa de EMISSÃO TOTAL - escolher setor
 
 ``` r
 setor = "agricultura" #mudar
@@ -796,50 +827,7 @@ map(2015:2023,~{municipality |>
          x = 'Longitude',
          y = 'Latitude') +
     scale_fill_viridis_d()})
-#> [[1]]
 ```
-
-![](README_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
-
-    #> 
-    #> [[2]]
-
-![](README_files/figure-gfm/unnamed-chunk-17-2.png)<!-- -->
-
-    #> 
-    #> [[3]]
-
-![](README_files/figure-gfm/unnamed-chunk-17-3.png)<!-- -->
-
-    #> 
-    #> [[4]]
-
-![](README_files/figure-gfm/unnamed-chunk-17-4.png)<!-- -->
-
-    #> 
-    #> [[5]]
-
-![](README_files/figure-gfm/unnamed-chunk-17-5.png)<!-- -->
-
-    #> 
-    #> [[6]]
-
-![](README_files/figure-gfm/unnamed-chunk-17-6.png)<!-- -->
-
-    #> 
-    #> [[7]]
-
-![](README_files/figure-gfm/unnamed-chunk-17-7.png)<!-- -->
-
-    #> 
-    #> [[8]]
-
-![](README_files/figure-gfm/unnamed-chunk-17-8.png)<!-- -->
-
-    #> 
-    #> [[9]]
-
-![](README_files/figure-gfm/unnamed-chunk-17-9.png)<!-- -->
 
 ## 🗺️ Mapa de EMISSÃO TOTAL - subsetores
 
@@ -898,50 +886,7 @@ map(2015:2023,~{municipality |>
          x = 'Longitude',
          y = 'Latitude') +
     scale_fill_viridis_c()})
-#> [[1]]
 ```
-
-![](README_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
-
-    #> 
-    #> [[2]]
-
-![](README_files/figure-gfm/unnamed-chunk-18-2.png)<!-- -->
-
-    #> 
-    #> [[3]]
-
-![](README_files/figure-gfm/unnamed-chunk-18-3.png)<!-- -->
-
-    #> 
-    #> [[4]]
-
-![](README_files/figure-gfm/unnamed-chunk-18-4.png)<!-- -->
-
-    #> 
-    #> [[5]]
-
-![](README_files/figure-gfm/unnamed-chunk-18-5.png)<!-- -->
-
-    #> 
-    #> [[6]]
-
-![](README_files/figure-gfm/unnamed-chunk-18-6.png)<!-- -->
-
-    #> 
-    #> [[7]]
-
-![](README_files/figure-gfm/unnamed-chunk-18-7.png)<!-- -->
-
-    #> 
-    #> [[8]]
-
-![](README_files/figure-gfm/unnamed-chunk-18-8.png)<!-- -->
-
-    #> 
-    #> [[9]]
-
-![](README_files/figure-gfm/unnamed-chunk-18-9.png)<!-- -->
 
 #### 🗺️ Mapa de EMISSÃO TOTAL - subsetores - Criando classe de emissão
 
@@ -997,50 +942,7 @@ map(2015:2023,~{municipality |>
          x = 'Longitude',
          y = 'Latitude') +
     scale_fill_viridis_d()})
-#> [[1]]
 ```
-
-![](README_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
-
-    #> 
-    #> [[2]]
-
-![](README_files/figure-gfm/unnamed-chunk-19-2.png)<!-- -->
-
-    #> 
-    #> [[3]]
-
-![](README_files/figure-gfm/unnamed-chunk-19-3.png)<!-- -->
-
-    #> 
-    #> [[4]]
-
-![](README_files/figure-gfm/unnamed-chunk-19-4.png)<!-- -->
-
-    #> 
-    #> [[5]]
-
-![](README_files/figure-gfm/unnamed-chunk-19-5.png)<!-- -->
-
-    #> 
-    #> [[6]]
-
-![](README_files/figure-gfm/unnamed-chunk-19-6.png)<!-- -->
-
-    #> 
-    #> [[7]]
-
-![](README_files/figure-gfm/unnamed-chunk-19-7.png)<!-- -->
-
-    #> 
-    #> [[8]]
-
-![](README_files/figure-gfm/unnamed-chunk-19-8.png)<!-- -->
-
-    #> 
-    #> [[9]]
-
-![](README_files/figure-gfm/unnamed-chunk-19-9.png)<!-- -->
 
 #### 🗺️ Mapa de EMISSÃO TOTAL - escolher subsetor
 
@@ -1095,50 +997,7 @@ map(2015:2023,~{municipality |>
          x = 'Longitude',
          y = 'Latitude') +
     scale_fill_viridis_d()})
-#> [[1]]
 ```
-
-![](README_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
-
-    #> 
-    #> [[2]]
-
-![](README_files/figure-gfm/unnamed-chunk-20-2.png)<!-- -->
-
-    #> 
-    #> [[3]]
-
-![](README_files/figure-gfm/unnamed-chunk-20-3.png)<!-- -->
-
-    #> 
-    #> [[4]]
-
-![](README_files/figure-gfm/unnamed-chunk-20-4.png)<!-- -->
-
-    #> 
-    #> [[5]]
-
-![](README_files/figure-gfm/unnamed-chunk-20-5.png)<!-- -->
-
-    #> 
-    #> [[6]]
-
-![](README_files/figure-gfm/unnamed-chunk-20-6.png)<!-- -->
-
-    #> 
-    #> [[7]]
-
-![](README_files/figure-gfm/unnamed-chunk-20-7.png)<!-- -->
-
-    #> 
-    #> [[8]]
-
-![](README_files/figure-gfm/unnamed-chunk-20-8.png)<!-- -->
-
-    #> 
-    #> [[9]]
-
-![](README_files/figure-gfm/unnamed-chunk-20-9.png)<!-- -->
 
 ## 🗺️ SETOR/SUBSETOR DE MAIOR EMISSÃO DA CIDADE
 
@@ -1209,56 +1068,9 @@ map(2015:2024,~{municipality |>
       )
   
   })
-#> [[1]]
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
-
-    #> 
-    #> [[2]]
-
-![](README_files/figure-gfm/unnamed-chunk-22-2.png)<!-- -->
-
-    #> 
-    #> [[3]]
-
-![](README_files/figure-gfm/unnamed-chunk-22-3.png)<!-- -->
-
-    #> 
-    #> [[4]]
-
-![](README_files/figure-gfm/unnamed-chunk-22-4.png)<!-- -->
-
-    #> 
-    #> [[5]]
-
-![](README_files/figure-gfm/unnamed-chunk-22-5.png)<!-- -->
-
-    #> 
-    #> [[6]]
-
-![](README_files/figure-gfm/unnamed-chunk-22-6.png)<!-- -->
-
-    #> 
-    #> [[7]]
-
-![](README_files/figure-gfm/unnamed-chunk-22-7.png)<!-- -->
-
-    #> 
-    #> [[8]]
-
-![](README_files/figure-gfm/unnamed-chunk-22-8.png)<!-- -->
-
-    #> 
-    #> [[9]]
-
-![](README_files/figure-gfm/unnamed-chunk-22-9.png)<!-- -->
-
-    #> 
-    #> [[10]]
-
-![](README_files/figure-gfm/unnamed-chunk-22-10.png)<!-- --> \## 🗺️
-SUBSETOR DE MAIOR EMISSÃO
+## 🗺️ SUBSETOR DE MAIOR EMISSÃO
 
 ``` r
 # Padronizar cores, criando vetor
@@ -1319,55 +1131,7 @@ map(2015:2024,~{municipality |>
     )
   
 })
-#> [[1]]
 ```
-
-![](README_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
-
-    #> 
-    #> [[2]]
-
-![](README_files/figure-gfm/unnamed-chunk-23-2.png)<!-- -->
-
-    #> 
-    #> [[3]]
-
-![](README_files/figure-gfm/unnamed-chunk-23-3.png)<!-- -->
-
-    #> 
-    #> [[4]]
-
-![](README_files/figure-gfm/unnamed-chunk-23-4.png)<!-- -->
-
-    #> 
-    #> [[5]]
-
-![](README_files/figure-gfm/unnamed-chunk-23-5.png)<!-- -->
-
-    #> 
-    #> [[6]]
-
-![](README_files/figure-gfm/unnamed-chunk-23-6.png)<!-- -->
-
-    #> 
-    #> [[7]]
-
-![](README_files/figure-gfm/unnamed-chunk-23-7.png)<!-- -->
-
-    #> 
-    #> [[8]]
-
-![](README_files/figure-gfm/unnamed-chunk-23-8.png)<!-- -->
-
-    #> 
-    #> [[9]]
-
-![](README_files/figure-gfm/unnamed-chunk-23-9.png)<!-- -->
-
-    #> 
-    #> [[10]]
-
-![](README_files/figure-gfm/unnamed-chunk-23-10.png)<!-- -->
 
 ## 🗺 Mapa de REMOÇÃO
 
@@ -1431,55 +1195,7 @@ map(2015:2024,~{municipality |>
          x = 'Longitude',
          y = 'Latitude') +
     scale_fill_viridis_c()})
-#> [[1]]
 ```
-
-![](README_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
-
-    #> 
-    #> [[2]]
-
-![](README_files/figure-gfm/unnamed-chunk-24-2.png)<!-- -->
-
-    #> 
-    #> [[3]]
-
-![](README_files/figure-gfm/unnamed-chunk-24-3.png)<!-- -->
-
-    #> 
-    #> [[4]]
-
-![](README_files/figure-gfm/unnamed-chunk-24-4.png)<!-- -->
-
-    #> 
-    #> [[5]]
-
-![](README_files/figure-gfm/unnamed-chunk-24-5.png)<!-- -->
-
-    #> 
-    #> [[6]]
-
-![](README_files/figure-gfm/unnamed-chunk-24-6.png)<!-- -->
-
-    #> 
-    #> [[7]]
-
-![](README_files/figure-gfm/unnamed-chunk-24-7.png)<!-- -->
-
-    #> 
-    #> [[8]]
-
-![](README_files/figure-gfm/unnamed-chunk-24-8.png)<!-- -->
-
-    #> 
-    #> [[9]]
-
-![](README_files/figure-gfm/unnamed-chunk-24-9.png)<!-- -->
-
-    #> 
-    #> [[10]]
-
-![](README_files/figure-gfm/unnamed-chunk-24-10.png)<!-- -->
 
 ## Instruções - feitas ✅
 
@@ -1554,8 +1270,6 @@ emissions_sources_15_20 |>
            label = ".",
            size=0.1)
 ```
-
-![](README_files/figure-gfm/unnamed-chunk-25-1.png)<!-- -->
 
 ## 📊 VISUALIZANDO MAIORES EMISSORES PARA O SETOR DE AGRICULTURA OU P/ SEUS SUBSETORES
 
@@ -1638,11 +1352,6 @@ emissions_sources_21_24 |>
            y=1,
            label = ".",
            size=0.1) 
-```
-
-![](README_files/figure-gfm/unnamed-chunk-26-1.png)<!-- -->
-
-``` r
 
 #
 #   ggplot(aes(emission/1e6, #passar de ton para Mton

@@ -11,6 +11,7 @@ output: github_document
 # "include = FALSE" 
   # Código vai ser executado, mas o código e saída ocultam-se no documento final.
 knitr::opts_chunk$set(
+  eval=FALSE,
   collapse = TRUE, # saída e código compilados no documento final
   message = FALSE, # ocultar mensagens geradas no documento final
   error = FALSE,   # ocultar mensagens de erro no documento final
@@ -21,7 +22,7 @@ knitr::opts_chunk$set(
 
 # MODELAGEM COMPUTACIONAL DA CONCENTRAÇÃO ATMOSFÉRICA DE CO~2~ e CH~4~ NO BRASIL CENTRAL
 
-**Resumo**:  As mudanças climáticas globais são uma preocupação mundial constante, sendo a principal causa o aumento da concentração de gases de efeito estufa (GEE) na atmosfera, especialmente o dióxido de carbono (CO~2~) e o metano (CH~4~). Para implementar medidas eficientes de mitigação das emissões de GEE, é fundamental compreender a dinâmica desses gases na atmosfera e estabelecer relações com outras variáveis associadas ao sistema solo-planta-atmosfera. Nesse contexto, diversos esforços têm sido realizados para aprimorar as técnicas de monitoramento de GEE em escala global e regional. Esta proposta tem como objetivo descrever a variabilidade espaçotemporal das concentrações atmosféricas de CO~2~ e CH~4~ em áreas do Brasil Central, identificando fontes e possíveis sumidouros desses gases ao longo dos anos de 2015 a 2023. Serão adquiridos dados das concentrações atmosféricas de CO~2~ (X~CO2~) e CH~4~ (X~CH4~) a partir dos sensores orbitais GOSAT e OCO-2. Em adição, dados das variáveis climáticas serão obtidos na plataforma da Agência Espacial Americana (NASA). Para todos os setores emissores de GEE, os dados serão obtidos a partir dos relatórios da plataforma Climate TRACE, coalizão sem fins lucrativos capaz de rastrear e fornecer informações sobre as emissões de GEE globalmente. A aquisição dos dados será sistematizada para redução das diferenças entre as resoluções espaciais dos dados de sensoriamento remoto, com posterior remoção da tendência mundial de X~CO2~ e X~CH4~. Para exploração dos dados adquiridos, serão utilizadas técnicas exploratórias multivariadas e análise geoestatística, implementadas em linguagem R. A interrelação entre as variáveis analisadas será descrita por de reconhecimento de padrão, que incluíram análises de agrupamento hierárquico e não-hierárquico, análise de componentes principais associadas aos padrões de variabilidade espacial. Espera-se que essa abordagem contribua para melhorar a compreensão da dinâmica dos gases de efeito estufa na atmosfera e suas interações com variáveis climáticas e de uso da terra no Brasil Central, auxiliando na formulação de políticas públicas voltadas para a mitigação das emissões de GEE e, principalmente, a adaptação às mudanças climáticas.
+**Resumo**:  As mudanças climáticas globais são uma preocupação mundial constante, sendo a principal causa o aumento da concentração de gases de efeito estufa (GEE) na atmosfera, especialmente o dióxido de carbono (CO~2~) e o metano (CH~4~). Para implementar medidas eficientes de mitigação das emissões de GEE, é fundamental compreender a dinâmica desses gases na atmosfera e estabelecer relações com outras variáveis associadas ao sistema solo-planta-atmosfera. Nesse contexto, diversos esforços têm sido realizados para aprimorar as técnicas de monitoramento de GEE em escala global e regional. Esta proposta tem como objetivo descrever a variabilidade espaçotemporal das concentrações atmosféricas de CO~2~ e CH~4~ em áreas do Brasil Central, identificando fontes e possíveis sumidouros desses gases ao longo dos anos de 2015 a 2023. **Serão adquiridos dados das concentrações atmosféricas de CO~2~ (X~CO2~) e CH~4~ (X~CH4~) a partir dos sensores orbitais GOSAT e OCO-2. Em adição, dados das variáveis climáticas serão obtidos na plataforma da Agência Espacial Americana (NASA). Para todos os setores emissores de GEE, os dados serão obtidos a partir dos relatórios da plataforma Climate TRACE, coalizão sem fins lucrativos capaz de rastrear e fornecer informações sobre as emissões de GEE globalmente**. A aquisição dos dados será sistematizada para redução das diferenças entre as resoluções espaciais dos dados de sensoriamento remoto, com posterior remoção da tendência mundial de X~CO2~ e X~CH4~. **Para exploração dos dados adquiridos, serão utilizadas técnicas exploratórias multivariadas e análise geoestatística, implementadas em linguagem R**. A interrelação entre as variáveis analisadas será descrita por de reconhecimento de padrão, que incluíram análises de agrupamento hierárquico e não-hierárquico, análise de componentes principais associadas aos padrões de variabilidade espacial. Espera-se que essa abordagem contribua para melhorar a compreensão da dinâmica dos gases de efeito estufa na atmosfera e suas interações com variáveis climáticas e de uso da terra no Brasil Central, auxiliando na formulação de políticas públicas voltadas para a mitigação das emissões de GEE e, principalmente, a adaptação às mudanças climáticas.
 
 **Objetivo**: Analisar a variabilidade espaçotemporal das concentrações atmosféricas de CO~2~ e CH~4~ em áreas do Brasil Central, identificando fontes e possíveis sumidouros desses gases ao longo dos anos de 2015 a 2023, bem como suas relações com índices vegetativos e climáticos, por meio de dados de GOSAT, OCO-2 e Climate TRACE.
 
@@ -97,6 +98,7 @@ library(tibble)
 library(corrplot)
 library(vegan)
 library(stringi)
+library(patchwork)
 source("R/my-function.R") 
 ```
 
@@ -292,6 +294,30 @@ base_completa |>
 
 ### 🔄 Atualização da Base - Cáculo da Anomalia
 
+
+```{r}
+city_ref <- base_completa_set$city_ref |> unique()
+
+for(i in seq_along(city_ref)){
+  da <- base_completa_set |> 
+    filter(city_ref == city_ref[i]) |> 
+    filter(year >= 2017 & year <= 2021)
+  if(nrow(da) >= 2){
+  mod <- lm(xch4 ~ year,data=da)
+  a <- mod$coefficients[[1]]
+  b <- mod$coefficients[[2]]
+  
+  base_completa_set <- base_completa_set |> 
+    mutate(
+      xch4 = ifelse(city_ref == city_ref[i],
+                    ifelse(is.na(xch4),
+                           a+year*b,xch4),xch4)
+    )}
+}
+```
+
+
+
 ```{r}
 base_completa_set <- base_completa_set_corrigida |> 
   group_by(year) |> 
@@ -306,6 +332,107 @@ base_completa_set <- base_completa_set_corrigida |>
          evi = media_evi,
          ndvi = media_ndvi)
 ```
+
+
+
+
+
+### 🔎 Mapas de XCO2 e XCH4 + respectivas anomalias
+
+
+```{r}
+map(2015:2023,~{
+  df_aux <- municipality |> 
+    mutate(
+      name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
+      name_muni = trimws(name_muni)
+    )  |> 
+    filter(abbrev_state %in% my_states) |> 
+    left_join(
+      base_completa_set |> 
+        filter(year == .x) |> 
+        rename(name_muni = city_ref,abbrev_state=state),
+  by = c("abbrev_state","name_muni")) 
+
+plot_xco2 <- df_aux |> 
+  ggplot() +
+    geom_sf(aes(fill=xco2), color="transparent",
+            size=.05, show.legend = TRUE)  +
+    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(size = rel(.9), color = "black"),
+      axis.title.x = element_text(size = rel(1.1), color = "black"),
+      axis.text.y = element_text(size = rel(.9), color = "black"),
+      axis.title.y = element_text(size = rel(1.1), color = "black"),
+      legend.text = element_text(size = rel(1), color = "black"),
+      legend.title = element_text(face = 'bold', size = rel(1.2))
+    ) +
+    labs(fill = 'XCO2 (ppm)',
+         x = 'Longitude',
+         y = 'Latitude') +
+    scale_fill_viridis_c()
+
+plot_anom_xco2 <- df_aux |> 
+  ggplot() +
+    geom_sf(aes(fill=anomalia_xco2), color="transparent",
+            size=.05, show.legend = TRUE)  +
+    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(size = rel(.9), color = "black"),
+      axis.title.x = element_text(size = rel(1.1), color = "black"),
+      axis.text.y = element_text(size = rel(.9), color = "black"),
+      axis.title.y = element_text(size = rel(1.1), color = "black"),
+      legend.text = element_text(size = rel(1), color = "black"),
+      legend.title = element_text(face = 'bold', size = rel(1.2))
+    ) +
+    labs(fill = 'Anomalia-XCO2',
+         x = 'Longitude',
+         y = 'Latitude') +
+    scale_fill_viridis_c(option = "A")
+###-----------------
+plot_xch4 <- df_aux |> 
+  ggplot() +
+    geom_sf(aes(fill=xch4), color="transparent",
+            size=.05, show.legend = TRUE)  +
+    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(size = rel(.9), color = "black"),
+      axis.title.x = element_text(size = rel(1.1), color = "black"),
+      axis.text.y = element_text(size = rel(.9), color = "black"),
+      axis.title.y = element_text(size = rel(1.1), color = "black"),
+      legend.text = element_text(size = rel(1), color = "black"),
+      legend.title = element_text(face = 'bold', size = rel(1.2))
+    ) +
+    labs(fill = 'XCH4 (ppb)',
+         x = 'Longitude',
+         y = 'Latitude') +
+    scale_fill_viridis_c(option = "E")
+
+plot_anom_xch4 <- df_aux |> 
+  ggplot() +
+    geom_sf(aes(fill=anomalia_xch4), color="transparent",
+            size=.05, show.legend = TRUE)  +
+    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(size = rel(.9), color = "black"),
+      axis.title.x = element_text(size = rel(1.1), color = "black"),
+      axis.text.y = element_text(size = rel(.9), color = "black"),
+      axis.title.y = element_text(size = rel(1.1), color = "black"),
+      legend.text = element_text(size = rel(1), color = "black"),
+      legend.title = element_text(face = 'bold', size = rel(1.2))
+    ) +
+    labs(fill = 'Anomalia-XCH4',
+         x = 'Longitude',
+         y = 'Latitude') +
+    scale_fill_viridis_c(option = "B")
+(plot_xco2 | plot_anom_xco2)/
+(plot_xch4 | plot_anom_xch4) + plot_annotation(title = .x)})
+```
+
 
 
 ### 🔎 Análise de correlação - entre setores
