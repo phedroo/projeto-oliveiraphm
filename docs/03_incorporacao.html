@@ -374,12 +374,6 @@ source(&quot;../R/my-function.R&quot;) </code></pre>
 <h4>Definindo estados</h4>
 <pre class="r"><code>my_states &lt;- c(&quot;MS&quot;,&quot;MT&quot;,&quot;GO&quot;,&quot;DF&quot;)</code></pre>
 </div>
-</div>
-<div id="entrada-com-a-base-emissions-sources.rds" class="section level3">
-<h3>💨 Entrada com a Base: <code>emissions-sources.rds</code></h3>
-<pre class="r"><code>emissions_sources &lt;- read_rds(&quot;../data/emissions_sources.rds&quot;)|&gt; 
-  filter(sigla_uf %in% my_states)
-glimpse(emissions_sources)</code></pre>
 <div id="filtrando-os-polígonos-do-municípios" class="section level4">
 <h4>Filtrando os polígonos do municípios</h4>
 <pre class="r"><code>munici_state &lt;- municipality |&gt; 
@@ -746,7 +740,8 @@ trace.</p>
 deter &lt;- read_rds(&quot;../data/deter_final.rds&quot;)
 prodes &lt;- read_rds(&quot;../data/prodes_final.rds&quot;)
 modis &lt;- read_rds(&quot;../data/appeears_modis_final.rds&quot;)
-climate_trace &lt;- read_rds(&quot;../data/emissions_sources_final.rds&quot;)</code></pre>
+climate_trace_set &lt;- read_rds(&quot;../data/climate_trace_setores.rds&quot;)
+climate_trace_subset &lt;- read_rds(&quot;../data/climate_trace_subsetores.rds&quot;)</code></pre>
 </div>
 <div id="incorporando-as-bases-faltantes-e-criando-a-base-semicompleta" class="section level3">
 <h3>⛓️ Incorporando as bases faltantes e Criando a base
@@ -768,23 +763,25 @@ quantity (até 2023) não estao presente para todos os anos</em></p>
 base_semicompleta
 # write_rds(base_semicompleta, &quot;../data/base_semicompleta.rds&quot;)</code></pre>
 </div>
-<div id="incorporando-base-climate-trace-antiga-e-atual-bases_ct_atualizadas-na-base-semicompleta-e-criando-base-completa" class="section level3">
+<div id="incorporando-base-climate-trace-antiga-e-atual-bases_ct_atualizadas-na-base-semicompleta-e-criando-base_completa_setores-e-base_completa_susetores" class="section level3">
 <h3>Incorporando base climate TRACE antiga e atual
-(bases_ct_atualizadas) na base semicompleta e criando base completa</h3>
+(bases_ct_atualizadas) na base semicompleta e criando
+“base_completa_setores” e “base_completa_susetores”</h3>
 <p>Essa base completa é a base utilizada nas análises futuras e já
 incorporadas</p>
-<pre class="r"><code># Carregando bases_ct_atualizadas
-# bases_ct_atualizadas &lt;- read_rds(&#39;../data-raw/bases_ct_atualizadas.rds&#39;)
-
-# incorporando
-base_completa &lt;- base_semicompleta |&gt; 
-  full_join(bases_ct_atualizadas,
+<pre class="r"><code># incorporando
+base_completa_setores &lt;- base_semicompleta |&gt; 
+  full_join(climate_trace_setores,
   by = c(&#39;year&#39;, &#39;city_ref&#39;, &#39;state&#39;))|&gt; 
   select(-ends_with(&quot;.x&quot;), -ends_with(&quot;.y&quot;))
 
-# Criando base completa
-base_completa
-# write_rds(base_completa, &#39;../data/base_completa.rds&#39;)</code></pre>
+base_completa_subsetores &lt;- base_semicompleta |&gt; 
+  full_join(climate_trace_subsetores,
+  by = c(&#39;year&#39;, &#39;city_ref&#39;, &#39;state&#39;))|&gt; 
+  select(-ends_with(&quot;.x&quot;), -ends_with(&quot;.y&quot;))
+
+# write_rds(base_completa_setores, &#39;../data/base_completa_setores.rds&#39;)
+# write_rds(base_completa_subsetores, &#39;../data/base_completa_subsetores.rds&#39;)</code></pre>
 </div>
 </div>
 

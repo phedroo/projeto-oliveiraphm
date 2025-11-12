@@ -37,23 +37,36 @@ my_states <- c("MS","MT","GO","DF")
 ```
 
 ### 💨 Entrada com a Base: `emissions-sources.rds`
-```{r, eval=FALSE}
-emissions_sources <- read_rds("../data/emissions_sources.rds")|> 
-  filter(sigla_uf %in% my_states)
-glimpse(emissions_sources)
-```
-### Adicionando base climate TRACE atualizada na base antiga
 
-A base CT nova contém dados para o período de 2021 a 2025, enquanto a base antiga, para o perídoo de 2015 a 2023. Os dados desta (antiga) foram utilizados até o ano de 2020.
+Essa é a base antiga do Climate TRACE, que compreende o período de 2015 a 2020
+
+```{r, eval=FALSE}
+emissions_sources <- read_rds("../data/emissions_sources.rds")
+```
+
+### 💨 Entrada com a Base: `climate-trace-br.xlsx`
+
+Essa é a nova base do Climate TRACE, que compreenderá o período de 2021 a 2023
+
+```{r}
+base_ct_att <- readxl::read_excel("../data-raw/climate-trace-br.xlsx")
+```
+
+
+### Adicionando base climate TRACE atualizada (climate-trace-br.xlsx) na base antiga (emissions_sources.rds)
+
+A base CT nova contém dados para o período de 2021 a 2025, enquanto a base antiga, para o perído de 2015 a 2023. Os dados desta (antiga) foram utilizados até o ano de 2020.
+
+#### Finalizar tratamento da base nova para posterior incorporação
+
+##### Pegando setores da base nova
 
 ```{r,eval=FALSE}
-# Primeiro devemos carregar a nova base e tratá-la 
-
-# Carregando nova base  -----------------------------------------------
-base_ct_att <- readxl::read_excel("../data-raw/climate-trace-br.xlsx")
-
 # Criando vetor para extrair os municipios de todos os tipos de emissões, possibilitando a padronização dos nomes para posterior incorporação
+# base_ct_att |> pull(admin) |> unique()
+
 municipios <- base_ct_att |> 
+  filter(estado %in% my_states) |> 
   mutate(
     fonte = stri_trans_general(tolower(fonte), "Latin-ASCII"),
     fonte = trimws(fonte)) |> 
@@ -63,14 +76,12 @@ municipios <- base_ct_att |>
 padrao_municipios <- paste0(municipios, collapse = "|")
 
 # Tratando base --------------------------------------------------
-nova_base_ct <- base_ct_att |> 
+emissions_sources_21_25_setores <- base_ct_att |> 
   rename(city_ref = fonte,
          emissao = emissao_co2e,
          state = estado,
-         year = ano) |> 
-  filter(state %in% my_states,
-         year %in% 2021:2023) |> 
-  select(year, state, city_ref, emissao, setor, subsetor) |> 
+         year = ano) |>
+  select(year, state, city_ref, emissao, setor) |> 
   mutate(
     city_ref = stri_trans_general(tolower(city_ref), "Latin-ASCII"),
     city_ref = trimws(city_ref),
@@ -82,48 +93,85 @@ nova_base_ct <- base_ct_att |>
     names_from = setor,
     values_from = emissao_setores,
     names_prefix = "emissao_"
-  ) |> 
-  left_join(
-    base_ct_att |> 
+  ) |>
+  rename_with(
+    .cols = starts_with("emissao"),
+    .fn = function(x) {
+      x <- tolower(x)
+      x <- stri_trans_general(x, "Latin-ASCII")
+      x <- gsub('emissao_', "", x) # encurtar nomes
+      x <- gsub(" ", "_", x) #espaço -> _
+      x <- gsub("-", "_", x) # - -> _
+      x
+    }) |> 
+  filter(state %in% my_states,
+         year %in% 2021:2025)
+```
+
+##### Pegando subsetores da base nova
+
+```{r,eval=FALSE}
+emissions_sources_21_25_subsetores <- base_ct_att |> 
   rename(city_ref = fonte,
          emissao = emissao_co2e,
          state = estado,
-         year = ano) |> 
-      filter(state %in% my_states,
-         year %in% 2021:2023) |> 
-  select(year, state, city_ref, emissao, setor, subsetor) |> 
+         year = ano) |>
+  select(year, state, city_ref, emissao, subsetor) |> 
   mutate(
     city_ref = stri_trans_general(tolower(city_ref), "Latin-ASCII"),
-    city_ref = trimws(city_ref)
+    city_ref = trimws(city_ref),
+    city_ref = str_extract(city_ref, padrao_municipios)
   ) |>
   group_by(year, state, city_ref, subsetor) |>
   summarise(emissao_sub_setores = sum(emissao)) |> 
   pivot_wider(
     names_from = subsetor,
     values_from = emissao_sub_setores,
-    names_prefix = "emissao_"
-  ),
-  by = c('city_ref', 'year', 'state')
-  )
+    names_prefix = "emissao_") |>
+  rename_with(
+    .cols = starts_with("emissao"),
+    .fn = function(x) {
+      x <- tolower(x)
+      x <- stri_trans_general(x, "Latin-ASCII")
+      x <- gsub('emissao_', "", x) # encurtar nomes
+      x <- gsub(" ", "_", x) #espaço -> _
+      x <- gsub("-", "_", x) # - -> _
+      x
+    }) |> 
+  rename(
+    fermentacao_enterica_gado_a_pasto = fermentacao_enterica___gado_a_pasto,
+    esterco_deixado_no_pasto_gado = `esterco_deixado_no_pasto_(gado)`,
+    remocoes_de_carbono_sequestro = `remocoes_de_carbono_(sequestro)`,
+    industria_de_papel_e_celulose = producao_de_papel_e_celulose,
+    industria_siderurgica = producao_de_ferro_e_aco,
+    fermentacao_enterica_gado_confinado = fermentacao_enterica___gado_confinado,
+    manejo_de_esterco_gado_confinado = manejo_de_esterco___gado_confinado,
+    industria_quimica = industria_quimica
+  ) |> 
+  filter(state %in% my_states,
+         year %in% 2021:2025)
 ```
 
 
 #### Finalizar tratamento da base antiga para posterior incorporação
 
-```{r,eval=FALSE}
-# Carregando base antiga
-emissions_sources_15_20 <- read_rds("../data/emissions_sources.rds")
+##### Pegando setores da base antiga `emissions_sources.rds`
 
-# Atualizando a base ct para corresponder à nova
-emissions_sources_15_20 <- emissions_sources |>
-  filter(year %in% 2015:2020, # só até 2020, pois a nova contém a partir de 2021
-         sigla_uf %in% my_states,
-         gas == "co2e_100yr") |> 
-  select(year, city_ref, sigla_uf, emissions_quantity, sector_name, sub_sector) |>
+```{r,eval=FALSE}
+# Visualizando setores da base antiga
+emissions_sources |> pull(sector_name) |> unique() 
+  
+# Extraindo setores da base antiga
+  # Antes, visualizar setores da nova base para padronizarmos:
+      base_ct_att |> pull(setor) |> unique()
+
+emissions_sources_15_20_setores <- emissions_sources |> 
+  filter(#  filtro de ano e estados passado para o final, para evitar ausência de observação para alguns dos subsetores
+         gas == "co2e_100yr")  |> 
   rename(state = sigla_uf,
          emissao = emissions_quantity,
-         setor = sector_name,
-         subsetor = sub_sector) |> 
+         setor = sector_name) |> 
+  select(year, city_ref, state, emissao, setor) |>
   mutate(
     city_ref = stri_trans_general(tolower(city_ref), "Latin-ASCII"),
     city_ref = trimws(city_ref)
@@ -132,111 +180,255 @@ emissions_sources_15_20 <- emissions_sources |>
   summarise(emissao_setores = sum(emissao)) |> 
   pivot_wider(
     names_from = setor,
-    values_from = emissao_setores,
-    names_prefix = "emissao_") |> 
-  left_join(
-    emissions_sources |>
-  filter(year %in% 2015:2020, # só até 2020, pois a nova contém a partir de 2021
-         sigla_uf %in% my_states,
-         gas == "co2e_100yr") |> 
-  select(year, city_ref, sigla_uf, emissions_quantity, sector_name, sub_sector) |>
-  rename(state = sigla_uf,
-         emissao = emissions_quantity,
-         setor = sector_name,
-         subsetor = sub_sector) |> 
-  mutate(
-    city_ref = stri_trans_general(tolower(city_ref), "Latin-ASCII"),
-    city_ref = trimws(city_ref),
-    setor = stri_trans_general(tolower(setor), "Latin-ASCII"),
-    setor = trimws(setor),
-    subsetor = stri_trans_general(tolower(subsetor), "Latin-ASCII"),
-    subsetor = trimws(subsetor)
+    values_from = emissao_setores) |>
+  rename(
+    agricultura = agriculture,
+    florestas_e_uso_da_terra = forestry_and_land_use,
+    operacoes_de_combustiveis_fosseis = fossil_fuel_operations,
+    extracao_mineral = mineral_extraction,
+    manufatura = manufacturing,
+    residuos = waste,
+    transporte = transportation,
+    # Edificações (não tem)
+    energia = power
   ) |> 
-  group_by(year, state, city_ref, subsetor) |>
-  summarise(emissao_sub_setores = sum(emissao)) |> 
-  pivot_wider(
-    names_from = subsetor,
-    values_from = emissao_sub_setores,
-    names_prefix = "emissao_"),
-    by = c('city_ref', 'year', 'state')
-  )
-
-# Padronizando nomes dos setores e subsetores para a nova nomenclatura
-# Vetor antigo e novo
-setores_antigos <- c(
-  "agriculture", "forestry_and_land_use", "fossil_fuel_operations",
-  "manufacturing", "transportation", "power",
-  "waste", "mineral_extraction"
-)
-
-setores_novos <- c(
-  "Agricultura", "Florestas e Uso da Terra", "Manufatura", "Transporte", "Energia", "Resíduos",  "Operações de Combustíveis Fósseis", "Extração Mineral"
-)
-
-# Vetor de nomes para usar no rename
-map_setores <- setNames(setores_novos, setores_antigos)
-
-subsetores_antigos <- c(
-  "cropland-fires", "enteric-fermentation-cattle-feedlot",
-  "enteric-fermentation-cattle-pasture", "manure-left-on-pasture-cattle",
-  "manure-management-cattle-feedlot", "rice-cultivation",
-  "synthetic-fertilizer-application", "forest-land-clearing",
-  "forest-land-degradation", "forest-land-fires", "net-forest-land",
-  "net-shrubgrass", "net-wetland", "removals", "shrubgrass-fires",
-  "water-reservoirs", "wetland-fires", "coal-mining",
-  "oil-and-gas-production-and-transport", "oil-and-gas-refining",
-  "aluminum", "cement", "chemicals", "pulp-and-paper", "steel",
-  "bauxite-mining", "copper-mining", "iron-mining",
-  "electricity-generation", "domestic-aviation", "domestic-shipping",
-  "international-aviation", "international-shipping",
-  "road-transportation", "solid-waste-disposal",
-  "wastewater-treatment-and-discharge"
-)
-
-subsetores_novos <- c(
-  "Queimadas em áreas agrícolas", "Fermentação entérica – gado confinado",
-  "Fermentação entérica – gado a pasto", "Esterco deixado no pasto (gado)",
-  "Manejo de esterco – gado confinado", "Cultivo de arroz",
-  "Aplicação de fertilizantes sintéticos", "Forest land clearing",
-  "Forest land degradation", "Forest land fires", "Uso líquido de terras florestais",
-  "Uso líquido de áreas arbustivas e gramíneas", "Uso líquido de áreas úmidas",
-  "Remoções de carbono (sequestro)", "Queimadas em áreas arbustivas",
-  "Reservatórios de água", "Wetland fires", "Mineração de carvão",
-  "Produção de petróleo e gás", "Refino de petróleo e gás",
-  "Produção de alumínio", "Produção de cimento", "Indústria química",
-  "Produção de papel e celulose", "Produção de ferro e aço",
-  "Mineração de bauxita", "Mineração de cobre", "Mineração de ferro",
-  "Geração de eletricidade", "Aviação doméstica", "Navegação doméstica",
-  "Aviação internacional", "Navegação internacional",
-  "Transporte rodoviário", "Disposição de resíduos sólidos",
-  "Tratamento e descarte de esgoto doméstico"
-)
-map_subsetores <- setNames(subsetores_novos, subsetores_antigos)
-
-emissions_sources_15_20_renomeada <- emissions_sources_15_20 |> 
-  rename_with(~ str_replace_all(., map_setores), .cols = starts_with("emissao_")) |> 
-  rename_with(~ str_replace_all(., map_subsetores), .cols = starts_with("emissao_")) 
-
-# Salvar
-# write_rds(emissions_sources_15_20_renomeada, "../data/emissions_sources_15_20.rds")
+  filter(state %in% my_states,
+         year %in% 2015:2020) # só até 2020, pois a nova contém a partir de 2021)
 ```
+
+##### Pegando subsetores da base antiga
 
 ```{r,eval=FALSE}
-# Carregando base antiga
-base_antiga <- read_rds("../data/emissions_sources_15_20.rds") 
+# Visualizando subsetores da base antiga
+emissions_sources |> pull(sub_sector) |> unique()
 
-# Adicionando base e padronizando colunas que começam com emissao
-bases_ct_atualizadas <- nova_base_ct |> full_join(
-  base_antiga,
-  # selecionar somente as colunas com nomes idênticos nas duas bases:
-  by = intersect(names(nova_base_ct), names(base_antiga)))|> 
-  # ----------------------------------------
-  select(-ends_with(".x"), -ends_with(".y"))
-
-bases_ct_atualizadas # ta considerando as regiões administrativas da nova base
-
-# write_rds(bases_ct_atualizadas, '../data-raw/bases_ct_atualizadas.rds')
+# Extraindo subsetores da base antiga
+  # Antes, visualizar subsetores da nova base para padronizarmos:
+    base_ct_att |> pull(subsetor) |> unique()
+    
+emissions_sources_15_20_subsetores <- emissions_sources |> 
+  filter(#  filtro de ano e estados passado para o final, para evitar ausência de observação para alguns dos subsetores
+         gas == "co2e_100yr") |> 
+  rename(state = sigla_uf,
+         emissao = emissions_quantity,
+         subsetor = sub_sector) |> 
+  select(year, city_ref, state, emissao, subsetor) |>
+  mutate(
+    city_ref = stri_trans_general(tolower(city_ref), "Latin-ASCII"),
+    city_ref = trimws(city_ref)
+  ) |> 
+  group_by(year, state, city_ref, subsetor) |>
+  summarise(emissao_subsetores = sum(emissao)) |> 
+  pivot_wider(
+    names_from = subsetor,
+    values_from = emissao_subsetores,
+    names_prefix = "emissao_") |>
+  rename_with(
+    .cols = starts_with("emissao"),
+    .fn = function(x) {
+      x <- tolower(x)
+      x <- stri_trans_general(x, "Latin-ASCII")
+      x <- gsub('emissao_', "", x) # encurtar nomes
+      x <- gsub(" ", "_", x) #espaço -> _
+      x <- gsub("-", "_", x) # - -> _
+      x
+    }) |>
+  rename(
+  aplicacao_de_fertilizantes_sinteticos = synthetic_fertilizer_application,
+  cultivo_de_arroz = rice_cultivation,
+  esterco_deixado_no_pasto_gado = manure_left_on_pasture_cattle,
+  manejo_de_esterco_gado_confinado = manure_management_cattle_feedlot,
+  fermentacao_enterica_gado_a_pasto = enteric_fermentation_cattle_pasture,
+  fermentacao_enterica_gado_confinado = enteric_fermentation_cattle_feedlot,
+  queimadas_em_areas_agricolas = cropland_fires,
+  # residuos_de_culturas_agricolas =
+  # uso_de_combustivel_em_edificacoes_nao_residenciais =
+  # uso_de_combustivel_em_edificacoes_residenciais =
+  remocoes_de_carbono_sequestro = removals,
+  uso_liquido_de_terras_florestais = net_forest_land,
+  uso_liquido_de_areas_arbustivas_e_gramineas = net_shrubgrass,
+  uso_liquido_de_areas_umidas = net_wetland,
+  transporte_rodoviario = road_transportation,
+  aviacao_domestica = domestic_aviation,
+  geracao_de_eletricidade = electricity_generation,
+  tratamento_e_descarte_de_esgoto_domestico = wastewater_treatment_and_discharge,
+  aviacao_internacional = international_aviation,
+  producao_de_petroleo_e_gas = oil_and_gas_refining,
+  transporte_de_petroleo_e_gas = oil_and_gas_production_and_transport,
+  producao_de_cimento = cement,
+  disposicao_de_residuos_solidos = solid_waste_disposal,
+  reservatorios_de_agua = water_reservoirs,
+  mineracao_de_cobre = copper_mining,
+  navegacao_domestica = domestic_shipping,
+  navegacao_internacional = international_shipping,
+  industria_siderurgica = steel,
+  industria_de_papel_e_celulose = pulp_and_paper,
+  industria_quimica = chemicals,
+  mineracao_de_ferro = iron_mining,
+  mineracao_de_bauxita = bauxite_mining,
+  mineracao_de_carvao = coal_mining,
+  degradacao_em_terras_florestais = forest_land_degradation,
+  desmatamento_em_terras_florestais = forest_land_clearing,
+  queimadas_em_terras_florestais = forest_land_fires,
+  queimadas_em_areas_arbustivas = shrubgrass_fires,
+  queimadas_em_areas_umidas = wetland_fires,
+  producao_de_aluminio = aluminum
+) |> 
+  filter(state %in% my_states,
+         year %in% 2015:2020) # só até 2020, pois a nova contém a partir de 2021)
 ```
+
+### Incorporando bases Climate TRACE setores
+
+```{r,eval=FALSE}
+climate_trace_setores <- emissions_sources_15_20_setores |> 
+  full_join(emissions_sources_21_25_setores,
+            by = c("year", "state", "city_ref", "residuos", "agricultura", "florestas_e_uso_da_terra", "manufatura", "transporte", "extracao_mineral", "energia", "operacoes_de_combustiveis_fosseis"))
+
+# write_rds(climate_trace_setores, '../data/climate_trace_setores.rds')
+```
+
+
+### Incorporando bases Climate TRACE subsetores
+
+```{r}
+climate_trace_subsetores <- emissions_sources_15_20_subsetores |> 
+  full_join(emissions_sources_21_25_subsetores,
+            by = c("year", "state", "city_ref", "aplicacao_de_fertilizantes_sinteticos",
+      "aviacao_domestica",
+      "aviacao_internacional",
+      "cultivo_de_arroz",
+      "esterco_deixado_no_pasto_gado",
+      "fermentacao_enterica_gado_a_pasto",
+      "fermentacao_enterica_gado_confinado",
+      "queimadas_em_areas_agricolas",
+      "remocoes_de_carbono_sequestro",
+      "transporte_rodoviario",
+      "tratamento_e_descarte_de_esgoto_domestico",
+      "uso_liquido_de_terras_florestais",
+      "uso_liquido_de_areas_arbustivas_e_gramineas",
+      "uso_liquido_de_areas_umidas",
+      "geracao_de_eletricidade",
+      "disposicao_de_residuos_solidos",
+      "mineracao_de_cobre",
+      "producao_de_cimento",
+      "producao_de_petroleo_e_gas",
+      "reservatorios_de_agua",
+      "navegacao_domestica",
+      "navegacao_internacional",
+      "industria_de_papel_e_celulose",
+      "industria_siderurgica",
+      "mineracao_de_ferro",
+      "mineracao_de_bauxita",
+      "industria_quimica",
+      "mineracao_de_carvao",
+      "producao_de_aluminio",
+      "transporte_de_petroleo_e_gas",
+      "manejo_de_esterco_gado_confinado"))
+      
+      # Presentes apenas em 21–23:
+      # "residuos_de_culturas_agricolas",
+      # "uso_de_combustivel_em_edificacoes_nao_residenciais,
+      # "uso_de_combustivel_em_edificacoes_residenciais",
+      # "industria_textil,_couro_e_vestuario",
+      # "refino_de_petroleo_e_gas",
+      # "craqueamento_a_vapor_petroquimico",
+      # "tratamento_e_descarte_de_efluentes_industriais",
+      # 
+      # # Presentes apenas em 15–20:
+      # "degradacao_em_terras_florestais",
+      # "desmatamento_em_terras_florestais",
+      # "queimadas_em_terras_florestais",
+      # "queimadas_em_areas_arbustivas",
+      # "queimadas_em_areas_umidas"
+
+# names(emissions_sources_21_23_subsetores)
+# names(emissions_sources_15_20_subsetores)
+
+# write_rds(climate_trace_subsetores, '../data/climate_trace_subsetores.rds')
+```
+
+
+# PROBLEMAS COM AS ANÁLISES
+```{r}
+
+  # Observando maiores emissões para verificar problemas no plot do readme
+
+   # Base completa ct
+emissions_sources |> filter(
+  sigla_uf %in% my_states,
+  gas == 'co2e_100yr') |> 
+  arrange(desc(emissions_quantity))
+
+
+ct_set <- read_rds('../data/climate_trace_setores.rds')
+
+ct_set |> filter(
+  state %in% my_states) |>
+  # select(-florestas_e_uso_da_terra) |> 
+  pivot_longer(
+    cols = florestas_e_uso_da_terra:edificacoes,
+    names_to = "setor",
+    values_to = "emission"
+  ) |> 
+  group_by(year, state, city_ref) |> 
+  summarise(
+    emission = sum(emission, na.rm = TRUE)
+  ) |> 
+  arrange(desc(emission))
+
+base_completa_set |> filter(
+  state %in% my_states) |>
+  # select(-florestas_e_uso_da_terra) |> 
+  pivot_longer(
+    cols = florestas_e_uso_da_terra:edificacoes,
+    names_to = "setor",
+    values_to = "emission"
+  ) |> 
+  group_by(year, state, city_ref) |> 
+  summarise(
+    emission = sum(emission/1e6, na.rm = TRUE)
+  ) |> 
+  arrange(desc(emission))
+
+
+    # Base nova ct
+
+emissions_sources_21_23_setores |> filter(
+  state %in% my_states) |>
+  # select(-florestas_e_uso_da_terra, -edificacoes) |> 
+  pivot_longer(
+    cols = agricultura:operacoes_de_combustiveis_fosseis,
+    names_to = "setor",
+    values_to = "emission"
+  ) |> 
+  group_by(year, state, city_ref) |> 
+  summarise(
+    emission = sum(emission/1e6, na.rm = TRUE)
+  ) |> 
+  arrange(desc(emission)) 
+
+
+    # Base antiga ct
+
+emissions_sources_15_20_setores |> filter(
+  state %in% my_states) |>
+  # select(-florestas_e_uso_da_terra) |> 
+  pivot_longer(
+    cols = florestas_e_uso_da_terra:extracao_mineral,
+    names_to = "setor",
+    values_to = "emission"
+  ) |> 
+  group_by(year, state, city_ref) |> 
+  summarise(
+    emission = sum(emission/1e6, na.rm = TRUE)
+  ) |> 
+  arrange(desc(emission))
+
+names(emissions_sources_21_23_setores)
+```
+
+
 
 
 ### 💨 Entrada com a Base: `nasa-xco2.rds`
@@ -1823,8 +2015,6 @@ map(2015:2023,~{
 
 # write_rds(nasa_power_bind,paste0("../data/nasa-power-",variavel,"-bind.rds"))
 ```
-
--->
 
 ### 🪓 Entrada com a Base: `prodes-deforestation.rds`
 ```{r, eval=FALSE} 
