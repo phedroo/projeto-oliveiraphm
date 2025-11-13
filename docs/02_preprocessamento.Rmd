@@ -31,10 +31,12 @@ library(dplyr)
 library(stringi)
 source("../R/my-function.R")
 ```
+
 #### Definindo estados
 ```{r, eval=FALSE}
 my_states <- c("MS","MT","GO","DF")
 ```
+
 
 ### 💨 Entrada com a Base: `emissions-sources.rds`
 
@@ -65,13 +67,12 @@ A base CT nova contém dados para o período de 2021 a 2025, enquanto a base ant
 # Criando vetor para extrair os municipios de todos os tipos de emissões, possibilitando a padronização dos nomes para posterior incorporação
 # base_ct_att |> pull(admin) |> unique()
 
-municipios <- base_ct_att |> 
-  filter(estado %in% my_states) |> 
+municipios <- municipality |> 
+  filter(abbrev_state %in% my_states) |> 
   mutate(
-    fonte = stri_trans_general(tolower(fonte), "Latin-ASCII"),
-    fonte = trimws(fonte)) |> 
-  filter(admin == 'Municipal') |> 
-  pull(fonte) |> unique()
+    name_muni  = stri_trans_general(tolower(name_muni ), "Latin-ASCII"),
+    name_muni  = trimws(name_muni )) |> 
+  pull(name_muni) |> unique()
 
 padrao_municipios <- paste0(municipios, collapse = "|")
 
@@ -349,84 +350,6 @@ climate_trace_subsetores <- emissions_sources_15_20_subsetores |>
 ```
 
 
-# PROBLEMAS COM AS ANÁLISES
-```{r}
-
-  # Observando maiores emissões para verificar problemas no plot do readme
-
-   # Base completa ct
-emissions_sources |> filter(
-  sigla_uf %in% my_states,
-  gas == 'co2e_100yr') |> 
-  arrange(desc(emissions_quantity))
-
-
-ct_set <- read_rds('../data/climate_trace_setores.rds')
-
-ct_set |> filter(
-  state %in% my_states) |>
-  # select(-florestas_e_uso_da_terra) |> 
-  pivot_longer(
-    cols = florestas_e_uso_da_terra:edificacoes,
-    names_to = "setor",
-    values_to = "emission"
-  ) |> 
-  group_by(year, state, city_ref) |> 
-  summarise(
-    emission = sum(emission, na.rm = TRUE)
-  ) |> 
-  arrange(desc(emission))
-
-base_completa_set |> filter(
-  state %in% my_states) |>
-  # select(-florestas_e_uso_da_terra) |> 
-  pivot_longer(
-    cols = florestas_e_uso_da_terra:edificacoes,
-    names_to = "setor",
-    values_to = "emission"
-  ) |> 
-  group_by(year, state, city_ref) |> 
-  summarise(
-    emission = sum(emission/1e6, na.rm = TRUE)
-  ) |> 
-  arrange(desc(emission))
-
-
-    # Base nova ct
-
-emissions_sources_21_23_setores |> filter(
-  state %in% my_states) |>
-  # select(-florestas_e_uso_da_terra, -edificacoes) |> 
-  pivot_longer(
-    cols = agricultura:operacoes_de_combustiveis_fosseis,
-    names_to = "setor",
-    values_to = "emission"
-  ) |> 
-  group_by(year, state, city_ref) |> 
-  summarise(
-    emission = sum(emission/1e6, na.rm = TRUE)
-  ) |> 
-  arrange(desc(emission)) 
-
-
-    # Base antiga ct
-
-emissions_sources_15_20_setores |> filter(
-  state %in% my_states) |>
-  # select(-florestas_e_uso_da_terra) |> 
-  pivot_longer(
-    cols = florestas_e_uso_da_terra:extracao_mineral,
-    names_to = "setor",
-    values_to = "emission"
-  ) |> 
-  group_by(year, state, city_ref) |> 
-  summarise(
-    emission = sum(emission/1e6, na.rm = TRUE)
-  ) |> 
-  arrange(desc(emission))
-
-names(emissions_sources_21_23_setores)
-```
 
 
 

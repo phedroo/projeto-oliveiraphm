@@ -402,13 +402,12 @@ utilizados até o ano de 2020.</p>
 <pre class="r"><code># Criando vetor para extrair os municipios de todos os tipos de emissões, possibilitando a padronização dos nomes para posterior incorporação
 # base_ct_att |&gt; pull(admin) |&gt; unique()
 
-municipios &lt;- base_ct_att |&gt; 
-  filter(estado %in% my_states) |&gt; 
+municipios &lt;- municipality |&gt; 
+  filter(abbrev_state %in% my_states) |&gt; 
   mutate(
-    fonte = stri_trans_general(tolower(fonte), &quot;Latin-ASCII&quot;),
-    fonte = trimws(fonte)) |&gt; 
-  filter(admin == &#39;Municipal&#39;) |&gt; 
-  pull(fonte) |&gt; unique()
+    name_muni  = stri_trans_general(tolower(name_muni ), &quot;Latin-ASCII&quot;),
+    name_muni  = trimws(name_muni )) |&gt; 
+  pull(name_muni) |&gt; unique()
 
 padrao_municipios &lt;- paste0(municipios, collapse = &quot;|&quot;)
 
@@ -676,81 +675,6 @@ emissions_sources_15_20_subsetores &lt;- emissions_sources |&gt;
 
 # write_rds(climate_trace_subsetores, &#39;../data/climate_trace_subsetores.rds&#39;)</code></pre>
 </div>
-<div id="problemas-com-as-análises" class="section level1">
-<h1>PROBLEMAS COM AS ANÁLISES</h1>
-<pre class="r"><code>
-  # Observando maiores emissões para verificar problemas no plot do readme
-
-   # Base completa ct
-emissions_sources |&gt; filter(
-  sigla_uf %in% my_states,
-  gas == &#39;co2e_100yr&#39;) |&gt; 
-  arrange(desc(emissions_quantity))
-
-
-ct_set &lt;- read_rds(&#39;../data/climate_trace_setores.rds&#39;)
-
-ct_set |&gt; filter(
-  state %in% my_states) |&gt;
-  # select(-florestas_e_uso_da_terra) |&gt; 
-  pivot_longer(
-    cols = florestas_e_uso_da_terra:edificacoes,
-    names_to = &quot;setor&quot;,
-    values_to = &quot;emission&quot;
-  ) |&gt; 
-  group_by(year, state, city_ref) |&gt; 
-  summarise(
-    emission = sum(emission, na.rm = TRUE)
-  ) |&gt; 
-  arrange(desc(emission))
-
-base_completa_set |&gt; filter(
-  state %in% my_states) |&gt;
-  # select(-florestas_e_uso_da_terra) |&gt; 
-  pivot_longer(
-    cols = florestas_e_uso_da_terra:edificacoes,
-    names_to = &quot;setor&quot;,
-    values_to = &quot;emission&quot;
-  ) |&gt; 
-  group_by(year, state, city_ref) |&gt; 
-  summarise(
-    emission = sum(emission/1e6, na.rm = TRUE)
-  ) |&gt; 
-  arrange(desc(emission))
-
-    # Base nova ct
-
-emissions_sources_21_23_setores |&gt; filter(
-  state %in% my_states) |&gt;
-  # select(-florestas_e_uso_da_terra, -edificacoes) |&gt; 
-  pivot_longer(
-    cols = agricultura:operacoes_de_combustiveis_fosseis,
-    names_to = &quot;setor&quot;,
-    values_to = &quot;emission&quot;
-  ) |&gt; 
-  group_by(year, state, city_ref) |&gt; 
-  summarise(
-    emission = sum(emission/1e6, na.rm = TRUE)
-  ) |&gt; 
-  arrange(desc(emission)) 
-
-    # Base antiga ct
-
-emissions_sources_15_20_setores |&gt; filter(
-  state %in% my_states) |&gt;
-  # select(-florestas_e_uso_da_terra) |&gt; 
-  pivot_longer(
-    cols = florestas_e_uso_da_terra:extracao_mineral,
-    names_to = &quot;setor&quot;,
-    values_to = &quot;emission&quot;
-  ) |&gt; 
-  group_by(year, state, city_ref) |&gt; 
-  summarise(
-    emission = sum(emission/1e6, na.rm = TRUE)
-  ) |&gt; 
-  arrange(desc(emission))
-
-names(emissions_sources_21_23_setores)</code></pre>
 <div id="entrada-com-a-base-nasa-xco2.rds" class="section level3">
 <h3>💨 Entrada com a Base: <code>nasa-xco2.rds</code></h3>
 <pre class="r"><code>nasa_xco2 &lt;- read_rds(&quot;../data/nasa-xco2.rds&quot;) |&gt; 
@@ -2431,7 +2355,6 @@ munic_geobr |&gt;
       scale_fill_viridis_c(
         option = &quot;inferno&quot;
       )})</code></pre>
-</div>
 </div>
 </div>
 
