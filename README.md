@@ -339,27 +339,6 @@ base_completa |>
 ### 🔄 Atualização da Base - Cáculo da Anomalia
 
 ``` r
-city_ref <- base_completa_set$city_ref |> unique()
-
-for(i in seq_along(city_ref)){
-  da <- base_completa_set |> 
-    filter(city_ref == city_ref[i]) |> 
-    filter(year >= 2017 & year <= 2021)
-  if(nrow(da) >= 2){
-  mod <- lm(xch4 ~ year,data=da)
-  a <- mod$coefficients[[1]]
-  b <- mod$coefficients[[2]]
-  
-  base_completa_set <- base_completa_set |> 
-    mutate(
-      xch4 = ifelse(city_ref == city_ref[i],
-                    ifelse(is.na(xch4),
-                           a+year*b,xch4),xch4)
-    )}
-}
-```
-
-``` r
 base_completa_set <- base_completa_set_corrigida |> 
   group_by(year) |> 
   mutate(anomalia_xco2 = xco2 - median(xco2,na.rm=TRUE),
@@ -372,6 +351,37 @@ base_completa_set <- base_completa_set_corrigida |>
          lai = media_lai,
          evi = media_evi,
          ndvi = media_ndvi)
+```
+
+``` r
+city_ref <- base_completa_set$city_ref |> unique()
+
+for(i in seq_along(city_ref)){
+  da <- base_completa_set |>
+    filter(city_ref == city_ref[i]) |>
+    filter(year >= 2014 & year <= 2021)
+  if(nrow(da) >= 2){
+  mod <- lm(xch4 ~ year,data=da)
+  a <- mod$coefficients[[1]]
+  b <- mod$coefficients[[2]]
+
+  base_completa_set <- base_completa_set |>
+    mutate(
+      xch4 = ifelse(city_ref == city_ref[i],
+                    ifelse(is.na(xch4),
+                           a+year*b,xch4),xch4)
+    )}
+}
+base_completa_set <- base_completa_set |> 
+  group_by(year, state) |> 
+  mutate(
+    xch4 = ifelse(is.na(xch4),median(xch4,na.rm = TRUE),xch4)
+  ) |> 
+  group_by(year) |> 
+  mutate(anomalia_xch4 = xch4 - median(xch4, na.rm=TRUE)) |> 
+  ungroup()
+
+base_completa_set$xch4 |> is.na() |>  sum()
 ```
 
 ### 🔎 Mapas de XCO2 e XCH4 + respectivas anomalias
@@ -394,7 +404,7 @@ plot_xco2 <- df_aux |>
   ggplot() +
     geom_sf(aes(fill=xco2), color="transparent",
             size=.05, show.legend = TRUE)  +
-    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
+    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=.3, show.legend = FALSE) +
     theme_bw() +
     theme(
       axis.text.x = element_text(size = rel(.9), color = "black"),
@@ -413,7 +423,7 @@ plot_anom_xco2 <- df_aux |>
   ggplot() +
     geom_sf(aes(fill=anomalia_xco2), color="transparent",
             size=.05, show.legend = TRUE)  +
-    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
+    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=.3, show.legend = FALSE) +
     theme_bw() +
     theme(
       axis.text.x = element_text(size = rel(.9), color = "black"),
@@ -432,7 +442,7 @@ plot_xch4 <- df_aux |>
   ggplot() +
     geom_sf(aes(fill=xch4), color="transparent",
             size=.05, show.legend = TRUE)  +
-    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
+    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=.3, show.legend = FALSE) +
     theme_bw() +
     theme(
       axis.text.x = element_text(size = rel(.9), color = "black"),
@@ -451,7 +461,7 @@ plot_anom_xch4 <- df_aux |>
   ggplot() +
     geom_sf(aes(fill=anomalia_xch4), color="transparent",
             size=.05, show.legend = TRUE)  +
-    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=3, show.legend = FALSE) +
+    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=.3, show.legend = FALSE) +
     theme_bw() +
     theme(
       axis.text.x = element_text(size = rel(.9), color = "black"),
