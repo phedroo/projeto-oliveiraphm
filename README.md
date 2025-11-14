@@ -141,8 +141,8 @@ library(tibble)
 library(corrplot)
 library(vegan)
 library(stringi)
-library(patchwork)
-source("R/my-function.R") 
+library(patchwork) # facilitar visualização das figuras
+source("R/my-function.R")
 ```
 
 #### Definindo estados
@@ -159,10 +159,11 @@ base_completa_setores <- read_rds('data/base_completa_setores.rds')
 
 ### Tratando outliers dos setores
 
-Foram considerados outliers, pois não foram encontradas bases já
+Foram considerados outliers, pois foram observados valores absurdos
+(acima de 1000 Mton no ano) e não foram encontradas bases já
 consolidadas (como o
 [SEEG](https://energiaeambiente.org.br/oito-dos-dez-municipios-que-mais-emitem-gases-de-efeito-estufa-estao-na-amazonia-20220617))
-com tais valores de emissão para os anos
+com valores próximos a estes
 
 *Realizar a média das emissões dos outliers com base nas observações da
 nova base*
@@ -176,7 +177,7 @@ padrão
 # Fazendo média 
 base_completa_set_novas_medias <- base_completa_setores |>
   filter(year %in% 2021:2024,
-         city_ref %in% c("sao jose do xingu", "sorriso", "taquaral de goias", "terenos", "pocone")) |>
+         city_ref %in% c("sao jose do xingu", "sorriso", "taquaral de goias", "terenos")) |> #pocone
   # devemos caracterizar ano par e ímpar, para pareá-los:
   mutate(paridade = if_else(year %% 2 == 0, "par", "impar")) |>
   # agrupar por paridade para que as médias sejam feitas separadamente, por ano par e ímpar
@@ -189,7 +190,7 @@ base_completa_set_corrigida <- base_completa_setores |>
   left_join(base_completa_set_novas_medias, by = c("state", "city_ref", "paridade"), suffix = c("", "_media")) |>
   mutate(across(
     florestas_e_uso_da_terra:edificacoes,
-    ~ ifelse(year < 2021 & city_ref %in% c("sao jose do xingu", "sorriso", "taquaral de goias", "terenos","pocone"),
+    ~ ifelse(year < 2021 & city_ref %in% c("sao jose do xingu", "sorriso", "taquaral de goias", "terenos"), #pocone
              get(paste0(cur_column(), "_media")),
              .)
   )) |>
@@ -211,8 +212,8 @@ base_completa_set_corrigida <- base_completa_setores |>
 
 
 # Verificar se a média foi corretamente passada
-# base_completa_set_corrigida |> 
-#   select(year:city_ref, agricultura:edificacoes) |> 
+# base_completa_set_corrigida |>
+#   select(year:city_ref, agricultura:edificacoes) |>
 #   filter(year %in% 2015:2024,
 #          city_ref %in% c("sao jose do xingu", "sorriso", "taquaral de goias", "terenos", "pocone"))
 ```
@@ -225,13 +226,13 @@ base_completa_subsetores <- read_rds('data/base_completa_subsetores.rds')
 
 ### Tratando outliers dos subsetores… (ainda não refeito para anos pares e ímpares)
 
-Mesma lógica que para os setores
+Mesma lógica que à utilizada para os setores
 
 ``` r
 # Fazendo média 
 base_completa_subset_novas_medias <- base_completa_subsetores |>
   filter(year %in% 2021:2024,
-         city_ref %in% c("sao jose do xingu", "sorriso", "taquaral de goias", "terenos", "pocone")) |>
+         city_ref %in% c("sao jose do xingu", "sorriso", "taquaral de goias", "terenos")) |> #pocone
   # devemos caracterizar ano par e ímpar, para pareá-los:
   mutate(paridade = if_else(year %% 2 == 0, "par", "impar")) |>
   # agrupar por paridade para que as médias sejam feitas separadamente, por ano par e ímpar
@@ -246,7 +247,7 @@ base_completa_subset_novas_medias <- base_completa_subsetores |>
     left_join(base_completa_subset_novas_medias, by = c("state", "city_ref", "paridade"), suffix = c("", "_media")) |>
     mutate(across(
       degradacao_em_terras_florestais:tratamento_e_descarte_de_efluentes_industriais,
-      ~ ifelse(year < 2021 & city_ref %in% c("sao jose do xingu", "sorriso", "taquaral de goias", "terenos","pocone"),
+      ~ ifelse(year < 2021 & city_ref %in% c("sao jose do xingu", "sorriso", "taquaral de goias", "terenos"), #pocone
                get(paste0(cur_column(), "_media")), # "cur_column()", "_media" Pega o valor da coluna de média correspondente
                .)
   )) |>
@@ -352,6 +353,12 @@ base_completa_set <- base_completa_set_corrigida |>
          evi = media_evi,
          ndvi = media_ndvi)
 ```
+
+A base de dados do GOSAT disponibiliza informações de XCH₄ até o ano de
+2021. Para possibilitar a análise de regressão, realizou-se a predição
+dos valores para 2022 e 2023 por meio do método de regressão linear
+simples, utilizando os dados observados no período de 2015 a 2021 como
+base de treinamento.
 
 ``` r
 city_ref <- base_completa_set$city_ref |> unique()
@@ -475,7 +482,7 @@ plot_anom_xch4 <- df_aux |>
          x = 'Longitude',
          y = 'Latitude') +
     scale_fill_viridis_c(option = "B")
-(plot_xco2 | plot_anom_xco2)/
+(plot_xco2 | plot_anom_xco2)/ #patchwork
 (plot_xch4 | plot_anom_xch4) + plot_annotation(title = .x)})
 ```
 
@@ -1213,54 +1220,57 @@ map(2015:2024,~{municipality |>
 fazer a soma de emissão por setor 3- pivto_wider com as emissão para os
 diferentes setores nas colunas
 
-## 📊 VISUALIZANDO MAIORES EMISSORES PARA O SETOR DE AGRICULTURA OU P/ ANIMAL
+## 📊 VISUALIZANDO MAIORES EMISSORES PARA TODOS OS SETORES e SUBSETORES
 
 ``` r
-# Base antiga
-emissions_sources_15_20 <- read_rds("data/emissions_sources.rds")
-
-emissions_sources_15_20 |>
+#### SETORES
+top_set <- base_completa_set |>
+  pivot_longer(
+    cols = florestas_e_uso_da_terra:edificacoes,
+    names_to = "setor",
+    values_to = "emissao"
+  ) |> 
+  mutate(emissao = ifelse(emissao>=0, emissao,0),
+         setor = stri_trans_general(setor, "title"), # passar para maiuscula
+         setor = str_replace_all(setor, "_", " ")) |> 
   filter(
-    year == 2020,                   #%in% 2015:2022
-    sigla_uf %in% my_states, # <-----
-    str_detect(activity_units, 'animal'),
-    # sector_name == 'agriculture',
-    !source_name %in% city_ref,
-    gas == 'co2e_100yr'
-    ) |>
-  group_by(city_ref, sigla_uf, sub_sector) |>
-  summarise(
-    emission = sum(emissions_quantity, na.rm = T)
+    year == 2024,                   #%in% 2015:2023
   ) |>
-  group_by(city_ref,sigla_uf) |>
+  select(year:city_ref, setor, emissao) |> 
+  group_by(year, city_ref, state, setor, emissao) |>
+  summarise(
+    emission = sum(emissao, na.rm = T)
+  ) |>
+  group_by(city_ref,state) |>
   mutate(
-    emission_total = sum(emission, na.rm = T)
+    emissao_total = sum(emission, na.rm = T)
   ) |>
   ungroup() |>
-  group_by(sigla_uf) |>
+  group_by(state) |>
   mutate(
-    sigla_uf = ifelse(sigla_uf == "DF", "GO", sigla_uf)) |> 
+    state = ifelse(state == "DF", "GO", state)) |>
   mutate(
-    city_ref = city_ref |> fct_reorder(emission_total) |>
-      fct_lump(n = 3, w = emission_total)) |>
-  filter(city_ref != "Other") |>
+    city_ref = city_ref |> fct_reorder(emissao_total) |>
+      fct_lump(n = 3, w = emissao_total)) |>
+  filter(city_ref != "Other") |> 
+  filter(city_ref != 'other') |>  
   mutate(
-      sub_sector = case_when(
-        sub_sector == "enteric-fermentation-cattle-feedlot" ~ "FEGC",
-        sub_sector == "enteric-fermentation-cattle-pasture" ~ "FEGP",
-        sub_sector == "manure-left-on-pasture-cattle"  ~ "EP",
-        sub_sector == "manure-management-cattle-feedlot" ~ "GEC",
-        sub_sector == 'cropland-fires' ~ 'CF',
-        sub_sector == 'synthetic-fertilizer-application' ~ 'SF application'
+      setor = case_when(
+        setor == "Operacoes De Combustiveis Fosseis" ~ "CF",
+        setor == "Extracao Mineral" ~ "EM.",
+        setor == 'Florestas E Uso Da Terra' ~ 'FUT',
+        setor == 'Edificacoes' ~ 'Edificações',
+        setor == 'Residuos' ~ 'Resíduos',
+        TRUE ~ setor # qualquer outro valor, manter valor original (setor)
       )) |>
   ggplot(aes(emission/1e6, #passar de ton para Mton
              city_ref,
-             fill = sub_sector)) +
+             fill = setor)) +
   geom_col(col="black", lwd = 0.1) +
   xlab(bquote(Emissião~CO[2]~e~(Mton))) +
   labs(#x = 'Emission (Mton)',
-       y = 'Cidade',
-       fill = 'Subsetor') +
+    y = 'Cidade',
+    fill = 'Setor') +
   theme_bw() +
   theme(
     axis.text.x = element_text(size = rel(1)),
@@ -1272,16 +1282,97 @@ emissions_sources_15_20 |>
     title = element_text(face = 'bold'),
     legend.position = 'top',
     legend.background = element_rect(fill = "transparent", color = "black")) +
-      scale_fill_viridis_d(option ='plasma') +
-  facet_wrap(~sigla_uf,scales = "free",ncol = 2) +
+  scale_fill_viridis_d(option ='plasma') +
+  facet_wrap(~state,scales = "free",ncol = 2) +
   annotate("text",
            x=2,
            y=1,
            label = ".",
            size=0.1)
+
+# -------------------------------------------------------------
+#### SUBSETORES
+top_subset <- base_completa_subset |>
+  pivot_longer(
+    cols = degradacao_em_terras_florestais:craqueamento_a_vapor_petroquimico,
+    names_to = "subsetor",
+    values_to = "emissao"
+  ) |> 
+  filter(
+    emissao > 0,
+    year == 2024,                   #%in% 2015:2022
+  ) |>
+  select(year:city_ref, subsetor, emissao) |> 
+  group_by(year, city_ref, state, subsetor, emissao) |>
+  summarise(
+    emission = sum(emissao, na.rm = T)
+  ) |>
+  group_by(city_ref,state) |>
+  ungroup() |>
+  group_by(state) |>
+  mutate(
+    state = ifelse(state == "DF", "GO", state),
+    city_ref = city_ref |> fct_reorder(emission) |> 
+      fct_lump(n = 3, w = emission)) |>
+  mutate(
+  subsetor = fct_lump_n(subsetor, n = 5, w = emission) # despoluir legenda, selecionando principais subsetores
+) |> 
+  filter(subsetor != "Other") |> 
+  filter(city_ref != "Other") |>
+  mutate(
+    subsetor = case_when(
+      subsetor == 'degradacao_em_terras_florestais'~'DgTF',
+      subsetor == 'fermentacao_enterica_gado_confinado'~'FEGC',
+      subsetor == 'fermentacao_enterica_gado_a_pasto'~'FEGP',
+      subsetor == 'esterco_deixado_no_pasto_gado'~'EP',
+      subsetor == 'manejo_de_esterco_gado_confinado'~'MEGC',
+      subsetor == 'desmatamento_em_terras_florestais'~'DmTF',
+      subsetor == 'queimadas_em_terras_florestais'~'QTF',
+      subsetor == 'queimadas_em_areas_agricolas'~'QG',
+      subsetor == 'queimadas_em_areas_arbustivas'~'QA',
+      subsetor == 'queimadas_em_areas_umidas'~'QU',
+      subsetor == 'cultivo_de_arroz'~'CA',
+      subsetor == 'residuos_de_culturas_agricolas'~'RCA',
+      subsetor == 'esterco_aplicado_ao_solo'~'EAS',
+      subsetor == 'uso_liquido_de_terras_florestais'~'ULTF', 
+      subsetor == 'uso_liquido_de_areas_arbustivas_e_gramineas'~'ULARG',
+      subsetor == 'uso_liquido_de_areas_umidas'~'UAU', 
+      subsetor == 'aplicacao_de_fertilizantes_sinteticos'~'AFS',
+      subsetor == 'transporte_rodoviario'~'TR',
+      subsetor == 'remocoes_de_carbono_sequestro'~'RCS',
+      TRUE ~ subsetor))|>
+  ggplot(aes(emission/1e6, #passar de ton para Mton
+             city_ref,
+             fill = subsetor)) +
+  geom_col(col="black", lwd = 0.1) +
+  xlab(bquote(Emissião~CO[2]~e~(Mton))) +
+  labs(#x = 'Emission (Mton)',
+    y = 'Cidade',
+    fill = 'Setor') +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(size = rel(1)),
+    # axis.title.x = element_text(size = rel(2)),
+    axis.text.y = element_text(size = rel(1.3)),
+    # axis.title.y = element_text(size = rel(2)),
+    legend.text = element_text(size = rel(1)),
+    #legend.title = element_text(size = rel(1.7)),
+    title = element_text(face = 'bold'),
+    legend.position = 'top',
+    legend.background = element_rect(fill = "transparent", color = "black")) +
+  scale_fill_viridis_d(option ='plasma') +
+  facet_wrap(~state,scales = "free",ncol = 2) +
+  annotate("text",
+           x=2,
+           y=1,
+           label = ".",
+           size=0.1)
+
+top_set
+top_subset
 ```
 
-## 📊 VISUALIZANDO MAIORES EMISSORES PARA O SETOR DE AGRICULTURA OU P/ SEUS SUBSETORES
+## 📊 VISUALIZANDO MAIORES EMISSORES PARA OS SUBSETORES DE AGRICULTURA
 
 Base NOVA
 
@@ -1289,10 +1380,11 @@ Pegando a base antes da incorporação, apenas para representar um ano de
 emissões
 
 ``` r
-# Base nova
+# Base nova antes da incorporação
 emissions_sources_21_24 <- readxl::read_excel("data-raw/climate-trace-br.xlsx")
-# 
+
 emissions_sources_21_24 |>
+  mutate(emissao_co2e = ifelse(emissao_co2e>=0, emissao_co2e,0)) |> 
   rename(city_ref = fonte,
          emissao = emissao_co2e,
          state = estado,
@@ -1301,16 +1393,16 @@ emissions_sources_21_24 |>
     year == 2024,                   #%in% 2021:2024
     state %in% my_states # <-----
     # setor == Agricultura
-    ) |>
+  ) |>
   mutate(
-    subsetor_agricultura = ifelse(setor == "Agricultura", subsetor, NA),
     city_ref = stri_trans_general(tolower(city_ref), "Latin-ASCII"),
     city_ref = trimws(city_ref),
-    city_ref = str_extract(city_ref, padrao_municipios)
-  ) |>
+    city_ref = str_extract(city_ref, padrao_municipios)) |> 
+  mutate(
+    s_agricultura = ifelse(setor == "Agricultura", subsetor, NA)) |> 
   drop_na() |>
-  select(year, state, city_ref, setor, subsetor_agricultura, emissao) |>
-  group_by(state, city_ref, year,subsetor_agricultura) |>
+  select(year, state, city_ref, setor, s_agricultura, emissao) |>
+  group_by(state, city_ref, year,s_agricultura) |>
   summarise(
     emissao_tot = sum(emissao, na.rm = T)
   ) |>
@@ -1320,30 +1412,31 @@ emissions_sources_21_24 |>
     city_ref = city_ref |> fct_reorder(emissao_tot) |>
       fct_lump(n = 3, w = emissao_tot),
     state = ifelse(state == "DF", "GO", state)) |>
-  filter(city_ref != "Other") |>
+  filter(city_ref != "Other") |> 
+  filter(city_ref != 'other') |> 
   mutate(
-      subsetor_agricultura = case_when(
-        subsetor_agricultura == "esterco aplicado ao solo" ~ "EAS",
-        subsetor_agricultura == "Fermentação entérica – gado confinado" ~ "FEGC",
-        subsetor_agricultura == "Fermentação entérica – gado a pasto" ~ "FEGP",
-        subsetor_agricultura == "Queimadas em áreas agrícolas" ~ "QAG",
-        subsetor_agricultura == "Resíduos de culturas agrícolas" ~ "RCA",
-        subsetor_agricultura == "Uso líquido de áreas arbustivas e gramíneas" ~"ULAG", 
-        subsetor_agricultura == "Uso líquido de áreas úmidas" ~"ULAU",
-        subsetor_agricultura == "Uso líquido de terras florestais" ~"ULTF",
-        subsetor_agricultura == "Esterco deixado no pasto (gado)"  ~ "EP",
-        subsetor_agricultura == "Manejo de esterco – gado confinado" ~ "MEGC",
-        subsetor_agricultura == 'Cultivo de arroz' ~ 'CA',
-        subsetor_agricultura == "Aplicação de fertilizantes sintéticos" ~ 'AFS'
-      )) |> 
+    s_agricultura = case_when(
+      s_agricultura == "esterco aplicado ao solo" ~ "EAS",
+      s_agricultura == "Fermentação entérica – gado confinado" ~ "FEGC",
+      s_agricultura == "Fermentação entérica – gado a pasto" ~ "FEGP",
+      s_agricultura == "Queimadas em áreas agrícolas" ~ "QAG",
+      s_agricultura == "Resíduos de culturas agrícolas" ~ "RCA",
+      s_agricultura == "Uso líquido de áreas arbustivas e gramíneas" ~"ULAG", 
+      s_agricultura == "Uso líquido de áreas úmidas" ~"ULAU",
+      s_agricultura == "Uso líquido de terras florestais" ~"ULTF",
+      s_agricultura == "Esterco deixado no pasto (gado)"  ~ "EP",
+      s_agricultura == "Manejo de esterco – gado confinado" ~ "MEGC",
+      s_agricultura == 'Cultivo de arroz' ~ 'CA',
+      s_agricultura == "Aplicação de fertilizantes sintéticos" ~ 'AFS'
+    )) |> 
   ggplot(aes(emissao_tot/1e6, #passar de ton para Mton
              city_ref,
-             fill = subsetor_agricultura)) +
+             fill = s_agricultura)) +
   geom_col(col="black", lwd = 0.1) +
   xlab(bquote(Emissião~CO[2]~e~(Mton))) +
   labs(#x = 'Emission (Mton)',
-       y = 'Cidade',
-       fill = 'Subsetor') +
+    y = 'Cidade',
+    fill = 'Subsetor') +
   theme_bw() +
   theme(
     axis.text.x = element_text(size = rel(1)),
@@ -1355,7 +1448,7 @@ emissions_sources_21_24 |>
     title = element_text(face = 'bold'),
     legend.position = 'top',
     legend.background = element_rect(fill = "transparent", color = "black")) +
-      scale_fill_viridis_d(option ='plasma') +
+  scale_fill_viridis_d(option ='plasma') +
   facet_wrap(~state,scales = "free",ncol = 2) +
   annotate("text",
            x=2,
