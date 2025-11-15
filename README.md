@@ -160,7 +160,7 @@ base_completa_setores <- read_rds('data/base_completa_setores.rds')
 ### Tratando outliers dos setores
 
 Foram considerados outliers, pois foram observados valores absurdos
-(acima de 1000 Mton no ano) e não foram encontradas bases já
+(acima de até 1300 Mton no ano) e não foram encontradas bases já
 consolidadas (como o
 [SEEG](https://energiaeambiente.org.br/oito-dos-dez-municipios-que-mais-emitem-gases-de-efeito-estufa-estao-na-amazonia-20220617))
 com valores próximos a estes
@@ -177,7 +177,7 @@ padrão
 # Fazendo média 
 base_completa_set_novas_medias <- base_completa_setores |>
   filter(year %in% 2021:2024,
-         city_ref %in% c("sao jose do xingu", "sorriso", "taquaral de goias", "terenos")) |> #pocone
+         city_ref %in% c("sao jose do xingu", "sorriso", "taquaral de goias", "terenos", "pocone")) |> 
   # devemos caracterizar ano par e ímpar, para pareá-los:
   mutate(paridade = if_else(year %% 2 == 0, "par", "impar")) |>
   # agrupar por paridade para que as médias sejam feitas separadamente, por ano par e ímpar
@@ -190,7 +190,7 @@ base_completa_set_corrigida <- base_completa_setores |>
   left_join(base_completa_set_novas_medias, by = c("state", "city_ref", "paridade"), suffix = c("", "_media")) |>
   mutate(across(
     florestas_e_uso_da_terra:edificacoes,
-    ~ ifelse(year < 2021 & city_ref %in% c("sao jose do xingu", "sorriso", "taquaral de goias", "terenos"), #pocone
+    ~ ifelse(year < 2021 & city_ref %in% c("sao jose do xingu", "sorriso", "taquaral de goias", "terenos", "pocone"), 
              get(paste0(cur_column(), "_media")),
              .)
   )) |>
@@ -232,7 +232,7 @@ Mesma lógica que à utilizada para os setores
 # Fazendo média 
 base_completa_subset_novas_medias <- base_completa_subsetores |>
   filter(year %in% 2021:2024,
-         city_ref %in% c("sao jose do xingu", "sorriso", "taquaral de goias", "terenos")) |> #pocone
+         city_ref %in% c("sao jose do xingu", "sorriso", "taquaral de goias", "terenos", "pocone")) |>
   # devemos caracterizar ano par e ímpar, para pareá-los:
   mutate(paridade = if_else(year %% 2 == 0, "par", "impar")) |>
   # agrupar por paridade para que as médias sejam feitas separadamente, por ano par e ímpar
@@ -247,7 +247,7 @@ base_completa_subset_novas_medias <- base_completa_subsetores |>
     left_join(base_completa_subset_novas_medias, by = c("state", "city_ref", "paridade"), suffix = c("", "_media")) |>
     mutate(across(
       degradacao_em_terras_florestais:tratamento_e_descarte_de_efluentes_industriais,
-      ~ ifelse(year < 2021 & city_ref %in% c("sao jose do xingu", "sorriso", "taquaral de goias", "terenos"), #pocone
+      ~ ifelse(year < 2021 & city_ref %in% c("sao jose do xingu", "sorriso", "taquaral de goias", "terenos", "pocone"), 
                get(paste0(cur_column(), "_media")), # "cur_column()", "_media" Pega o valor da coluna de média correspondente
                .)
   )) |>
@@ -1166,7 +1166,6 @@ subsetores:
       # base_completa_subset |>
       #   mutate(remocoes_de_carbono_sequestro = -abs(remocoes_de_carbono_sequestro)) |>  select(year,city_ref,remocoes_de_carbono_sequestro,uso_liquido_de_terras_florestais,uso_liquido_de_areas_arbustivas_e_gramineas,uso_liquido_de_areas_umidas)
 
-
 map(2015:2024,~{municipality |> 
     mutate(
       name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
@@ -1176,7 +1175,7 @@ map(2015:2024,~{municipality |>
     left_join(
       data.frame(
         base_completa_subset |> 
-          mutate(remocoes_de_carbono_sequestro = -abs(remocoes_de_carbono_sequestro)) |> #valores absolutos negativos 
+          mutate(remocoes_de_carbono_sequestro = -abs(remocoes_de_carbono_sequestro)) |> #valores absolutos negativos
           filter(year == .x,
                  remocoes_de_carbono_sequestro <=0,
                  uso_liquido_de_terras_florestais<=0,
@@ -1222,9 +1221,13 @@ diferentes setores nas colunas
 
 ## 📊 VISUALIZANDO MAIORES EMISSORES PARA TODOS OS SETORES e SUBSETORES
 
+Visualização em acumulado de CO2 equivalente no período de 2021 a 2023
+(somente considerada a base climate TRACE nova, para que se evite os
+outliers)
+
 ``` r
 #### SETORES
-top_set <- base_completa_set |>
+top_set <- base_completa_setores |>
   pivot_longer(
     cols = florestas_e_uso_da_terra:edificacoes,
     names_to = "setor",
@@ -1234,10 +1237,10 @@ top_set <- base_completa_set |>
          setor = stri_trans_general(setor, "title"), # passar para maiuscula
          setor = str_replace_all(setor, "_", " ")) |> 
   filter(
-    year == 2024,                   #%in% 2015:2023
+    year%in%2021:2024,                   #%in% 2015:2023
   ) |>
   select(year:city_ref, setor, emissao) |> 
-  group_by(year, city_ref, state, setor, emissao) |>
+  group_by(city_ref, state, setor) |>
   summarise(
     emission = sum(emissao, na.rm = T)
   ) |>
@@ -1292,7 +1295,7 @@ top_set <- base_completa_set |>
 
 # -------------------------------------------------------------
 #### SUBSETORES
-top_subset <- base_completa_subset |>
+top_subset <- base_completa_subsetores |>
   pivot_longer(
     cols = degradacao_em_terras_florestais:craqueamento_a_vapor_petroquimico,
     names_to = "subsetor",
@@ -1300,10 +1303,10 @@ top_subset <- base_completa_subset |>
   ) |> 
   filter(
     emissao > 0,
-    year == 2024,                   #%in% 2015:2022
+    year%in%2021:2024,                   #%in% 2015:2022
   ) |>
   select(year:city_ref, subsetor, emissao) |> 
-  group_by(year, city_ref, state, subsetor, emissao) |>
+  group_by(city_ref, state, subsetor) |>
   summarise(
     emission = sum(emissao, na.rm = T)
   ) |>
@@ -1319,6 +1322,10 @@ top_subset <- base_completa_subset |>
 ) |> 
   filter(subsetor != "Other") |> 
   filter(city_ref != "Other") |>
+  group_by(state, city_ref) |>
+  mutate(total_city = sum(emission, na.rm = TRUE)) |>  # soma total por cidade DENTRO do estado
+  ungroup() |>
+  mutate(city_ref = fct_reorder(city_ref, total_city, .desc = FALSE)) |> 
   mutate(
     subsetor = case_when(
       subsetor == 'degradacao_em_terras_florestais'~'DgTF',
