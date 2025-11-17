@@ -277,32 +277,32 @@ base_completa_subset_novas_medias <- base_completa_subsetores |>
 ### 🧮 Estatística descritiva
 &#10;
 ``` r
-# variavel <- "xco2" # opcional (mudar variavel)
+variavel <- "xch4" # opcional (mudar variavel)
 &#10;# Criar vetor com as variáveis
-variaveis <- base_completa_setores |>
+variaveis <- base_completa_set |>
   select(-year, -state, -city_ref) |>
   names()
 &#10;# names(base_completa_setores) # ver colunas
 &#10;# Função de loop sobre as variáveis para facilitar processo
-for (variavel in variaveis) {
-  cat("Processando:", variavel, "\n")  # feedback
-&#10;# df <- base_completa_setores |>
-#   filter(state != 'DF') |> 
-#   group_by(year,state) |>
-#   summarise(
-#     N = sum(!is.na(.data[[variavel]]), na.rm = TRUE), # observações
-#     MIN = min(.data[[variavel]], na.rm = TRUE), # valor mínimo
-#     MEAN = mean(.data[[variavel]], na.rm = TRUE), # média
-#     MEDIAN = median(.data[[variavel]], na.rm = TRUE), # mediana
-#     MAX = max(.data[[variavel]], na.rm = TRUE), # valor máximo
-#     VARIANCIA  = var(.data[[variavel]], na.rm = TRUE),
-#     STD_DV = sd(.data[[variavel]], na.rm = TRUE), # desvio padrão
-#     CV = 100*STD_DV/MEAN, # coeficiete de variação
-#     SKW = agricolae::skewness(.data[[variavel]]), #
-#     KRT = agricolae::kurtosis(.data[[variavel]]), #
-#   )
+# for (variavel in variaveis) {
+#   cat("Processando:", variavel, "\n")  # feedback
+&#10;df <- base_completa_set |>
+  filter(state != 'DF') |>
+  group_by(year,state) |>
+  summarise(
+    N = sum(!is.na(.data[[variavel]]), na.rm = TRUE), # observações
+    MIN = min(.data[[variavel]], na.rm = TRUE), # valor mínimo
+    MEAN = mean(.data[[variavel]], na.rm = TRUE), # média
+    MEDIAN = median(.data[[variavel]], na.rm = TRUE), # mediana
+    MAX = max(.data[[variavel]], na.rm = TRUE), # valor máximo
+    VARIANCIA  = var(.data[[variavel]], na.rm = TRUE),
+    STD_DV = sd(.data[[variavel]], na.rm = TRUE), # desvio padrão
+    CV = 100*STD_DV/MEAN, # coeficiete de variação
+    SKW = agricolae::skewness(.data[[variavel]]), #
+    KRT = agricolae::kurtosis(.data[[variavel]]), #
+  )
 &#10;# Salvar
-# writexl::write_xlsx(df, paste0("output/estat-descritiva-",variavel,"_.xlsx"))
+writexl::write_xlsx(df, paste0("output/estat-descritiva-",variavel,"_.xlsx"))
 &#10;}
 &#10;```
 &#10;### 📊 Histogramas
@@ -394,7 +394,9 @@ base_completa_set$xch4 |> is.na() |>  sum()
 ### 🔎 Mapas de XCO2 e XCH4 + respectivas anomalias
 
 ``` r
-map(2015:2023,~{
+library(patchwork)
+
+map(2015:2023, ~{
   df_aux <- municipality |> 
     mutate(
       name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
@@ -404,14 +406,15 @@ map(2015:2023,~{
     left_join(
       base_completa_set |> 
         filter(year == .x) |> 
-        rename(name_muni = city_ref,abbrev_state=state),
-  by = c("abbrev_state","name_muni")) 
+        rename(name_muni = city_ref, abbrev_state = state),
+      by = c("abbrev_state","name_muni")
+    ) 
 
-plot_xco2 <- df_aux |> 
-  ggplot() +
-    geom_sf(aes(fill=xco2), color="transparent",
-            size=.05, show.legend = TRUE)  +
-    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=.3, show.legend = FALSE) +
+  plot_xco2 <- df_aux |> 
+    ggplot() +
+    geom_sf(aes(fill=xco2), color="transparent", size=.05, show.legend = TRUE) +
+    geom_sf(data = municipality |> filter(abbrev_state %in% my_states),
+            fill="transparent", size=.3, show.legend = FALSE) +
     theme_bw() +
     theme(
       axis.text.x = element_text(size = rel(.9), color = "black"),
@@ -421,16 +424,16 @@ plot_xco2 <- df_aux |>
       legend.text = element_text(size = rel(1), color = "black"),
       legend.title = element_text(face = 'bold', size = rel(1.2))
     ) +
-    labs(fill = 'XCO2 (ppm)',
-         x = 'Longitude',
-         y = 'Latitude') +
+    labs(fill = "XCO2 (ppm)",
+         x = "Longitude",
+         y = "Latitude") +
     scale_fill_viridis_c()
 
-plot_anom_xco2 <- df_aux |> 
-  ggplot() +
-    geom_sf(aes(fill=anomalia_xco2), color="transparent",
-            size=.05, show.legend = TRUE)  +
-    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=.3, show.legend = FALSE) +
+  plot_anom_xco2 <- df_aux |> 
+    ggplot() +
+    geom_sf(aes(fill=anomalia_xco2), color="transparent", size=.05, show.legend = TRUE) +
+    geom_sf(data = municipality |> filter(abbrev_state %in% my_states),
+            fill="transparent", size=.3, show.legend = FALSE) +
     theme_bw() +
     theme(
       axis.text.x = element_text(size = rel(.9), color = "black"),
@@ -440,16 +443,16 @@ plot_anom_xco2 <- df_aux |>
       legend.text = element_text(size = rel(1), color = "black"),
       legend.title = element_text(face = 'bold', size = rel(1.2))
     ) +
-    labs(fill = 'Anomalia-XCO2',
-         x = 'Longitude',
-         y = 'Latitude') +
+    labs(fill = "Anomalia-XCO2",
+         x = "Longitude",
+         y = "Latitude") +
     scale_fill_viridis_c(option = "A")
-###-----------------
-plot_xch4 <- df_aux |> 
-  ggplot() +
-    geom_sf(aes(fill=xch4), color="transparent",
-            size=.05, show.legend = TRUE)  +
-    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=.3, show.legend = FALSE) +
+
+  plot_xch4 <- df_aux |> 
+    ggplot() +
+    geom_sf(aes(fill=xch4), color="transparent", size=.05, show.legend = TRUE) +
+    geom_sf(data = municipality |> filter(abbrev_state %in% my_states),
+            fill="transparent", size=.3, show.legend = FALSE) +
     theme_bw() +
     theme(
       axis.text.x = element_text(size = rel(.9), color = "black"),
@@ -459,16 +462,16 @@ plot_xch4 <- df_aux |>
       legend.text = element_text(size = rel(1), color = "black"),
       legend.title = element_text(face = 'bold', size = rel(1.2))
     ) +
-    labs(fill = 'XCH4 (ppb)',
-         x = 'Longitude',
-         y = 'Latitude') +
+    labs(fill = "XCH4 (ppb)",
+         x = "Longitude",
+         y = "Latitude") +
     scale_fill_viridis_c(option = "E")
 
-plot_anom_xch4 <- df_aux |> 
-  ggplot() +
-    geom_sf(aes(fill=anomalia_xch4), color="transparent",
-            size=.05, show.legend = TRUE)  +
-    geom_sf(data=municipality |> filter(abbrev_state %in% my_states), fill="transparent", size=.3, show.legend = FALSE) +
+  plot_anom_xch4 <- df_aux |> 
+    ggplot() +
+    geom_sf(aes(fill=anomalia_xch4), color="transparent", size=.05, show.legend = TRUE) +
+    geom_sf(data = municipality |> filter(abbrev_state %in% my_states),
+            fill="transparent", size=.3, show.legend = FALSE) +
     theme_bw() +
     theme(
       axis.text.x = element_text(size = rel(.9), color = "black"),
@@ -478,30 +481,50 @@ plot_anom_xch4 <- df_aux |>
       legend.text = element_text(size = rel(1), color = "black"),
       legend.title = element_text(face = 'bold', size = rel(1.2))
     ) +
-    labs(fill = 'Anomalia-XCH4',
-         x = 'Longitude',
-         y = 'Latitude') +
+    labs(fill = "Anomalia-XCH4",
+         x = "Longitude",
+         y = "Latitude") +
     scale_fill_viridis_c(option = "B")
-(plot_xco2 | plot_anom_xco2)/ #patchwork
-(plot_xch4 | plot_anom_xch4) + plot_annotation(title = .x)})
+
+  painel_gee_anom <- (plot_xco2 | plot_anom_xco2) /
+            (plot_xch4 | plot_anom_xch4) +
+            plot_annotation(title = .x)
+
+  # if (!dir.exists("results")) dir.create("results")
+
+  ggsave(
+    filename = paste0("results/mapas_", .x, ".png"),
+    plot = painel_gee_anom,
+    width = 16,
+    height = 12,
+    dpi = 300
+  )
+
+  # Retorna painel_gee_anom (opcional)
+  painel_gee_anom
+})
+
+
+# (plot_xco2 | plot_anom_xco2)/ #patchwork
+# (plot_xch4 | plot_anom_xch4) + plot_annotation(title = .x)})
 ```
 
 ### 🔎 Análise de correlação - entre setores
 
 ``` r
-mc_set <- cor(base_completa_set |>
-            select(florestas_e_uso_da_terra:edificacoes, -operacoes_de_combustiveis_fosseis), use = "pairwise.complete.obs")
-corrplot(mc_set,method = "color",
-         outline = TRUE,
-         type = "upper",
-         addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
-         tl.cex = .7, cl.cex = 1,  bg="azure2",
-         # diag = FALSE,
-         # addCoef.col = "black",
-         cl.ratio = 0.2,
-         cl.length = 5,
-         number.cex = 0.8
-) 
+# mc_set <- cor(base_completa_set |>
+#             select(florestas_e_uso_da_terra:edificacoes, -operacoes_de_combustiveis_fosseis), use = "pairwise.complete.obs")
+# corrplot(mc_set,method = "color",
+#          outline = TRUE,
+#          type = "upper",
+#          addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
+#          tl.cex = .7, cl.cex = 1,  bg="azure2",
+#          # diag = FALSE,
+#          # addCoef.col = "black",
+#          cl.ratio = 0.2,
+#          cl.length = 5,
+#          number.cex = 0.8
+# ) 
 ```
 
 ### 🔎 Análise de correlação - total
@@ -673,14 +696,14 @@ for( i in 2015:2023){
 }
 ```
 
+<!--
 ## 🗺️ Mapa de EMISSÃO TOTAL - setores
-
+&#10;
 ``` r
 # Remover outliers (trecho comentado pois os outliers agora foram tratados)
 # Criando vetor com os municipios que são outliers, nos anos em que são outliers
   # observação: é possível fazer um replace dos valores para estes outliers com a média dos anos seguintes (2021 a 2025)
-
-# remov_out <- base_completa_set |> filter(
+&#10;# remov_out <- base_completa_set |> filter(
 #   state %in% my_states) |>
 #   # select(-florestas_e_uso_da_terra) |> 
 #   pivot_longer(
@@ -695,17 +718,14 @@ for( i in 2015:2023){
 #   arrange(desc(emission)) |> 
 #   head(11) |> 
 #   pull(city_ref, year)
-
-# Criando vetor para extrair os municipios de todos os tipos de emissões, possibilitando a padronização dos nomes para evitar outliers aparecendo
+&#10;# Criando vetor para extrair os municipios de todos os tipos de emissões, possibilitando a padronização dos nomes para evitar outliers aparecendo
 municipios <- base_completa_set |>
   mutate(
     city_ref = stri_trans_general(tolower(city_ref), "Latin-ASCII"),
     city_ref = trimws(city_ref)) |>
   pull(city_ref) |> unique()
-
-padrao_municipios <- paste0(municipios, collapse = "|") 
-
-# Gerando mapa
+&#10;padrao_municipios <- paste0(municipios, collapse = "|") 
+&#10;# Gerando mapa
 map(2015:2023,~{municipality |> 
     mutate(
       name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
@@ -750,6 +770,7 @@ map(2015:2023,~{municipality |>
          y = 'Latitude') +
     scale_fill_viridis_c()})
 ```
+&#10;-->
 
 #### 🗺️ Mapa de EMISSÃO TOTAL - setores - Criando classe de emissão
 
@@ -798,13 +819,13 @@ map(2015:2023,~{municipality |>
     scale_fill_viridis_d()})
 ```
 
+<!--
 #### 🗺️ Mapa de EMISSÃO TOTAL - escolher setor
-
+&#10;
 ``` r
 setor = "agricultura" #mudar
 # setor = c("agricultura", "florestas_e_uso_da_terra") #escolher mais de 1 setor...
-
-# Gerando mapa
+&#10;# Gerando mapa
 map(2015:2023,~{municipality |> 
     mutate(
       name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
@@ -845,13 +866,10 @@ map(2015:2023,~{municipality |>
          y = 'Latitude') +
     scale_fill_viridis_d()})
 ```
-
-## 🗺️ Mapa de EMISSÃO TOTAL - subsetores
-
-Aparentemente, muitos subsetores (não consegui ver todos que são) estão
-com suas metodologias alteradas, e isso esta gerando grande divergência
-entre os mapas
-
+&#10;
+&#10;## 🗺️ Mapa de EMISSÃO TOTAL - subsetores
+&#10;Aparentemente, muitos subsetores (não consegui ver todos que são) estão com suas metodologias alteradas, e isso esta gerando grande divergência entre os mapas
+&#10;
 ``` r
 map(2015:2023,~{municipality |> 
     mutate(
@@ -904,6 +922,7 @@ map(2015:2023,~{municipality |>
          y = 'Latitude') +
     scale_fill_viridis_c()})
 ```
+&#10;-->
 
 #### 🗺️ Mapa de EMISSÃO TOTAL - subsetores - Criando classe de emissão
 
@@ -961,17 +980,16 @@ map(2015:2023,~{municipality |>
     scale_fill_viridis_d()})
 ```
 
-#### 🗺️ Mapa de EMISSÃO TOTAL - escolher subsetor
-
+<!--
+&#10;#### 🗺️ Mapa de EMISSÃO TOTAL - escolher subsetor
+&#10;
 ``` r
 subsetor = "queimadas_em_areas_agricolas" #mudar
 #detalhe: alguns subsetores como "degradacao_em_terras_florestais" só estão em uma das bases (nesse caso, na antiga)
-
-# Escolher mais de 1 subsetor...
+&#10;# Escolher mais de 1 subsetor...
 # subsetor = c("degradacao_em_terras_florestais", "queimadas_em_areas_agricolas", "fermentacao_enterica_gado_a_pasto", "desmatamento_em_terras_florestais", "queimadas_em_terras_florestais", "esterco_deixado_no_pasto_gado", "queimadas_em_areas_arbustivas", "queimadas_em_areas_umidas")
 #detalhe: não passará na legenda do mapa
-
-
+&#10;
 # Gerando mapa
 map(2015:2023,~{municipality |> 
     mutate(
@@ -1015,9 +1033,9 @@ map(2015:2023,~{municipality |>
          y = 'Latitude') +
     scale_fill_viridis_d()})
 ```
-
+&#10;
 ## 🗺️ SETOR/SUBSETOR DE MAIOR EMISSÃO DA CIDADE
-
+&#10;
 ``` r
 # Unindo as bases climate TRACE
   # Feito caso queira visualizar os setores e subsetores de maior emissão em um mesmo mapa
@@ -1027,6 +1045,7 @@ map(2015:2023,~{municipality |>
 #               select(year:city_ref, degradacao_em_terras_florestais:tratamento_e_descarte_de_efluentes_industriais),
 #             by = c("year", "city_ref", "state"))
 ```
+-->
 
 ## 🗺️ SETOR DE MAIOR EMISSÃO
 
@@ -1213,17 +1232,12 @@ map(2015:2024,~{municipality |>
     scale_fill_viridis_c()})
 ```
 
-## Instruções - feitas ✅
-
-1- Na incorporação retirar os subsetores (para não contar duas vezes) 2-
-fazer a soma de emissão por setor 3- pivto_wider com as emissão para os
-diferentes setores nas colunas
-
 ## 📊 VISUALIZANDO MAIORES EMISSORES PARA TODOS OS SETORES e SUBSETORES
 
-Visualização em acumulado de CO2 equivalente no período de 2021 a 2023
-(somente considerada a base climate TRACE nova, para que se evite os
-outliers)
+Visualização em acumulado de CO2 equivalente no período de 2021 a 2024
+(somente considerada a base climate TRACE nova, devido sua metodologia
+consolidada, de modo que se evite os outliers entre outros problemas da
+base antiga)
 
 ``` r
 #### SETORES
@@ -1270,7 +1284,7 @@ top_set <- base_completa_setores |>
              city_ref,
              fill = setor)) +
   geom_col(col="black", lwd = 0.1) +
-  xlab(bquote(Emissião~CO[2]~e~(Mton))) +
+  xlab(bquote(Emissão~CO[2]~e~(Mton))) +
   labs(#x = 'Emission (Mton)',
     y = 'Cidade',
     fill = 'Setor') +
@@ -1280,13 +1294,13 @@ top_set <- base_completa_setores |>
     # axis.title.x = element_text(size = rel(2)),
     axis.text.y = element_text(size = rel(1.3)),
     # axis.title.y = element_text(size = rel(2)),
-    legend.text = element_text(size = rel(1)),
+    legend.text = element_text(size = rel(.9)),
     #legend.title = element_text(size = rel(1.7)),
     title = element_text(face = 'bold'),
     legend.position = 'top',
     legend.background = element_rect(fill = "transparent", color = "black")) +
   scale_fill_viridis_d(option ='plasma') +
-  facet_wrap(~state,scales = "free",ncol = 2) +
+  facet_wrap(~state,scales = "free",ncol = 1) +
   annotate("text",
            x=2,
            y=1,
@@ -1352,7 +1366,7 @@ top_subset <- base_completa_subsetores |>
              city_ref,
              fill = subsetor)) +
   geom_col(col="black", lwd = 0.1) +
-  xlab(bquote(Emissião~CO[2]~e~(Mton))) +
+  xlab(bquote(Emissão~CO[2]~e~(Mton))) +
   labs(#x = 'Emission (Mton)',
     y = 'Cidade',
     fill = 'Setor') +
@@ -1368,14 +1382,14 @@ top_subset <- base_completa_subsetores |>
     legend.position = 'top',
     legend.background = element_rect(fill = "transparent", color = "black")) +
   scale_fill_viridis_d(option ='plasma') +
-  facet_wrap(~state,scales = "free",ncol = 2) +
+  facet_wrap(~state,scales = "free",ncol = 1) +
   annotate("text",
            x=2,
            y=1,
            label = ".",
            size=0.1)
 
-top_set
+top_set 
 top_subset
 ```
 
@@ -1388,18 +1402,23 @@ representar um ano de emissões
 de código:*
 `s_agricultura = ifelse(setor == "Agricultura", subsetor, NA)`
 
+Visualização em acumulado de CO2 equivalente no período de 2021 a 2024
+(somente considerada a base climate TRACE nova, devido sua metodologia
+consolidada, de modo que se evite os outliers entre outros problemas da
+base antiga)
+
 ``` r
 # Base nova antes da incorporação
 emissions_sources_21_24 <- readxl::read_excel("data-raw/climate-trace-br.xlsx")
 
-emissions_sources_21_24 |>
+top_agc <- emissions_sources_21_24 |>
   mutate(emissao_co2e = ifelse(emissao_co2e>=0, emissao_co2e,0)) |> 
   rename(city_ref = fonte,
          emissao = emissao_co2e,
          state = estado,
          year = ano) |>
   filter(
-    year == 2024,                   #%in% 2021:2024
+    year %in% 2021:2024,                   #%in% 2021:2024
     state %in% my_states # <-----
   ) |>
   mutate(
@@ -1410,18 +1429,22 @@ emissions_sources_21_24 |>
     s_agricultura = ifelse(setor == "Agricultura", subsetor, NA)) |> 
   drop_na() |>
   select(year, state, city_ref, setor, s_agricultura, emissao) |>
-  group_by(state, city_ref, year,s_agricultura) |>
+  group_by(state, city_ref,s_agricultura) |>
   summarise(
     emissao_tot = sum(emissao, na.rm = T)
   ) |>
   ungroup() |>
   group_by(state) |>
   mutate(
+    state = ifelse(state == "DF", "GO", state),
     city_ref = city_ref |> fct_reorder(emissao_tot) |>
-      fct_lump(n = 3, w = emissao_tot),
-    state = ifelse(state == "DF", "GO", state)) |>
+      fct_lump(n = 3, w = emissao_tot)) |>
   filter(city_ref != "Other") |> 
   filter(city_ref != 'other') |> 
+    group_by(state, city_ref) |>
+    mutate(total_city = sum(emissao_tot, na.rm = TRUE)) |>  # soma total por cidade DENTRO do estado
+    ungroup() |>
+    mutate(city_ref = fct_reorder(city_ref, total_city, .desc = FALSE)) |> 
   mutate(
     s_agricultura = case_when(
       s_agricultura == "esterco aplicado ao solo" ~ "EAS",
@@ -1437,11 +1460,12 @@ emissions_sources_21_24 |>
       s_agricultura == 'Cultivo de arroz' ~ 'CA',
       s_agricultura == "Aplicação de fertilizantes sintéticos" ~ 'AFS'
     )) |> 
+  drop_na() |> 
   ggplot(aes(emissao_tot/1e6, #passar de ton para Mton
              city_ref,
              fill = s_agricultura)) +
   geom_col(col="black", lwd = 0.1) +
-  xlab(bquote(Emissião~CO[2]~e~(Mton))) +
+  xlab(bquote(Emissão~CO[2]~e~(Mton))) +
   labs(#x = 'Emission (Mton)',
     y = 'Cidade',
     fill = 'Subsetor') +
@@ -1457,10 +1481,12 @@ emissions_sources_21_24 |>
     legend.position = 'top',
     legend.background = element_rect(fill = "transparent", color = "black")) +
   scale_fill_viridis_d(option ='plasma') +
-  facet_wrap(~state,scales = "free",ncol = 2) +
+  facet_wrap(~state,scales = "free",ncol = 1) +
   annotate("text",
            x=2,
            y=1,
            label = ".",
-           size=0.1) 
+           size=0.1)
+
+top_agc
 ```
