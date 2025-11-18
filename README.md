@@ -394,8 +394,6 @@ base_completa_set$xch4 |> is.na() |>  sum()
 ### 🔎 Mapas de XCO2 e XCH4 + respectivas anomalias
 
 ``` r
-library(patchwork)
-
 map(2015:2023, ~{
   df_aux <- municipality |> 
     mutate(
@@ -500,7 +498,6 @@ map(2015:2023, ~{
     dpi = 300
   )
 
-  # Retorna painel_gee_anom (opcional)
   painel_gee_anom
 })
 
@@ -693,6 +690,25 @@ for( i in 2015:2023){
       pcat<-round(tabelapca,3)
       tabelapca<-tabelapca[order(abs(tabelapca[,1])),]
       print(tabelapca)
+      
+corr_maps <- plot_map_group + bi_plot + plot_layout(ncol = 2) +
+  plot_annotation(title = i)
+
+# Salvar mapas das correlações e biplot por ano
+ggsave(
+  filename = paste0("results/map_biplot_", i, ".png"),
+  plot = corr_maps,
+  width = 14, height = 6, dpi = 300
+)
+
+
+# Salvar Tabela da correlação dos atributos com cada Componente Principal (PC)
+write.csv(
+  tabelapca,
+  file = paste0("results/tabelapca", i, ".csv"),
+  row.names = TRUE
+)
+
 }
 ```
 
