@@ -143,6 +143,7 @@ library(vegan)
 library(stringi)
 library(patchwork) # facilitar visualização das figuras
 source("R/my-function.R")
+#> List of polygons loaded [list_pol]
 ```
 
 #### Definindo estados
@@ -354,6 +355,11 @@ base_completa_set |>
   ggpubr::stat_regline_equation(ggplot2::aes(
   label =  paste(..eq.label.., ..rr.label.., sep = "*plain(\",\")~~"))) +
   theme_bw()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+
+``` r
 
 # XCH4
 base_completa_set |> 
@@ -369,6 +375,8 @@ base_completa_set |>
   theme_bw()
 ```
 
+![](README_files/figure-gfm/unnamed-chunk-11-2.png)<!-- -->
+
 Análise de regressão linear para posterior retirada de tendência.
 
 ``` r
@@ -381,14 +389,14 @@ mod_trend_xco2 <- lm(
   xco2 ~ year_adj + city_ref,
   data = base_completa_set_tend |> drop_na(xco2, city_ref)
 )
-mod_trend_xco2
+
 
 # Modelo XCH4
 mod_trend_xch4 <- lm(
   xch4 ~ year_adj + city_ref,
   data = base_completa_set_tend |> drop_na(xch4, city_ref)
 )
-mod_trend_xch4
+
 
 # 2) Previsão da tendência usando os modelos
 
@@ -497,6 +505,7 @@ base_completa_set <- base_completa_set |>
   ungroup()
 
 base_completa_set$xch4 |> is.na() |>  sum()
+#> [1] 0
 ```
 
 ### 🔎 Mapas de XCO2 e XCH4 + respectivas anomalias
@@ -612,6 +621,11 @@ for( i in 2015:2023){
 
   # painel_gee_anom
 }
+```
+
+![](README_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-16-2.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-16-3.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-16-4.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-16-5.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-16-6.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-16-7.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-16-8.png)<!-- -->![](README_files/figure-gfm/unnamed-chunk-16-9.png)<!-- -->
+
+``` r
 
 
 # (plot_xco2 | plot_anom_xco2)/ #patchwork
@@ -802,7 +816,9 @@ for( i in 2015:2023){
       pcat<-round(tabelapca,3)
       tabelapca<-tabelapca[order(abs(tabelapca[,1])),]
       print(tabelapca)
-      
+  print("======= agrupamento 3 =======")
+  nmg <- as.numeric(names(table(grupo))[(table(grupo) == min(table(grupo)))])
+  grupo[grupo == nmg]
 corr_maps <- plot_map_group + bi_plot + plot_layout(ncol = 2) +
   plot_annotation(title = i)
 
@@ -897,8 +913,51 @@ map(2015:2023,~{municipality |>
          x = 'Longitude',
          y = 'Latitude') +
     scale_fill_viridis_c()})
+#> [[1]]
 ```
-&#10;-->
+&#10;![](README_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
+
+    #> 
+    #> [[2]]
+
+![](README_files/figure-gfm/unnamed-chunk-20-2.png)<!-- -->
+
+    #> 
+    #> [[3]]
+
+![](README_files/figure-gfm/unnamed-chunk-20-3.png)<!-- -->
+
+    #> 
+    #> [[4]]
+
+![](README_files/figure-gfm/unnamed-chunk-20-4.png)<!-- -->
+
+    #> 
+    #> [[5]]
+
+![](README_files/figure-gfm/unnamed-chunk-20-5.png)<!-- -->
+
+    #> 
+    #> [[6]]
+
+![](README_files/figure-gfm/unnamed-chunk-20-6.png)<!-- -->
+
+    #> 
+    #> [[7]]
+
+![](README_files/figure-gfm/unnamed-chunk-20-7.png)<!-- -->
+
+    #> 
+    #> [[8]]
+
+![](README_files/figure-gfm/unnamed-chunk-20-8.png)<!-- -->
+
+    #> 
+    #> [[9]]
+
+![](README_files/figure-gfm/unnamed-chunk-20-9.png)<!-- -->
+
+–\>
 
 #### 🗺️ Mapa de EMISSÃO TOTAL - setores - Criando classe de emissão
 
@@ -945,7 +1004,50 @@ map(2015:2023,~{municipality |>
          x = 'Longitude',
          y = 'Latitude') +
     scale_fill_viridis_d()})
+#> [[1]]
 ```
+
+![](README_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
+
+    #> 
+    #> [[2]]
+
+![](README_files/figure-gfm/unnamed-chunk-21-2.png)<!-- -->
+
+    #> 
+    #> [[3]]
+
+![](README_files/figure-gfm/unnamed-chunk-21-3.png)<!-- -->
+
+    #> 
+    #> [[4]]
+
+![](README_files/figure-gfm/unnamed-chunk-21-4.png)<!-- -->
+
+    #> 
+    #> [[5]]
+
+![](README_files/figure-gfm/unnamed-chunk-21-5.png)<!-- -->
+
+    #> 
+    #> [[6]]
+
+![](README_files/figure-gfm/unnamed-chunk-21-6.png)<!-- -->
+
+    #> 
+    #> [[7]]
+
+![](README_files/figure-gfm/unnamed-chunk-21-7.png)<!-- -->
+
+    #> 
+    #> [[8]]
+
+![](README_files/figure-gfm/unnamed-chunk-21-8.png)<!-- -->
+
+    #> 
+    #> [[9]]
+
+![](README_files/figure-gfm/unnamed-chunk-21-9.png)<!-- -->
 
 <!--
 #### 🗺️ Mapa de EMISSÃO TOTAL - escolher setor
@@ -993,11 +1095,56 @@ map(2015:2023,~{municipality |>
          x = 'Longitude',
          y = 'Latitude') +
     scale_fill_viridis_d()})
+#> [[1]]
 ```
-&#10;
-&#10;## 🗺️ Mapa de EMISSÃO TOTAL - subsetores
-&#10;Aparentemente, muitos subsetores (não consegui ver todos que são) estão com suas metodologias alteradas, e isso esta gerando grande divergência entre os mapas
-&#10;
+&#10;![](README_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
+
+    #> 
+    #> [[2]]
+
+![](README_files/figure-gfm/unnamed-chunk-22-2.png)<!-- -->
+
+    #> 
+    #> [[3]]
+
+![](README_files/figure-gfm/unnamed-chunk-22-3.png)<!-- -->
+
+    #> 
+    #> [[4]]
+
+![](README_files/figure-gfm/unnamed-chunk-22-4.png)<!-- -->
+
+    #> 
+    #> [[5]]
+
+![](README_files/figure-gfm/unnamed-chunk-22-5.png)<!-- -->
+
+    #> 
+    #> [[6]]
+
+![](README_files/figure-gfm/unnamed-chunk-22-6.png)<!-- -->
+
+    #> 
+    #> [[7]]
+
+![](README_files/figure-gfm/unnamed-chunk-22-7.png)<!-- -->
+
+    #> 
+    #> [[8]]
+
+![](README_files/figure-gfm/unnamed-chunk-22-8.png)<!-- -->
+
+    #> 
+    #> [[9]]
+
+![](README_files/figure-gfm/unnamed-chunk-22-9.png)<!-- -->
+
+## 🗺️ Mapa de EMISSÃO TOTAL - subsetores
+
+Aparentemente, muitos subsetores (não consegui ver todos que são) estão
+com suas metodologias alteradas, e isso esta gerando grande divergência
+entre os mapas
+
 ``` r
 map(2015:2023,~{municipality |> 
     mutate(
@@ -1049,8 +1196,52 @@ map(2015:2023,~{municipality |>
          x = 'Longitude',
          y = 'Latitude') +
     scale_fill_viridis_c()})
+#> [[1]]
 ```
-&#10;-->
+
+![](README_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
+
+    #> 
+    #> [[2]]
+
+![](README_files/figure-gfm/unnamed-chunk-23-2.png)<!-- -->
+
+    #> 
+    #> [[3]]
+
+![](README_files/figure-gfm/unnamed-chunk-23-3.png)<!-- -->
+
+    #> 
+    #> [[4]]
+
+![](README_files/figure-gfm/unnamed-chunk-23-4.png)<!-- -->
+
+    #> 
+    #> [[5]]
+
+![](README_files/figure-gfm/unnamed-chunk-23-5.png)<!-- -->
+
+    #> 
+    #> [[6]]
+
+![](README_files/figure-gfm/unnamed-chunk-23-6.png)<!-- -->
+
+    #> 
+    #> [[7]]
+
+![](README_files/figure-gfm/unnamed-chunk-23-7.png)<!-- -->
+
+    #> 
+    #> [[8]]
+
+![](README_files/figure-gfm/unnamed-chunk-23-8.png)<!-- -->
+
+    #> 
+    #> [[9]]
+
+![](README_files/figure-gfm/unnamed-chunk-23-9.png)<!-- -->
+
+–\>
 
 #### 🗺️ Mapa de EMISSÃO TOTAL - subsetores - Criando classe de emissão
 
@@ -1106,18 +1297,63 @@ map(2015:2023,~{municipality |>
          x = 'Longitude',
          y = 'Latitude') +
     scale_fill_viridis_d()})
+#> [[1]]
 ```
 
-<!--
-&#10;#### 🗺️ Mapa de EMISSÃO TOTAL - escolher subsetor
-&#10;
+![](README_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
+
+    #> 
+    #> [[2]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-2.png)<!-- -->
+
+    #> 
+    #> [[3]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-3.png)<!-- -->
+
+    #> 
+    #> [[4]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-4.png)<!-- -->
+
+    #> 
+    #> [[5]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-5.png)<!-- -->
+
+    #> 
+    #> [[6]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-6.png)<!-- -->
+
+    #> 
+    #> [[7]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-7.png)<!-- -->
+
+    #> 
+    #> [[8]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-8.png)<!-- -->
+
+    #> 
+    #> [[9]]
+
+![](README_files/figure-gfm/unnamed-chunk-24-9.png)<!-- --> <!--
+
+#### 🗺️ Mapa de EMISSÃO TOTAL - escolher subsetor
+
+
 ``` r
 subsetor = "queimadas_em_areas_agricolas" #mudar
 #detalhe: alguns subsetores como "degradacao_em_terras_florestais" só estão em uma das bases (nesse caso, na antiga)
-&#10;# Escolher mais de 1 subsetor...
+
+# Escolher mais de 1 subsetor...
 # subsetor = c("degradacao_em_terras_florestais", "queimadas_em_areas_agricolas", "fermentacao_enterica_gado_a_pasto", "desmatamento_em_terras_florestais", "queimadas_em_terras_florestais", "esterco_deixado_no_pasto_gado", "queimadas_em_areas_arbustivas", "queimadas_em_areas_umidas")
 #detalhe: não passará na legenda do mapa
-&#10;
+
+
 # Gerando mapa
 map(2015:2023,~{municipality |> 
     mutate(
@@ -1160,10 +1396,53 @@ map(2015:2023,~{municipality |>
          x = 'Longitude',
          y = 'Latitude') +
     scale_fill_viridis_d()})
+#> [[1]]
 ```
-&#10;
+
+![](README_files/figure-gfm/unnamed-chunk-25-1.png)<!-- -->
+
+    #> 
+    #> [[2]]
+
+![](README_files/figure-gfm/unnamed-chunk-25-2.png)<!-- -->
+
+    #> 
+    #> [[3]]
+
+![](README_files/figure-gfm/unnamed-chunk-25-3.png)<!-- -->
+
+    #> 
+    #> [[4]]
+
+![](README_files/figure-gfm/unnamed-chunk-25-4.png)<!-- -->
+
+    #> 
+    #> [[5]]
+
+![](README_files/figure-gfm/unnamed-chunk-25-5.png)<!-- -->
+
+    #> 
+    #> [[6]]
+
+![](README_files/figure-gfm/unnamed-chunk-25-6.png)<!-- -->
+
+    #> 
+    #> [[7]]
+
+![](README_files/figure-gfm/unnamed-chunk-25-7.png)<!-- -->
+
+    #> 
+    #> [[8]]
+
+![](README_files/figure-gfm/unnamed-chunk-25-8.png)<!-- -->
+
+    #> 
+    #> [[9]]
+
+![](README_files/figure-gfm/unnamed-chunk-25-9.png)<!-- -->
+
 ## 🗺️ SETOR/SUBSETOR DE MAIOR EMISSÃO DA CIDADE
-&#10;
+
 ``` r
 # Unindo as bases climate TRACE
   # Feito caso queira visualizar os setores e subsetores de maior emissão em um mesmo mapa
@@ -1173,7 +1452,8 @@ map(2015:2023,~{municipality |>
 #               select(year:city_ref, degradacao_em_terras_florestais:tratamento_e_descarte_de_efluentes_industriais),
 #             by = c("year", "city_ref", "state"))
 ```
--->
+
+–\>
 
 ## 🗺️ SETOR DE MAIOR EMISSÃO
 
@@ -1232,7 +1512,55 @@ map(2015:2024,~{municipality |>
       )
   
   })
+#> [[1]]
 ```
+
+![](README_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
+
+    #> 
+    #> [[2]]
+
+![](README_files/figure-gfm/unnamed-chunk-27-2.png)<!-- -->
+
+    #> 
+    #> [[3]]
+
+![](README_files/figure-gfm/unnamed-chunk-27-3.png)<!-- -->
+
+    #> 
+    #> [[4]]
+
+![](README_files/figure-gfm/unnamed-chunk-27-4.png)<!-- -->
+
+    #> 
+    #> [[5]]
+
+![](README_files/figure-gfm/unnamed-chunk-27-5.png)<!-- -->
+
+    #> 
+    #> [[6]]
+
+![](README_files/figure-gfm/unnamed-chunk-27-6.png)<!-- -->
+
+    #> 
+    #> [[7]]
+
+![](README_files/figure-gfm/unnamed-chunk-27-7.png)<!-- -->
+
+    #> 
+    #> [[8]]
+
+![](README_files/figure-gfm/unnamed-chunk-27-8.png)<!-- -->
+
+    #> 
+    #> [[9]]
+
+![](README_files/figure-gfm/unnamed-chunk-27-9.png)<!-- -->
+
+    #> 
+    #> [[10]]
+
+![](README_files/figure-gfm/unnamed-chunk-27-10.png)<!-- -->
 
 ## 🗺️ SUBSETOR DE MAIOR EMISSÃO
 
@@ -1295,7 +1623,55 @@ map(2015:2024,~{municipality |>
     )
   
 })
+#> [[1]]
 ```
+
+![](README_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->
+
+    #> 
+    #> [[2]]
+
+![](README_files/figure-gfm/unnamed-chunk-28-2.png)<!-- -->
+
+    #> 
+    #> [[3]]
+
+![](README_files/figure-gfm/unnamed-chunk-28-3.png)<!-- -->
+
+    #> 
+    #> [[4]]
+
+![](README_files/figure-gfm/unnamed-chunk-28-4.png)<!-- -->
+
+    #> 
+    #> [[5]]
+
+![](README_files/figure-gfm/unnamed-chunk-28-5.png)<!-- -->
+
+    #> 
+    #> [[6]]
+
+![](README_files/figure-gfm/unnamed-chunk-28-6.png)<!-- -->
+
+    #> 
+    #> [[7]]
+
+![](README_files/figure-gfm/unnamed-chunk-28-7.png)<!-- -->
+
+    #> 
+    #> [[8]]
+
+![](README_files/figure-gfm/unnamed-chunk-28-8.png)<!-- -->
+
+    #> 
+    #> [[9]]
+
+![](README_files/figure-gfm/unnamed-chunk-28-9.png)<!-- -->
+
+    #> 
+    #> [[10]]
+
+![](README_files/figure-gfm/unnamed-chunk-28-10.png)<!-- -->
 
 ## 🗺 Mapa de REMOÇÃO
 
@@ -1358,7 +1734,55 @@ map(2015:2024,~{municipality |>
          x = 'Longitude',
          y = 'Latitude') +
     scale_fill_viridis_c()})
+#> [[1]]
 ```
+
+![](README_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
+
+    #> 
+    #> [[2]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-2.png)<!-- -->
+
+    #> 
+    #> [[3]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-3.png)<!-- -->
+
+    #> 
+    #> [[4]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-4.png)<!-- -->
+
+    #> 
+    #> [[5]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-5.png)<!-- -->
+
+    #> 
+    #> [[6]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-6.png)<!-- -->
+
+    #> 
+    #> [[7]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-7.png)<!-- -->
+
+    #> 
+    #> [[8]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-8.png)<!-- -->
+
+    #> 
+    #> [[9]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-9.png)<!-- -->
+
+    #> 
+    #> [[10]]
+
+![](README_files/figure-gfm/unnamed-chunk-29-10.png)<!-- -->
 
 ## 📊 VISUALIZANDO MAIORES EMISSORES PARA TODOS OS SETORES e SUBSETORES
 
@@ -1518,8 +1942,15 @@ top_subset <- base_completa_subsetores |>
            size=0.1)
 
 top_set 
+```
+
+![](README_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
+
+``` r
 top_subset
 ```
+
+![](README_files/figure-gfm/unnamed-chunk-30-2.png)<!-- -->
 
 ## 📊 VISUALIZANDO MAIORES EMISSORES PARA OS SUBSETORES DE AGRICULTURA
 
@@ -1618,3 +2049,5 @@ top_agc <- emissions_sources_21_24 |>
 
 top_agc
 ```
+
+![](README_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->

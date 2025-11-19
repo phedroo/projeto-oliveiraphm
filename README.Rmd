@@ -11,7 +11,7 @@ output: github_document
 # "include = FALSE" 
   # Código vai ser executado, mas o código e saída ocultam-se no documento final.
 knitr::opts_chunk$set(
-  eval = FALSE,
+  # eval = FALSE,
   collapse = TRUE, # saída e código compilados no documento final
   message = FALSE, # ocultar mensagens geradas no documento final
   error = FALSE,   # ocultar mensagens de erro no documento final
@@ -339,14 +339,14 @@ mod_trend_xco2 <- lm(
   xco2 ~ year_adj + city_ref,
   data = base_completa_set_tend |> drop_na(xco2, city_ref)
 )
-mod_trend_xco2
+
 
 # Modelo XCH4
 mod_trend_xch4 <- lm(
   xch4 ~ year_adj + city_ref,
   data = base_completa_set_tend |> drop_na(xch4, city_ref)
 )
-mod_trend_xch4
+
 
 # 2) Previsão da tendência usando os modelos
 
@@ -768,7 +768,9 @@ for( i in 2015:2023){
       pcat<-round(tabelapca,3)
       tabelapca<-tabelapca[order(abs(tabelapca[,1])),]
       print(tabelapca)
-      
+  print("======= agrupamento 3 =======")
+  nmg <- as.numeric(names(table(grupo))[(table(grupo) == min(table(grupo)))])
+  grupo[grupo == nmg]
 corr_maps <- plot_map_group + bi_plot + plot_layout(ncol = 2) +
   plot_annotation(title = i)
 
