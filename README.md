@@ -185,7 +185,7 @@ base_completa_set_novas_medias <- base_completa_setores |>
   summarise(across(florestas_e_uso_da_terra:edificacoes, ~ mean(., na.rm = TRUE)), .groups = "drop")
 
 # Atribuindo novos valores dos outliers de 2015 a 2020
-base_completa_set_corrigida <- base_completa_setores |>
+base_completa_set <- base_completa_setores |>
   mutate(paridade = if_else(year %% 2 == 0, "par", "impar")) |>
   left_join(base_completa_set_novas_medias, by = c("state", "city_ref", "paridade"), suffix = c("", "_media")) |>
   mutate(across(
@@ -337,17 +337,125 @@ base_completa |>
 ```
 -->
 
+## Análise de tendência dos dados de XCO2 e XCH4
+
+Caraterizando a tendência para resolução temporal em anos.
+
+``` r
+# XCO2
+base_completa_set |> 
+  mutate(
+    state = ifelse(state=="DF","GO",state),0) |> 
+  # sample_n(10000) |> 
+  ggplot(aes(x=year, y=xco2)) +
+  geom_point() +
+  geom_point(shape=21,color="black",fill="gray") +
+  geom_smooth(method = "lm") +
+  ggpubr::stat_regline_equation(ggplot2::aes(
+  label =  paste(..eq.label.., ..rr.label.., sep = "*plain(\",\")~~"))) +
+  theme_bw()
+
+# XCH4
+base_completa_set |> 
+  mutate(
+    state = ifelse(state=="DF","GO",state),0) |> 
+  # sample_n(10000) |> 
+  ggplot(aes(x=year, y=xch4)) +
+  geom_point() +
+  geom_point(shape=21,color="black",fill="gray") +
+  geom_smooth(method = "lm") +
+  ggpubr::stat_regline_equation(ggplot2::aes(
+  label =  paste(..eq.label.., ..rr.label.., sep = "*plain(\",\")~~"))) +
+  theme_bw()
+```
+
+Análise de regressão linear para posterior retirada de tendência.
+
+``` r
+# Criar year_adj (1, 2, 3...)
+base_completa_set_tend <- base_completa_set |>
+  mutate(year_adj = year - min(year, na.rm = TRUE))
+
+# Modelo XCO2
+mod_trend_xco2 <- lm(
+  xco2 ~ year_adj + city_ref,
+  data = base_completa_set_tend |> drop_na(xco2, city_ref)
+)
+mod_trend_xco2
+
+# Modelo XCH4
+mod_trend_xch4 <- lm(
+  xch4 ~ year_adj + city_ref,
+  data = base_completa_set_tend |> drop_na(xch4, city_ref)
+)
+mod_trend_xch4
+
+# 2) Previsão da tendência usando os modelos
+
+base_completa_set_tend <- base_completa_set |>
+  mutate(
+    delta_co2 = predict(mod_trend_xco2, newdata = base_completa_set_tend),
+    delta_ch4 = predict(mod_trend_xch4, newdata = base_completa_set_tend)
+  )
+```
+
+#### Retirando a tendência
+
+``` r
+# Código PIBIC 
+
+# base_completa_set |>
+#   group_by(variable) |>
+#   mutate(
+#     value_est = ifelse(variable=="xco2",
+#                        a_co2+b_co2*(year-min(year)),
+#                        ifelse(variable=="xch4",
+#                               a_ch4+b_ch4*(year-min(year)),
+#                               value)),
+#     delta = ifelse(variable=="sif",value,value_est-value),
+#     value_detrend = ifelse(variable =="xco2", (a_co2-delta)-(mean(value)-a_co2),
+#                        ifelse(variable =="xch4",
+#                               (a_ch4-delta)-(mean(value)-a_ch4),value)),
+#     value = value_detrend
+#   ) |> ungroup() |>
+#   select(-value_est,-delta,-value_detrend)
+# 
+# kgr_maps_detrend |> 
+#   filter(variable == "xch4")
+
+
+# Código PIBIC adaptado à nova base
+  # xco2 e xch4 em colunas separadas
+
+# 3) Remoção da tendência mantendo média por cidade
+
+base_completa_set_tend <- base_completa_set_tend |>
+  group_by(city_ref) |>
+  mutate(
+    xco2_detrend = (xco2 - delta_co2) + mean(xco2, na.rm = TRUE),
+    xch4_detrend = (xch4 - delta_ch4) + mean(xch4, na.rm = TRUE)
+  ) |>
+  ungroup()
+
+base_completa_set_tend <- base_completa_set_tend |> 
+  mutate(
+    xco2 = xco2_detrend,
+    xch4 = xch4_detrend
+  ) |> 
+  select(-(delta_co2:xch4_detrend))
+```
+
 ### 🔄 Atualização da Base - Cáculo da Anomalia
 
 ``` r
-base_completa_set <- base_completa_set_corrigida |> 
+base_completa_set <- base_completa_set_tend |> 
   group_by(year) |> 
   mutate(anomalia_xco2 = xco2 - median(xco2,na.rm=TRUE),
          anomalia_xch4 = xch4 - median(xch4, na.rm=TRUE)) |> 
   dplyr::ungroup() |> 
   relocate(year:city_ref, xco2, anomalia_xco2, xch4, anomalia_xch4, sif_757, temperatura, umidade, precipitacao, pressao, radiacao, vento,media_fpar:media_ndvi, desmatamento,area_queimada) |> 
     select(-media_et) |> 
-  rename(queimada = area_queimada, 
+  rename(queimada = area_queimada,
          fpar = media_fpar,
          lai = media_lai,
          evi = media_evi,
@@ -394,7 +502,7 @@ base_completa_set$xch4 |> is.na() |>  sum()
 ### 🔎 Mapas de XCO2 e XCH4 + respectivas anomalias
 
 ``` r
-map(2015:2023, ~{
+for( i in 2015:2023){
   df_aux <- municipality |> 
     mutate(
       name_muni = stri_trans_general(tolower(name_muni), "Latin-ASCII"),
@@ -403,7 +511,7 @@ map(2015:2023, ~{
     filter(abbrev_state %in% my_states) |> 
     left_join(
       base_completa_set |> 
-        filter(year == .x) |> 
+        filter(year == i) |> 
         rename(name_muni = city_ref, abbrev_state = state),
       by = c("abbrev_state","name_muni")
     ) 
@@ -483,27 +591,31 @@ map(2015:2023, ~{
          x = "Longitude",
          y = "Latitude") +
     scale_fill_viridis_c(option = "B")
+  
+  print((plot_xco2 | plot_anom_xco2)/ #patchwork
+    (plot_xch4 | plot_anom_xch4) + plot_annotation(title = i))
 
-  painel_gee_anom <- (plot_xco2 | plot_anom_xco2) /
-            (plot_xch4 | plot_anom_xch4) +
-            plot_annotation(title = .x)
+   # PARA SALVAR ----------------------------------------------
+  # painel_gee_anom <- (plot_xco2 | plot_anom_xco2) /
+  #           (plot_xch4 | plot_anom_xch4) +
+  #           plot_annotation(title = .x)
 
   # if (!dir.exists("results")) dir.create("results")
 
-  ggsave(
-    filename = paste0("results/mapas_", .x, ".png"),
-    plot = painel_gee_anom,
-    width = 16,
-    height = 12,
-    dpi = 300
-  )
+  # ggsave(
+  #   filename = paste0("results/mapas_", .x, ".png"),
+  #   plot = painel_gee_anom,
+  #   width = 16,
+  #   height = 12,
+  #   dpi = 300
+  # )
 
-  painel_gee_anom
-})
+  # painel_gee_anom
+}
 
 
 # (plot_xco2 | plot_anom_xco2)/ #patchwork
-# (plot_xch4 | plot_anom_xch4) + plot_annotation(title = .x)})
+#   (plot_xch4 | plot_anom_xch4) + plot_annotation(title = i)
 ```
 
 ### 🔎 Análise de correlação - entre setores
@@ -695,19 +807,19 @@ corr_maps <- plot_map_group + bi_plot + plot_layout(ncol = 2) +
   plot_annotation(title = i)
 
 # Salvar mapas das correlações e biplot por ano
-ggsave(
-  filename = paste0("results/map_biplot_", i, ".png"),
-  plot = corr_maps,
-  width = 14, height = 6, dpi = 300
-)
+# ggsave(
+#   filename = paste0("results/map_biplot_", i, ".png"),
+#   plot = corr_maps,
+#   width = 14, height = 6, dpi = 300
+# )
 
 
 # Salvar Tabela da correlação dos atributos com cada Componente Principal (PC)
-write.csv(
-  tabelapca,
-  file = paste0("results/tabelapca", i, ".csv"),
-  row.names = TRUE
-)
+# write.csv(
+#   tabelapca,
+#   file = paste0("results/tabelapca", i, ".csv"),
+#   row.names = TRUE
+# )
 
 }
 ```
