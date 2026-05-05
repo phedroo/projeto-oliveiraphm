@@ -548,8 +548,8 @@ tibble( #criando tibble com todos os resultados
                    "-",my_year,"-xco2.csv")) # MODIFICAR variável
 
 ls_csv <- list.files("../output/",full.names = TRUE,pattern = "-xco2.csv") # MODIFICAR
-map_df(ls_csv, read_csv) |> 
-  writexl::write_xlsx("../output/semivariogram-models-xco2.xlsx") # MODIFICAR
+# map_df(ls_csv, read_csv) |> 
+#   writexl::write_xlsx("../output/semivariogram-models-xco2.xlsx") # MODIFICAR
 ```
 
 
@@ -809,7 +809,7 @@ Já feito no arquivo da pasta docs
 ```{r, eval=FALSE}
 gosat_xch4 <- read_rds("../data/gosat_xch4.rds") # os arquivos com underline foram tratados, classificados por município e deverão ser repassados para a pasta data futuramente
 
-my_year = 2020
+my_year = 2021
 municipality |> 
   filter(abbrev_state %in% my_states) |> 
   left_join(
@@ -1150,7 +1150,7 @@ oco2_sif |>
 
 #### Gerar mapa
 ```{r, eval=FALSE}
-my_year = 2020
+my_year = 2021
 municipality |> 
   filter(abbrev_state %in% my_states) |> 
   left_join(
@@ -1245,8 +1245,8 @@ vari_exp  |>
 
 ```{r, eval=FALSE}
 patamar=0.039
-alcance=0.7
-epepita=0.0352
+alcance=0.5
+epepita=0.036
 modelo_1 <- fit.variogram(vari_exp,vgm(patamar,"Sph",alcance,epepita))
 modelo_2 <- fit.variogram(vari_exp,vgm(patamar,"Exp",alcance,epepita))
 modelo_3 <- fit.variogram(vari_exp,vgm(patamar,"Gau",alcance,epepita))
