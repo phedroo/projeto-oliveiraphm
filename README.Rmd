@@ -608,7 +608,7 @@ mc <- cor(base_completa_set |>
             ), use = "complete.obs") # "complete.obs" descarta totalemnte linha com qualquer NA
 corrplot(mc,method = "color",
          outline = TRUE,
-         # type = "upper",
+         type = "lower", # ou "upper"
          addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
          tl.cex = .85, cl.cex = 1,  bg="azure2",
          # diag = FALSE,
