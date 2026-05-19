@@ -87,7 +87,7 @@ Formato dos arquivos:
 #### 🛠️ Pré-processameto [script](https://arpanosso.github.io//projeto-oliveiraphm//02_preprocessamento.html) 
 
 #### ⛓️ Incorporação das bases
-[script](adicionar link)
+[script](https://github.com/phedroo/projeto-oliveiraphm/blob/master/docs/03_incorporacao.html)
 
 ### 🛠 Preparação dos dados para análise.
 ```{r}
