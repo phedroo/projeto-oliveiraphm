@@ -598,26 +598,57 @@ for( i in 2015:2023){
  Correlação de Pearson
 
 ```{r,eval=FALSE}
-mc <- cor(base_completa_set |>
-            select(anomalia_xco2:queimada, -xch4, -evi, -ndvi)  |> 
-            rename_with(~ str_to_title(.x))|>
-            rename(
-              XCO2 = Anomalia_xco2, XCH4 = Anomalia_xch4, "SIF 757" = Sif_757,
-              LAI = Lai, FPAR = Fpar, Precipitação = Precipitacao, 
-              Radiação = Radiacao, Pressão = Pressao
-            ), use = "complete.obs") # "complete.obs" descarta totalemnte linha com qualquer NA
-corrplot(mc,method = "color",
-         outline = TRUE,
-         type = "lower", # ou "upper"
-         addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
-         tl.cex = .85, cl.cex = 1,  bg="azure2",
-         # diag = FALSE,
-         # addCoef.col = "black",
-         cl.ratio = 0.15,
-         cl.length = 5
-         # number.cex = 0.5, #tamanho dos n° dentro da matriz
-         # addCoef.col = "black"
-) 
+# mc <- cor(base_completa_set |>
+#             select(anomalia_xco2:queimada, -xch4, -evi, -ndvi)  |> 
+#             rename_with(~ str_to_title(.x))|>
+#             rename(
+#               XCO2 = Anomalia_xco2, XCH4 = Anomalia_xch4, "SIF 757" = Sif_757,
+#               LAI = Lai, FPAR = Fpar, Precipitação = Precipitacao, 
+#               Radiação = Radiacao, Pressão = Pressao
+#             ), use = "pairwise.complete.obs") # "complete.obs" descarta totalemnte linha com qualquer NA
+# 
+# corrplot(mc,method = "color",
+#          outline = TRUE,
+#          type = "upper", # ou "lower"
+#          addgrid.col = "darkgray",cl.pos = "r", tl.col = "black",
+#          tl.cex = .85, cl.cex = 1,  bg="azure2",
+#          # diag = FALSE,
+#          # addCoef.col = "black",
+#          cl.ratio = 0.15,
+#          cl.length = 5,
+#          insig = "blank"
+#          # number.cex = 0.5, #tamanho dos n° dentro da matriz
+#          # addCoef.col = "black"
+# ) 
+
+
+#########################################
+# nova construção da matriz de correlação
+#########################################
+
+# install.packages('Hmisc')
+# install.packages('ggcorrplot')
+# library(Hmisc)
+# library(ggcorrplot)
+
+df <- base_completa_set[,-c(1:3)] |> 
+  dplyr::select(anomalia_xco2:queimada, -xch4, -evi, -ndvi)
+  # remover colunas não numéricas
+
+cor_mat <- cor(df,
+               use = "pairwise.complete.obs")
+
+p_mat <- rcorr(as.matrix(df))$P
+
+ggcorrplot(
+  cor_mat,
+  type = "upper",
+  lab = TRUE,
+  p.mat = p_mat,
+  insig = "blank",
+  outline = TRUE,
+  colors = c("#B2182B", "white", "#2166AC")
+)
 
 # "method" da função "cor()" não foi especificado, logo o R usa por padrão a correlação de Pearson. Para utilizar a de postos de Spearman: "method = "spearman", ou ainda a de Kendall: "method = "kendall"".
 ```
