@@ -399,6 +399,20 @@ base_completa_set_tend <- base_completa_set_tend |>
     xch4 = xch4_detrend
   ) |> 
   select(-(delta_co2:xch4_detrend))
+
+
+# Visualização da tendência removida
+base_completa_set_tend |> 
+  mutate(
+    state = ifelse(state=="DF","GO",state),0) |> 
+  # sample_n(10000) |> 
+  ggplot(aes(x=year, y=xco2)) + # xch4
+  geom_point() +
+  geom_point(shape=21,color="black",fill="gray") +
+  geom_smooth(method = "lm") +
+  ggpubr::stat_regline_equation(ggplot2::aes(
+  label =  paste(..eq.label.., ..rr.label.., sep = "*plain(\",\")~~"))) +
+  theme_bw()
 ```
 
 ### 🔄 Atualização da Base - Cáculo da Anomalia
@@ -628,8 +642,8 @@ for( i in 2015:2023){
 
 # install.packages('Hmisc')
 # install.packages('ggcorrplot')
-# library(Hmisc)
-# library(ggcorrplot)
+library(Hmisc)
+library(ggcorrplot)
 
 df <- base_completa_set[,-c(1:3)] |> 
   dplyr::select(anomalia_xco2:queimada, -xch4, -evi, -ndvi)
